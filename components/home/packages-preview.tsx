@@ -1,0 +1,193 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { Check, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { supabase } from '@/lib/supabase';
+import type { Package } from '@/lib/supabase';
+
+export function PackagesPreview() {
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch packages from Supabase
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('packages')
+          .select('*')
+          .order('price', { ascending: true })
+          .limit(3);
+        
+        if (error) {
+          console.error('Error fetching packages:', error);
+          // Fallback to static data if there's an error
+          setPackages(fallbackPackages);
+        } else if (data && data.length > 0) {
+          setPackages(data as Package[]);
+        } else {
+          // Use fallback data if no packages are found
+          setPackages(fallbackPackages);
+        }
+      } catch (error) {
+        console.error('Error in packages fetch:', error);
+        setPackages(fallbackPackages);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPackages();
+  }, []);
+
+  // Fallback package data in case the Supabase fetch fails
+  const fallbackPackages: Package[] = [
+    {
+      id: '1',
+      name: 'Starter Package',
+      description: 'Perfect for beginners who are just starting their driving journey',
+      price: 299.99,
+      hours: 5,
+      features: ['5 hours of driving lessons', 'Personalized instruction', 'Flexible scheduling'],
+      popular: false,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: '2',
+      name: 'Standard Package',
+      description: 'Our most popular package for learners with some experience',
+      price: 499.99,
+      hours: 10,
+      features: ['10 hours of driving lessons', 'Personalized instruction', 'Flexible scheduling', 'Test preparation'],
+      popular: true,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: '3',
+      name: 'Premium Package',
+      description: 'Comprehensive package for complete preparation',
+      price: 799.99,
+      hours: 20,
+      features: ['20 hours of driving lessons', 'Personalized instruction', 'Flexible scheduling', 'Test preparation', 'Mock driving test', 'Pick-up and drop-off service'],
+      popular: false,
+      created_at: new Date().toISOString()
+    }
+  ];
+
+  // Animation variants for staggered animations
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5
+      }
+    }
+  };
+
+  return (
+    <section className="py-20 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+              Driving Lesson Packages
+            </h2>
+            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
+              Choose the package that best suits your needs and budget
+            </p>
+          </motion.div>
+        </div>
+
+        {loading ? (
+          // Loading skeleton
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-gray-100 rounded-xl p-8 h-96 animate-pulse"></div>
+            ))}
+          </div>
+        ) : (
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            {packages.map((pkg) => (
+              <motion.div key={pkg.id} variants={itemVariants}>
+                <Card className={`h-full flex flex-col ${pkg.popular ? 'border-blue-500 shadow-lg' : ''}`}>
+                  <CardHeader className="pb-4">
+                    {pkg.popular && (
+                      <Badge className="self-start mb-2 bg-blue-500">Most Popular</Badge>
+                    )}
+                    <CardTitle className="text-2xl">{pkg.name}</CardTitle>
+                    <CardDescription>{pkg.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    <div className="mb-6">
+                      <span className="text-4xl font-bold">${pkg.price.toFixed(0)}</span>
+                      <span className="text-gray-500 ml-1">/ package</span>
+                    </div>
+                    <div className="text-gray-700 mb-2 font-medium">
+                      {pkg.hours} hours of driving lessons
+                    </div>
+                    <ul className="space-y-2 mt-4">
+                      {pkg.features.map((feature, index) => (
+                        <li key={index} className="flex items-start">
+                          <Check className="h-5 w-5 text-green-500 mr-2 shrink-0 mt-0.5" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      className={`w-full ${pkg.popular ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                      asChild
+                    >
+                      <Link href="/packages">
+                        Select Package
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+
+        <div className="text-center mt-12">
+          <Button variant="outline" size="lg" asChild>
+            <Link href="/packages">
+              View All Packages
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
