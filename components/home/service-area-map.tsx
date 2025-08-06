@@ -62,7 +62,7 @@ export function ServiceAreaMap() {
             className="bg-gray-50 p-6 rounded-xl shadow-md"
           >
             <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-              <MapPin className="h-5 w-5 text-blue-600 mr-2" />
+              <MapPin className="h-5 w-5 text-yellow-600 mr-2" />
               Covered Areas
             </h3>
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
@@ -71,14 +71,14 @@ export function ServiceAreaMap() {
                   key={area.id}
                   className={`p-3 rounded-lg cursor-pointer transition-colors ${
                     selectedArea === area.id 
-                      ? 'bg-blue-100 border-l-4 border-blue-600' 
+                      ? 'bg-yellow-100 border-l-4 border-yellow-600' 
                       : 'bg-white hover:bg-gray-100 border-l-4 border-transparent'
                   }`}
                   onClick={() => setSelectedArea(area.id)}
                 >
                   <div className="font-medium text-gray-900">{area.name}</div>
                   {area.popular && (
-                    <div className="text-sm text-blue-600 mt-1">Popular area</div>
+                    <div className="text-sm text-yellow-600 mt-1">Popular area</div>
                   )}
                 </div>
               ))}
@@ -111,7 +111,7 @@ export function ServiceAreaMap() {
                     position={brisbaneCenter}
                     title="Brisbane Driving School Office"
                   >
-                    <div className="bg-blue-600 text-white px-3 py-2 rounded-lg shadow-md text-sm font-medium">
+                    <div className="bg-yellow-600 text-white px-3 py-2 rounded-lg shadow-md text-sm font-medium">
                       Main Office
                     </div>
                   </AdvancedMarker>
@@ -124,7 +124,7 @@ export function ServiceAreaMap() {
                       onClick={() => setSelectedArea(area.id)}
                     >
                       <Pin
-                        background={selectedArea === area.id ? '#2563EB' : (area.popular ? '#3B82F6' : '#94A3B8')}
+                        background={selectedArea === area.id ? '#ca8a04' : (area.popular ? '#eab308' : '#94A3B8')}
                         borderColor="#FFFFFF"
                         glyphColor="#FFFFFF"
                         scale={selectedArea === area.id ? 1.2 : 1}
@@ -153,7 +153,7 @@ export function ServiceAreaMap() {
             {(!mapLoaded || !process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && (
               <div className="w-full h-full flex items-center justify-center bg-gray-100">
                 <div className="text-center p-6">
-                  <MapPin className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                  <MapPin className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900">Map Loading...</h3>
                   <p className="mt-2 text-gray-600">
                     We provide driving lessons throughout Brisbane and surrounding suburbs.

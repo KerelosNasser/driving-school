@@ -61,7 +61,7 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -168,7 +168,7 @@ export default function AdminDashboard() {
                           <XAxis dataKey="month" />
                           <YAxis />
                           <Tooltip />
-                          <Bar dataKey="bookings" fill="#3b82f6" />
+                          <Bar dataKey="bookings" fill="#eab308" />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -207,7 +207,7 @@ export default function AdminDashboard() {
                 <CardContent>
                   <p className="text-gray-600">
                     This section will display a table of users with their details and status.
-                    You'll be able to view, edit, and manage user accounts.
+                    You&#39;ll be able to view, edit, and manage user accounts.
                   </p>
                   <div className="mt-8 text-center text-gray-500">
                     <Users className="h-12 w-12 mx-auto text-gray-400" />
@@ -227,7 +227,7 @@ export default function AdminDashboard() {
                 <CardContent>
                   <p className="text-gray-600">
                     This section will display a calendar view of all bookings.
-                    You'll be able to view, edit, and manage booking details.
+                    You&#39;ll be able to view, edit, and manage booking details.
                   </p>
                   <div className="mt-8 text-center text-gray-500">
                     <Calendar className="h-12 w-12 mx-auto text-gray-400" />
@@ -247,7 +247,7 @@ export default function AdminDashboard() {
                 <CardContent>
                   <p className="text-gray-600">
                     This section will display a table of payment transactions.
-                    You'll be able to view payment details, issue refunds, and generate reports.
+                    You&#39;ll be able to view payment details, issue refunds, and generate reports.
                   </p>
                   <div className="mt-8 text-center text-gray-500">
                     <CreditCard className="h-12 w-12 mx-auto text-gray-400" />

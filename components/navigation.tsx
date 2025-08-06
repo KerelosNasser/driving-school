@@ -25,7 +25,7 @@ export function Navigation() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <Car className="h-8 w-8 text-blue-600" />
+            <Car className="h-8 w-8 text-yellow-600" />
             <span className="font-bold text-xl text-gray-900">Brisbane Driving School</span>
           </Link>
 
@@ -35,7 +35,7 @@ export function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
+                className="text-gray-700 hover:text-yellow-600 transition-colors font-medium"
               >
                 {item.label}
               </Link>
@@ -54,7 +54,7 @@ export function Navigation() {
 
           {/* Auth & CTA */}
           <div className="hidden md:flex items-center space-x-4">
-            <a href="tel:+61400000000" className="flex items-center text-gray-700 hover:text-blue-600">
+            <a href="tel:+61400000000" className="flex items-center text-gray-700 hover:text-yellow-600">
               <Phone className="h-4 w-4 mr-1" />
               <span className="font-medium">0400 000 000</span>
             </a>
@@ -64,7 +64,7 @@ export function Navigation() {
                 {user ? (
                   <UserButton afterSignOutUrl="/" />
                 ) : (
-                  <SignInButton mode="modal">
+                  <SignInButton>
                     <Button variant="outline">Sign In</Button>
                   </SignInButton>
                 )}
@@ -93,7 +93,7 @@ export function Navigation() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
+                  className="text-gray-700 hover:text-yellow-600 transition-colors font-medium"
                   onClick={() => setIsOpen(false)}
                 >
                   {item.label}
@@ -116,7 +116,7 @@ export function Navigation() {
                     {user ? (
                       <UserButton afterSignOutUrl="/" />
                     ) : (
-                      <SignInButton mode="modal">
+                      <SignInButton>
                         <Button variant="outline" className="w-full">Sign In</Button>
                       </SignInButton>
                     )}

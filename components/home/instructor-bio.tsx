@@ -27,7 +27,7 @@ export function InstructorBio() {
               />
               
               {/* Experience badge */}
-              <div className="absolute top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-1">
+              <div className="absolute top-4 right-4 bg-yellow-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-1">
                 <Clock className="h-4 w-4" />
                 <span className="font-medium">15+ Years Experience</span>
               </div>
@@ -35,7 +35,7 @@ export function InstructorBio() {
             
             {/* Certification badges */}
             <div className="absolute -bottom-6 -right-6 bg-white p-4 rounded-lg shadow-lg flex items-center space-x-3">
-              <Award className="h-6 w-6 text-blue-600" />
+              <Award className="h-6 w-6 text-yellow-600" />
               <div>
                 <div className="font-semibold text-gray-900">Certified Instructor</div>
                 <div className="text-sm text-gray-600">Queensland Transport Approved</div>
@@ -59,7 +59,7 @@ export function InstructorBio() {
           >
             <div>
               <h2 className="text-3xl font-bold text-gray-900">Meet Your Instructor</h2>
-              <div className="mt-2 text-xl text-blue-600 font-medium">Michael Thompson</div>
+              <div className="mt-2 text-xl text-yellow-600 font-medium">Michael Thompson</div>
             </div>
             
             <p className="text-gray-700">
@@ -72,26 +72,26 @@ export function InstructorBio() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div className="flex items-center space-x-3">
-                <div className="bg-blue-100 p-2 rounded-full">
-                  <Car className="h-5 w-5 text-blue-600" />
+                <div className="bg-yellow-100 p-2 rounded-full">
+                  <Car className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div className="text-gray-700">Dual-control vehicle</div>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="bg-blue-100 p-2 rounded-full">
-                  <MapPin className="h-5 w-5 text-blue-600" />
+                <div className="bg-yellow-100 p-2 rounded-full">
+                  <MapPin className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div className="text-gray-700">All Brisbane suburbs</div>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="bg-blue-100 p-2 rounded-full">
-                  <Calendar className="h-5 w-5 text-blue-600" />
+                <div className="bg-yellow-100 p-2 rounded-full">
+                  <Calendar className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div className="text-gray-700">Flexible scheduling</div>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="bg-blue-100 p-2 rounded-full">
-                  <Award className="h-5 w-5 text-blue-600" />
+                <div className="bg-yellow-100 p-2 rounded-full">
+                  <Award className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div className="text-gray-700">Keys2drive accredited</div>
               </div>

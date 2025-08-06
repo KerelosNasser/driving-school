@@ -55,7 +55,7 @@ export default function AboutPage() {
       
       <main>
         {/* Hero Section */}
-        <section className="bg-blue-600 text-white py-16 md:py-24">
+        <section className="bg-yellow-600 text-white py-16 md:py-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -65,7 +65,7 @@ export default function AboutPage() {
               <h1 className="text-4xl md:text-5xl font-bold mb-4">
                 About Brisbane Driving School
               </h1>
-              <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+              <p className="text-xl text-yellow-100 max-w-3xl mx-auto">
                 Learn more about your instructor and the areas we cover in Brisbane
               </p>
             </motion.div>
@@ -93,7 +93,7 @@ export default function AboutPage() {
                   />
                   
                   {/* Experience badge */}
-                  <div className="absolute top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-1">
+                  <div className="absolute top-4 right-4 bg-yellow-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-1">
                     <Clock className="h-4 w-4" />
                     <span className="font-medium">15+ Years Experience</span>
                   </div>
@@ -101,7 +101,7 @@ export default function AboutPage() {
                 
                 {/* Certification badges */}
                 <div className="absolute -bottom-6 -right-6 bg-white p-4 rounded-lg shadow-lg flex items-center space-x-3">
-                  <Award className="h-6 w-6 text-blue-600" />
+                  <Award className="h-6 w-6 text-yellow-600" />
                   <div>
                     <div className="font-semibold text-gray-900">Certified Instructor</div>
                     <div className="text-sm text-gray-600">Queensland Transport Approved</div>
@@ -119,7 +119,7 @@ export default function AboutPage() {
               >
                 <div>
                   <h2 className="text-3xl font-bold text-gray-900">Meet Your Instructor</h2>
-                  <div className="mt-2 text-xl text-blue-600 font-medium">Michael Thompson</div>
+                  <div className="mt-2 text-xl text-yellow-600 font-medium">Michael Thompson</div>
                 </div>
                 
                 <p className="text-gray-700">
@@ -178,8 +178,8 @@ export default function AboutPage() {
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="bg-white rounded-xl p-6 shadow-md"
               >
-                <div className="rounded-full bg-blue-100 w-12 h-12 flex items-center justify-center mb-4">
-                  <GraduationCap className="h-6 w-6 text-blue-600" />
+                <div className="rounded-full bg-yellow-100 w-12 h-12 flex items-center justify-center mb-4">
+                  <GraduationCap className="h-6 w-6 text-yellow-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Certified Instructor</h3>
                 <p className="text-gray-700">
@@ -194,8 +194,8 @@ export default function AboutPage() {
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="bg-white rounded-xl p-6 shadow-md"
               >
-                <div className="rounded-full bg-blue-100 w-12 h-12 flex items-center justify-center mb-4">
-                  <Briefcase className="h-6 w-6 text-blue-600" />
+                <div className="rounded-full bg-yellow-100 w-12 h-12 flex items-center justify-center mb-4">
+                  <Briefcase className="h-6 w-6 text-yellow-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">15+ Years Experience</h3>
                 <p className="text-gray-700">
@@ -210,8 +210,8 @@ export default function AboutPage() {
                 transition={{ duration: 0.5, delay: 0.3 }}
                 className="bg-white rounded-xl p-6 shadow-md"
               >
-                <div className="rounded-full bg-blue-100 w-12 h-12 flex items-center justify-center mb-4">
-                  <Award className="h-6 w-6 text-blue-600" />
+                <div className="rounded-full bg-yellow-100 w-12 h-12 flex items-center justify-center mb-4">
+                  <Award className="h-6 w-6 text-yellow-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Keys2drive Accredited</h3>
                 <p className="text-gray-700">
@@ -250,7 +250,7 @@ export default function AboutPage() {
                 className="bg-gray-50 p-6 rounded-xl shadow-md"
               >
                 <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <MapPin className="h-5 w-5 text-blue-600 mr-2" />
+                  <MapPin className="h-5 w-5 text-yellow-600 mr-2" />
                   Covered Areas
                 </h3>
                 <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
@@ -259,14 +259,14 @@ export default function AboutPage() {
                       key={area.id}
                       className={`p-3 rounded-lg cursor-pointer transition-colors ${
                         selectedArea === area.id 
-                          ? 'bg-blue-100 border-l-4 border-blue-600' 
+                          ? 'bg-yellow-100 border-l-4 border-yellow-600' 
                           : 'bg-white hover:bg-gray-100 border-l-4 border-transparent'
                       }`}
                       onClick={() => setSelectedArea(area.id)}
                     >
                       <div className="font-medium text-gray-900">{area.name}</div>
                       {area.popular && (
-                        <div className="text-sm text-blue-600 mt-1">Popular area</div>
+                        <div className="text-sm text-yellow-600 mt-1">Popular area</div>
                       )}
                     </div>
                   ))}
@@ -299,7 +299,7 @@ export default function AboutPage() {
                         position={brisbaneCenter}
                         title="Brisbane Driving School Office"
                       >
-                        <div className="bg-blue-600 text-white px-3 py-2 rounded-lg shadow-md text-sm font-medium">
+                        <div className="bg-yellow-600 text-white px-3 py-2 rounded-lg shadow-md text-sm font-medium">
                           Main Office
                         </div>
                       </AdvancedMarker>
@@ -312,7 +312,7 @@ export default function AboutPage() {
                           onClick={() => setSelectedArea(area.id)}
                         >
                           <Pin
-                            background={selectedArea === area.id ? '#2563EB' : (area.popular ? '#3B82F6' : '#94A3B8')}
+                            background={selectedArea === area.id ? '#ca8a04' : (area.popular ? '#eab308' : '#94A3B8')}
                             borderColor="#FFFFFF"
                             glyphColor="#FFFFFF"
                             scale={selectedArea === area.id ? 1.2 : 1}
@@ -341,7 +341,7 @@ export default function AboutPage() {
                 {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
                   <div className="w-full h-full flex items-center justify-center bg-gray-100">
                     <div className="text-center p-6">
-                      <MapPin className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                      <MapPin className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
                       <h3 className="text-xl font-semibold text-gray-900">Map Loading...</h3>
                       <p className="mt-2 text-gray-600">
                         We provide driving lessons throughout Brisbane and surrounding suburbs.
@@ -381,8 +381,8 @@ export default function AboutPage() {
                 className="space-y-6"
               >
                 <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 p-2 rounded-full shrink-0 mt-1">
-                    <CheckCircle className="h-6 w-6 text-blue-600" />
+                  <div className="bg-yellow-100 p-2 rounded-full shrink-0 mt-1">
+                    <CheckCircle className="h-6 w-6 text-yellow-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">Personalized Instruction</h3>
@@ -393,8 +393,8 @@ export default function AboutPage() {
                 </div>
                 
                 <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 p-2 rounded-full shrink-0 mt-1">
-                    <CheckCircle className="h-6 w-6 text-blue-600" />
+                  <div className="bg-yellow-100 p-2 rounded-full shrink-0 mt-1">
+                    <CheckCircle className="h-6 w-6 text-yellow-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">Patience and Support</h3>
@@ -405,8 +405,8 @@ export default function AboutPage() {
                 </div>
                 
                 <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 p-2 rounded-full shrink-0 mt-1">
-                    <CheckCircle className="h-6 w-6 text-blue-600" />
+                  <div className="bg-yellow-100 p-2 rounded-full shrink-0 mt-1">
+                    <CheckCircle className="h-6 w-6 text-yellow-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">Flexible Scheduling</h3>
@@ -425,8 +425,8 @@ export default function AboutPage() {
                 className="space-y-6"
               >
                 <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 p-2 rounded-full shrink-0 mt-1">
-                    <CheckCircle className="h-6 w-6 text-blue-600" />
+                  <div className="bg-yellow-100 p-2 rounded-full shrink-0 mt-1">
+                    <CheckCircle className="h-6 w-6 text-yellow-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">Modern, Dual-Control Vehicle</h3>
@@ -437,8 +437,8 @@ export default function AboutPage() {
                 </div>
                 
                 <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 p-2 rounded-full shrink-0 mt-1">
-                    <CheckCircle className="h-6 w-6 text-blue-600" />
+                  <div className="bg-yellow-100 p-2 rounded-full shrink-0 mt-1">
+                    <CheckCircle className="h-6 w-6 text-yellow-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">Test Route Familiarity</h3>
@@ -449,8 +449,8 @@ export default function AboutPage() {
                 </div>
                 
                 <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 p-2 rounded-full shrink-0 mt-1">
-                    <CheckCircle className="h-6 w-6 text-blue-600" />
+                  <div className="bg-yellow-100 p-2 rounded-full shrink-0 mt-1">
+                    <CheckCircle className="h-6 w-6 text-yellow-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">Competitive Rates</h3>
@@ -467,11 +467,11 @@ export default function AboutPage() {
         {/* Contact Section */}
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-blue-600 rounded-xl text-white overflow-hidden shadow-xl">
+            <div className="bg-yellow-600 rounded-xl text-white overflow-hidden shadow-xl">
               <div className="grid grid-cols-1 md:grid-cols-2">
                 <div className="p-8 md:p-12">
                   <h2 className="text-3xl font-bold mb-4">Get in Touch</h2>
-                  <p className="text-blue-100 mb-6">
+                  <p className="text-yellow-100 mb-6">
                     Have questions or ready to book your first lesson? Contact me today!
                   </p>
                   
@@ -482,7 +482,7 @@ export default function AboutPage() {
                       </div>
                       <div>
                         <div className="font-medium">Phone</div>
-                        <a href="tel:+61400000000" className="text-blue-100 hover:text-white">
+                        <a href="tel:+61400000000" className="text-yellow-100 hover:text-white">
                           0400 000 000
                         </a>
                       </div>
@@ -494,7 +494,7 @@ export default function AboutPage() {
                       </div>
                       <div>
                         <div className="font-medium">Email</div>
-                        <a href="mailto:info@brisbanedrivingschool.com" className="text-blue-100 hover:text-white">
+                        <a href="mailto:info@brisbanedrivingschool.com" className="text-yellow-100 hover:text-white">
                           info@brisbanedrivingschool.com
                         </a>
                       </div>
@@ -506,7 +506,7 @@ export default function AboutPage() {
                       </div>
                       <div>
                         <div className="font-medium">Location</div>
-                        <div className="text-blue-100">
+                        <div className="text-yellow-100">
                           Brisbane, Queensland, Australia
                         </div>
                       </div>
@@ -515,7 +515,7 @@ export default function AboutPage() {
                   
                   <div className="mt-8">
                     <Button 
-                      className="bg-white text-blue-700 hover:bg-blue-50"
+                      className="bg-white text-yellow-700 hover:bg-yellow-50"
                       size="lg"
                       asChild
                     >
@@ -533,7 +533,7 @@ export default function AboutPage() {
                     alt="Contact us" 
                     className="h-full w-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600/80 to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-600/80 to-transparent"></div>
                 </div>
               </div>
             </div>

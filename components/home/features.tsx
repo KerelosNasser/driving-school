@@ -32,8 +32,8 @@ const FeatureItem = ({
       transition={{ duration: 0.5, delay }}
       className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow"
     >
-      <div className="rounded-full bg-blue-100 w-12 h-12 flex items-center justify-center mb-4">
-        <Icon className="h-6 w-6 text-blue-600" />
+      <div className="rounded-full bg-yellow-100 w-12 h-12 flex items-center justify-center mb-4">
+        <Icon className="h-6 w-6 text-yellow-600" />
       </div>
       <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
       <p className="text-gray-600">{description}</p>

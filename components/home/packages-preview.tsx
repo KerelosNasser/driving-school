@@ -164,7 +164,7 @@ export function PackagesPreview() {
                   </CardContent>
                   <CardFooter>
                     <Button 
-                      className={`w-full ${pkg.popular ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                      className={`w-full ${pkg.popular ? 'bg-yellow-600 hover:bg-yellow-700' : ''}`}
                       asChild
                     >
                       <Link href="/packages">

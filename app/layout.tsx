@@ -43,15 +43,6 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <header className="p-4 flex justify-end">
-            <SignedOut>
-              <SignInButton className="mr-4" />
-              <SignUpButton />
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </header>
           {children}
           <Toaster position="top-right" />
           {/* Free AI Chatbot Widget */}

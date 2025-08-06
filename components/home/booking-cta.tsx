@@ -7,7 +7,7 @@ import { Calendar, Phone, Mail, ArrowRight } from 'lucide-react';
 
 export function BookingCTA() {
   return (
-    <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+    <section className="py-20 bg-gradient-to-r from-yellow-600 to-yellow-800 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* CTA Content */}
@@ -21,7 +21,7 @@ export function BookingCTA() {
             <h2 className="text-3xl md:text-4xl font-bold leading-tight">
               Ready to Start Your Driving Journey?
             </h2>
-            <p className="text-xl text-blue-100">
+            <p className="text-xl text-yellow-100">
               Book your first lesson today and take the first step towards getting your license with Brisbane&apos;s most trusted driving instructor.
             </p>
             
@@ -36,20 +36,20 @@ export function BookingCTA() {
                 <div className="bg-white/20 p-2 rounded-full">
                   <Phone className="h-5 w-5" />
                 </div>
-                <div>Call us at <a href="tel:+61400000000" className="underline hover:text-blue-200">0400 000 000</a></div>
+                <div>Call us at <a href="tel:+61400000000" className="underline hover:text-yellow-200">0400 000 000</a></div>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="bg-white/20 p-2 rounded-full">
                   <Mail className="h-5 w-5" />
                 </div>
-                <div>Email us at <a href="mailto:info@brisbanedrivingschool.com" className="underline hover:text-blue-200">info@brisbanedrivingschool.com</a></div>
+                <div>Email us at <a href="mailto:info@brisbanedrivingschool.com" className="underline hover:text-yellow-200">info@brisbanedrivingschool.com</a></div>
               </div>
             </div>
             
             <div className="pt-4 flex flex-col sm:flex-row gap-4">
               <Button 
                 size="lg" 
-                className="bg-white text-blue-700 hover:bg-blue-50"
+                className="bg-white text-yellow-700 hover:bg-yellow-50"
                 asChild
               >
                 <Link href="/book">
@@ -79,7 +79,7 @@ export function BookingCTA() {
           >
             <div className="bg-white rounded-xl shadow-xl p-6 text-gray-900">
               <div className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                <Calendar className="h-5 w-5 text-blue-600 mr-2" />
+                <Calendar className="h-5 w-5 text-yellow-600 mr-2" />
                 Quick Booking Preview
               </div>
               
@@ -125,7 +125,7 @@ export function BookingCTA() {
               
               <div className="text-center">
                 <Button 
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-yellow-600 hover:bg-yellow-700"
                   asChild
                 >
                   <Link href="/book">

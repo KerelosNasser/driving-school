@@ -88,7 +88,7 @@ export function Footer() {
             <p className="text-gray-300">Book your driving lesson today and take the first step towards getting your license.</p>
             <Link 
               href="/book" 
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors"
+              className="inline-block bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded transition-colors"
             >
               Book Now
             </Link>

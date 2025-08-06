@@ -174,10 +174,10 @@ export function ReviewsPreview() {
                 variants={itemVariants}
                 className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow relative"
               >
-                <Quote className="absolute top-6 right-6 h-8 w-8 text-blue-100" />
+                <Quote className="absolute top-6 right-6 h-8 w-8 text-yellow-100" />
                 
                 <div className="flex items-center mb-4">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                  <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 font-bold">
                     {review.user_name.charAt(0)}
                   </div>
                   <div className="ml-3">
