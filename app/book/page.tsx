@@ -18,6 +18,7 @@ import { SignInButton } from '@clerk/nextjs';
 import { Calendar as CalendarIcon, Clock, MapPin, Car, CheckCircle, ArrowRight, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Package } from '@/lib/supabase';
+import { geocodeAddress, isInServiceArea } from '@/lib/geocoding';
 
 // Available time slots
 const timeSlots = [
@@ -119,47 +120,81 @@ export default function BookingPage() {
 
   // Function to handle form submission
   const handleSubmit = async () => {
-    if (!user || !selectedPackage || !selectedDate || !selectedTime || !selectedLocation) {
+    if (!user || !selectedPackage || !selectedDate || !selectedTime || !selectedLocation || !selectedPackageDetails) {
       return;
     }
 
     try {
       setLoading(true);
       
-      // Format date and time for database
+      // Format date and time
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       
-      // Create booking in Supabase
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert([
-          {
-            user_id: user.id,
-            package_id: selectedPackage,
+      // Validate location is in service area
+      const geoResult = await geocodeAddress(selectedLocation);
+      if (geoResult && !isInServiceArea(geoResult.lat, geoResult.lng)) {
+        alert('Sorry, the selected location is outside our service area. Please choose a different location.');
+        setLoading(false);
+        return;
+      }
+      
+      // Create Stripe checkout session
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          packageId: selectedPackage,
+          packageName: selectedPackageDetails.name,
+          price: selectedPackageDetails.price,
+          bookingDetails: {
+            userId: user.id,
+            userName: user.fullName || user.firstName || '',
+            userEmail: user.primaryEmailAddress?.emailAddress || '',
             date: dateStr,
             time: selectedTime,
-            status: 'pending',
+            location: selectedLocation,
+            hours: selectedPackageDetails.hours,
             notes: notes,
-            // In a real implementation, we would create a Google Calendar event here
-            // and store the event ID in google_calendar_event_id
-          }
-        ])
-        .select();
+            latitude: geoResult?.lat,
+            longitude: geoResult?.lng,
+          },
+        }),
+      });
+      
+      const { sessionId, url, error } = await response.json();
       
       if (error) {
-        console.error('Error creating booking:', error);
-        alert('There was an error creating your booking. Please try again.');
-      } else {
-        // Booking successful
-        setBookingSubmitted(true);
+        console.error('Error creating checkout session:', error);
+        alert('There was an error processing your payment. Please try again.');
+      } else if (url) {
+        // Save booking to Supabase with pending status
+        const { data: bookingData, error: bookingError } = await supabase
+          .from('bookings')
+          .insert([
+            {
+              user_id: user.id,
+              package_id: selectedPackage,
+              date: dateStr,
+              time: selectedTime,
+              status: 'pending_payment',
+              notes: notes,
+              stripe_session_id: sessionId,
+            }
+          ])
+          .select();
         
-        // In a real implementation, we would redirect to a payment page here
-        // For now, we'll just show a success message
+        if (bookingError) {
+          console.error('Error saving booking:', bookingError);
+        }
+        
+        // Redirect to Stripe checkout
+        window.location.href = url;
       }
     } catch (error) {
       console.error('Error in booking submission:', error);
       alert('There was an error creating your booking. Please try again.');
-    } finally {
       setLoading(false);
     }
   };

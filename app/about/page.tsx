@@ -19,29 +19,7 @@ import {
   Briefcase,
   GraduationCap
 } from 'lucide-react';
-import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
-
-// Service areas in Brisbane
-const serviceAreas = [
-  { id: 1, name: 'Brisbane CBD', lat: -27.4698, lng: 153.0251, popular: true },
-  { id: 2, name: 'South Brisbane', lat: -27.4809, lng: 153.0176, popular: true },
-  { id: 3, name: 'West End', lat: -27.4818, lng: 153.0120, popular: false },
-  { id: 4, name: 'Fortitude Valley', lat: -27.4570, lng: 153.0344, popular: true },
-  { id: 5, name: 'New Farm', lat: -27.4677, lng: 153.0520, popular: false },
-  { id: 6, name: 'Paddington', lat: -27.4610, lng: 153.0024, popular: false },
-  { id: 7, name: 'Milton', lat: -27.4709, lng: 152.9999, popular: false },
-  { id: 8, name: 'Toowong', lat: -27.4845, lng: 152.9928, popular: true },
-  { id: 9, name: 'St Lucia', lat: -27.4975, lng: 153.0095, popular: false },
-  { id: 10, name: 'Indooroopilly', lat: -27.5016, lng: 152.9719, popular: true },
-  { id: 11, name: 'Kelvin Grove', lat: -27.4476, lng: 153.0153, popular: false },
-  { id: 12, name: 'Chermside', lat: -27.3861, lng: 153.0344, popular: true },
-  { id: 13, name: 'Carindale', lat: -27.5047, lng: 153.1000, popular: false },
-  { id: 14, name: 'Mount Gravatt', lat: -27.5397, lng: 153.0785, popular: false },
-  { id: 15, name: 'Sunnybank', lat: -27.5777, lng: 153.0571, popular: true },
-  { id: 16, name: 'Wynnum', lat: -27.4418, lng: 153.1735, popular: false },
-  { id: 17, name: 'Sandgate', lat: -27.3200, lng: 153.0700, popular: false },
-  { id: 18, name: 'The Gap', lat: -27.4447, lng: 152.9500, popular: false },
-];
+import LeafletServiceAreaMap, { serviceAreas } from '@/components/maps/LeafletServiceAreaMap';
 
 export default function AboutPage() {
   const [selectedArea, setSelectedArea] = useState<number | null>(null);
@@ -355,7 +333,7 @@ export default function AboutPage() {
                 </div>
               </motion.div>
 
-              {/* Google Map */}
+              {/* Leaflet Map */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
@@ -363,71 +341,10 @@ export default function AboutPage() {
                 transition={{ duration: 0.5 }}
                 className="lg:col-span-2 rounded-xl overflow-hidden shadow-lg h-[500px]"
               >
-                {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-                  <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
-                    <Map
-                      defaultCenter={brisbaneCenter}
-                      defaultZoom={12}
-                      mapId="driving-school-map"
-                      gestureHandling="greedy"
-                      disableDefaultUI={false}
-                      className="w-full h-full"
-                    >
-                      {/* Main office marker */}
-                      <AdvancedMarker 
-                        position={brisbaneCenter}
-                        title="Brisbane Driving School Office"
-                      >
-                        <div className="bg-yellow-600 text-white px-3 py-2 rounded-lg shadow-md text-sm font-medium">
-                          Main Office
-                        </div>
-                      </AdvancedMarker>
-                      
-                      {/* Service area markers */}
-                      {serviceAreas.map((area) => (
-                        <AdvancedMarker
-                          key={area.id}
-                          position={{ lat: area.lat, lng: area.lng }}
-                          onClick={() => setSelectedArea(area.id)}
-                        >
-                          <Pin
-                            background={selectedArea === area.id ? '#ca8a04' : (area.popular ? '#eab308' : '#94A3B8')}
-                            borderColor="#FFFFFF"
-                            glyphColor="#FFFFFF"
-                            scale={selectedArea === area.id ? 1.2 : 1}
-                          />
-                          
-                          {selectedArea === area.id && (
-                            <InfoWindow
-                              position={{ lat: area.lat, lng: area.lng }}
-                              onCloseClick={() => setSelectedArea(null)}
-                            >
-                              <div className="p-2">
-                                <h3 className="font-medium text-gray-900">{area.name}</h3>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  Driving lessons available in this area.
-                                </p>
-                              </div>
-                            </InfoWindow>
-                          )}
-                        </AdvancedMarker>
-                      ))}
-                    </Map>
-                  </APIProvider>
-                )}
-                
-                {/* Fallback if map can't load */}
-                {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                    <div className="text-center p-6">
-                      <MapPin className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-gray-900">Map Loading...</h3>
-                      <p className="mt-2 text-gray-600">
-                        We provide driving lessons throughout Brisbane and surrounding suburbs.
-                      </p>
-                    </div>
-                  </div>
-                )}
+                <LeafletServiceAreaMap 
+                  selectedAreaId={selectedArea}
+                  onAreaSelect={setSelectedArea}
+                />
               </motion.div>
             </div>
           </div>
