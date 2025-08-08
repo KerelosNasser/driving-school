@@ -32,7 +32,7 @@ interface ServiceAreaMapProps {
   selectedAreaId?: number | null;
 }
 
-const LeafletServiceAreaMapComponent = ({ onAreaSelect, selectedAreaId }: ServiceAreaMapProps) => {
+export const LeafletServiceAreaMapComponent = ({ onAreaSelect, selectedAreaId }: ServiceAreaMapProps) => {
   const [map, setMap] = useState<L.Map | null>(null);
   const [markers, setMarkers] = useState<Map<number, L.Marker>>(new Map());
 
@@ -218,11 +218,11 @@ const LeafletServiceAreaMapComponent = ({ onAreaSelect, selectedAreaId }: Servic
   );
 };
 
-// Export as dynamic component to avoid SSR issues
-const LeafletServiceAreaMap = dynamic(
-  () => Promise.resolve(LeafletServiceAreaMapComponent),
-  { 
-    ssr: false,
+// Export as dynamic component with SSR disabled
+const DynamicLeafletMap = dynamic(
+  () => import('./LeafletServiceAreaMap').then(mod => mod.LeafletServiceAreaMapComponent),
+  {
+    ssr: false, // Disable server-side rendering for this component
     loading: () => (
       <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center rounded-xl">
         <p>Loading map...</p>
@@ -231,6 +231,8 @@ const LeafletServiceAreaMap = dynamic(
   }
 );
 
-export default LeafletServiceAreaMap;
+// Export the dynamic component as default
+export default DynamicLeafletMap;
 
+// Export service areas separately
 export { serviceAreas };
