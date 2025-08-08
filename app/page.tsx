@@ -11,7 +11,6 @@ import {Hero} from "@/components/home/hero";
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       <main>
         <Hero />
         <Features />
@@ -21,7 +20,6 @@ export default function Home() {
         <ReviewsPreview />
         <BookingCTA />
       </main>
-      <Footer />
     </div>
   );
 }

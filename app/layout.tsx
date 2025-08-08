@@ -2,14 +2,11 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import {
   ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
 } from '@clerk/nextjs';
-import { Toaster } from 'react-hot-toast';
+import { Toaster } from 'sonner';
 import "./globals.css";
+import {Navigation} from "@/components/navigation";
+import {Footer} from "@/components/footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,8 +40,10 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
+          <Navigation />
           {children}
-          <Toaster position="top-right" />
+          <Footer />
+          <Toaster richColors />
           {/* Free AI Chatbot Widget */}
           <script
             dangerouslySetInnerHTML={{

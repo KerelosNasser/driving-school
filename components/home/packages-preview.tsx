@@ -137,10 +137,10 @@ export function PackagesPreview() {
           >
             {packages.map((pkg) => (
               <motion.div key={pkg.id} variants={itemVariants}>
-                <Card className={`h-full flex flex-col ${pkg.popular ? 'border-blue-500 shadow-lg' : ''}`}>
+                <Card className={`h-full flex flex-col ${pkg.popular ? 'border-yellow-500 shadow-lg' : ''}`}>
                   <CardHeader className="pb-4">
                     {pkg.popular && (
-                      <Badge className="self-start mb-2 bg-blue-500">Most Popular</Badge>
+                      <Badge className="self-start mb-2 bg-yellow-500">Most Popular</Badge>
                     )}
                     <CardTitle className="text-2xl">{pkg.name}</CardTitle>
                     <CardDescription>{pkg.description}</CardDescription>

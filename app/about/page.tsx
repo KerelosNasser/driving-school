@@ -51,24 +51,103 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       
       <main>
         {/* Hero Section */}
-        <section className="bg-yellow-600 text-white py-16 md:py-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                About Brisbane Driving School
-              </h1>
-              <p className="text-xl text-yellow-100 max-w-3xl mx-auto">
-                Learn more about your instructor and the areas we cover in Brisbane
-              </p>
-            </motion.div>
+        <section className="relative bg-gradient-to-r from-yellow-700 via-yellow-600 to-yellow-500 text-white overflow-hidden">
+          {/* Background pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div 
+              className="absolute inset-0" 
+              style={{
+                backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                backgroundSize: '30px 30px',
+              }} 
+            />
+          </div>
+          
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-center lg:text-left"
+              >
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+                  About Brisbane <span className="text-yellow-200">Driving School</span>
+                </h1>
+                <p className="text-xl text-yellow-100 max-w-2xl mx-auto lg:mx-0">
+                  Meet our professional instructor and discover the areas we serve across Brisbane
+                </p>
+                <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                  <Button 
+                    size="lg" 
+                    className="bg-white text-yellow-700 hover:bg-yellow-50 font-bold px-8 py-6 rounded-xl"
+                    asChild
+                  >
+                    <Link href="/book">
+                      Book a Lesson
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Link>
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="border-white text-white bg-white/10 hover:bg-white/20 font-bold px-8 py-6 rounded-xl backdrop-blur-sm"
+                    asChild
+                  >
+                    <Link href="#contact">
+                      Contact Us
+                    </Link>
+                  </Button>
+                </div>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.7 }}
+                className="hidden lg:block"
+              >
+                <div className="relative">
+                  <div className="absolute -top-6 -right-6 h-32 w-32 bg-yellow-400 rounded-full opacity-20 blur-3xl"></div>
+                  <div className="absolute -bottom-6 -left-6 h-40 w-40 bg-yellow-800 rounded-full opacity-20 blur-3xl"></div>
+                  
+                  <div className="relative bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-2xl">
+                    <div className="flex items-center space-x-4">
+                      <div className="bg-yellow-500/20 p-3 rounded-full">
+                        <Car className="h-8 w-8 text-yellow-300" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold">15+</div>
+                        <div className="text-yellow-100">Years Experience</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4 mt-4">
+                      <div className="bg-yellow-500/20 p-3 rounded-full">
+                        <Award className="h-8 w-8 text-yellow-300" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold">500+</div>
+                        <div className="text-yellow-100">Students Taught</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4 mt-4">
+                      <div className="bg-yellow-500/20 p-3 rounded-full">
+                        <CheckCircle className="h-8 w-8 text-yellow-300" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold">98%</div>
+                        <div className="text-yellow-100">Pass Rate</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           </div>
         </section>
 
@@ -558,8 +637,6 @@ export default function AboutPage() {
           </div>
         </section>
       </main>
-      
-      <Footer />
     </div>
   );
 }

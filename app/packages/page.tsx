@@ -132,11 +132,9 @@ export default function PackagesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
-      
       <main>
         {/* Hero Section */}
-        <section className="bg-blue-600 text-white py-16 md:py-24">
+        <section className="bg-yellow-600 text-white py-16 md:py-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -146,7 +144,7 @@ export default function PackagesPage() {
               <h1 className="text-4xl md:text-5xl font-bold mb-4">
                 Driving Lesson Packages
               </h1>
-              <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+              <p className="text-xl text-yellow-100 max-w-3xl mx-auto">
                 Choose the package that best suits your needs and start your journey to becoming a confident driver.
               </p>
             </motion.div>
@@ -177,14 +175,14 @@ export default function PackagesPage() {
                       <Card 
                         className={`h-full flex flex-col cursor-pointer transition-all ${
                           selectedPackage === pkg.id 
-                            ? 'ring-2 ring-blue-500 shadow-lg transform scale-[1.02]' 
+                            ? 'ring-2 ring-yellow-500 shadow-lg transform scale-[1.02]' 
                             : 'hover:shadow-md'
-                        } ${pkg.popular ? 'border-blue-500' : ''}`}
+                        } ${pkg.popular ? 'border-yellow-500' : ''}`}
                         onClick={() => setSelectedPackage(pkg.id)}
                       >
                         <CardHeader className="pb-4">
                           {pkg.popular && (
-                            <Badge className="self-start mb-2 bg-blue-500">Most Popular</Badge>
+                            <Badge className="self-start mb-2 bg-yellow-500">Most Popular</Badge>
                           )}
                           <CardTitle className="text-2xl">{pkg.name}</CardTitle>
                           <CardDescription>{pkg.description}</CardDescription>
@@ -210,8 +208,8 @@ export default function PackagesPage() {
                           <Button 
                             className={`w-full ${
                               selectedPackage === pkg.id 
-                                ? 'bg-blue-600 hover:bg-blue-700' 
-                                : pkg.popular ? 'bg-blue-600 hover:bg-blue-700' : ''
+                                ? 'bg-yellow-600 hover:bg-yellow-700' 
+                                : pkg.popular ? 'bg-yellow-600 hover:bg-yellow-700' : ''
                             }`}
                             onClick={() => setSelectedPackage(pkg.id)}
                           >
@@ -238,19 +236,19 @@ export default function PackagesPage() {
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                         <div className="flex flex-col items-center p-6 bg-white rounded-lg shadow-sm">
-                          <Clock className="h-8 w-8 text-blue-600 mb-3" />
+                          <Clock className="h-8 w-8 text-yellow-600 mb-3" />
                           <div className="text-2xl font-bold">{selectedPackageDetails.hours} Hours</div>
                           <div className="text-gray-600 text-center">Of professional driving instruction</div>
                         </div>
                         
                         <div className="flex flex-col items-center p-6 bg-white rounded-lg shadow-sm">
-                          <Car className="h-8 w-8 text-blue-600 mb-3" />
+                          <Car className="h-8 w-8 text-yellow-600 mb-3" />
                           <div className="text-2xl font-bold">Dual Control</div>
                           <div className="text-gray-600 text-center">Modern vehicle with safety features</div>
                         </div>
                         
                         <div className="flex flex-col items-center p-6 bg-white rounded-lg shadow-sm">
-                          <ShieldCheck className="h-8 w-8 text-blue-600 mb-3" />
+                          <ShieldCheck className="h-8 w-8 text-yellow-600 mb-3" />
                           <div className="text-2xl font-bold">Licensed</div>
                           <div className="text-gray-600 text-center">Queensland Transport approved instructor</div>
                         </div>
@@ -333,18 +331,18 @@ export default function PackagesPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-16 bg-blue-600 text-white">
+        <section className="py-16 bg-yellow-600 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl font-bold mb-4">
               Ready to Start Your Driving Journey?
             </h2>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto mb-8">
+            <p className="text-xl text-yellow-100 max-w-3xl mx-auto mb-8">
               Book your first lesson today and take the first step towards getting your license.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button 
                 size="lg" 
-                className="bg-white text-blue-700 hover:bg-blue-50"
+                className="bg-white text-yellow-700 hover:bg-yellow-50"
                 asChild
               >
                 <Link href="/book">
@@ -366,8 +364,6 @@ export default function PackagesPage() {
           </div>
         </section>
       </main>
-      
-      <Footer />
     </div>
   );
 }

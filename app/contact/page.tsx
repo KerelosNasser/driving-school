@@ -11,7 +11,6 @@ import { Mail, Phone, MapPin } from "lucide-react";
 export default function ContactPage() {
   return (
     <div className="flex flex-col min-h-screen">
-      <Navigation />
       <main className="flex-grow bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24">
           <div className="grid md:grid-cols-2 gap-12">
@@ -82,7 +81,6 @@ export default function ContactPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

@@ -176,7 +176,7 @@ export default function BookingPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -185,11 +185,10 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       
       <main>
         {/* Hero Section */}
-        <section className="bg-blue-600 text-white py-16">
+        <section className="bg-yellow-600 text-white py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -199,7 +198,7 @@ export default function BookingPage() {
               <h1 className="text-4xl font-bold mb-4">
                 Book Your Driving Lesson
               </h1>
-              <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+              <p className="text-xl text-yellow-100 max-w-3xl mx-auto">
                 Select your package, choose a date and time, and get ready to start your driving journey
               </p>
             </motion.div>
@@ -281,25 +280,25 @@ export default function BookingPage() {
                 {/* Progress Steps */}
                 <div className="bg-gray-50 px-6 py-4 border-b">
                   <div className="flex justify-between">
-                    <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
+                    <div className={`flex items-center ${step >= 1 ? 'text-yellow-600' : 'text-gray-400'}`}>
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 ${
-                        step >= 1 ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'
+                        step >= 1 ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-200 text-gray-400'
                       }`}>
                         1
                       </div>
                       <span className="hidden sm:inline font-medium">Select Package</span>
                     </div>
-                    <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
+                    <div className={`flex items-center ${step >= 2 ? 'text-yellow-600' : 'text-gray-400'}`}>
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 ${
-                        step >= 2 ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'
+                        step >= 2 ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-200 text-gray-400'
                       }`}>
                         2
                       </div>
                       <span className="hidden sm:inline font-medium">Choose Date & Time</span>
                     </div>
-                    <div className={`flex items-center ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
+                    <div className={`flex items-center ${step >= 3 ? 'text-yellow-600' : 'text-gray-400'}`}>
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 ${
-                        step >= 3 ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'
+                        step >= 3 ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-200 text-gray-400'
                       }`}>
                         3
                       </div>
@@ -327,8 +326,8 @@ export default function BookingPage() {
                               key={pkg.id}
                               className={`border rounded-lg p-4 cursor-pointer transition-all ${
                                 selectedPackage === pkg.id 
-                                  ? 'border-blue-500 bg-blue-50' 
-                                  : 'border-gray-200 hover:border-blue-200'
+                                  ? 'border-yellow-500 bg-yellow-50' 
+                                  : 'border-gray-200 hover:border-yellow-200'
                               }`}
                               onClick={() => setSelectedPackage(pkg.id)}
                             >
@@ -342,7 +341,7 @@ export default function BookingPage() {
                                     <div className="font-bold text-lg">${pkg.price.toFixed(0)}</div>
                                   </div>
                                   <p className="text-gray-600 mt-1">{pkg.description}</p>
-                                  <div className="text-sm text-blue-600 mt-2">{pkg.hours} hours of driving lessons</div>
+                                  <div className="text-sm text-yellow-600 mt-2">{pkg.hours} hours of driving lessons</div>
                                 </div>
                               </div>
                             </div>
@@ -403,8 +402,8 @@ export default function BookingPage() {
                                       !available 
                                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                                         : selectedTime === time
-                                          ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                                          : 'bg-white border border-gray-200 hover:border-blue-300 text-gray-700'
+                                          ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                                          : 'bg-white border border-gray-200 hover:border-yellow-300 text-gray-700'
                                     }`}
                                     onClick={() => available && setSelectedTime(time)}
                                     disabled={!available}
@@ -469,7 +468,7 @@ export default function BookingPage() {
                       
                       <div className="space-y-4">
                         <div className="flex items-start">
-                          <Car className="h-5 w-5 text-blue-600 mt-0.5 mr-3 shrink-0" />
+                          <Car className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 shrink-0" />
                           <div>
                             <div className="font-medium">{selectedPackageDetails.name}</div>
                             <div className="text-gray-600">{selectedPackageDetails.hours} hours of driving lessons</div>
@@ -477,7 +476,7 @@ export default function BookingPage() {
                         </div>
                         
                         <div className="flex items-start">
-                          <CalendarIcon className="h-5 w-5 text-blue-600 mt-0.5 mr-3 shrink-0" />
+                          <CalendarIcon className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 shrink-0" />
                           <div>
                             <div className="font-medium">Date</div>
                             <div className="text-gray-600">
@@ -487,7 +486,7 @@ export default function BookingPage() {
                         </div>
                         
                         <div className="flex items-start">
-                          <Clock className="h-5 w-5 text-blue-600 mt-0.5 mr-3 shrink-0" />
+                          <Clock className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 shrink-0" />
                           <div>
                             <div className="font-medium">Time</div>
                             <div className="text-gray-600">{selectedTime}</div>
@@ -495,7 +494,7 @@ export default function BookingPage() {
                         </div>
                         
                         <div className="flex items-start">
-                          <MapPin className="h-5 w-5 text-blue-600 mt-0.5 mr-3 shrink-0" />
+                          <MapPin className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 shrink-0" />
                           <div>
                             <div className="font-medium">Pick-up Location</div>
                             <div className="text-gray-600">{selectedLocation}</div>
@@ -523,9 +522,9 @@ export default function BookingPage() {
                       ></textarea>
                     </div>
                     
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-start">
-                      <Info className="h-5 w-5 text-blue-600 mt-0.5 mr-3 shrink-0" />
-                      <div className="text-sm text-blue-800">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-start">
+                      <Info className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 shrink-0" />
+                      <div className="text-sm text-yellow-800">
                         <p className="font-medium">Payment Information</p>
                         <p className="mt-1">
                           You&apos;ll be redirected to our secure payment page after confirming your booking.
@@ -566,8 +565,6 @@ export default function BookingPage() {
           </div>
         </section>
       </main>
-      
-      <Footer />
     </div>
   );
 }

@@ -215,11 +215,9 @@ export default function ReviewsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
-      
       <main>
         {/* Hero Section */}
-        <section className="bg-blue-600 text-white py-16 md:py-24">
+        <section className="bg-yellow-600 text-white py-16 md:py-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -229,7 +227,7 @@ export default function ReviewsPage() {
               <h1 className="text-4xl md:text-5xl font-bold mb-4">
                 Student Reviews
               </h1>
-              <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+              <p className="text-xl text-yellow-100 max-w-3xl mx-auto">
                 See what our students have to say about their experience with Brisbane Driving School
               </p>
             </motion.div>
@@ -273,7 +271,7 @@ export default function ReviewsPage() {
               <div className="text-center md:text-right">
                 <p className="text-gray-700 mb-4">Had a great experience?</p>
                 <Button asChild>
-                  <Link href="/contact">
+                  <Link href="/reviews/submit">
                     Leave a Review
                     <ThumbsUp className="ml-2 h-4 w-4" />
                   </Link>
@@ -294,7 +292,7 @@ export default function ReviewsPage() {
                 </div>
                 <input
                   type="text"
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
                   placeholder="Search reviews..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -310,7 +308,7 @@ export default function ReviewsPage() {
                       key={rating === null ? 'all' : rating}
                       className={`px-3 py-1 rounded-full text-sm ${
                         filterRating === rating 
-                          ? 'bg-blue-600 text-white' 
+                          ? 'bg-yellow-600 text-white' 
                           : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
                       }`}
                       onClick={() => setFilterRating(rating)}
@@ -358,10 +356,10 @@ export default function ReviewsPage() {
                     variants={itemVariants}
                     className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow relative"
                   >
-                    <Quote className="absolute top-6 right-6 h-8 w-8 text-blue-100" />
+                    <Quote className="absolute top-6 right-6 h-8 w-8 text-yellow-100" />
                     
                     <div className="flex items-center mb-4">
-                      <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
+                      <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 font-bold text-lg">
                         {review.user_name.charAt(0)}
                       </div>
                       <div className="ml-3">
@@ -391,18 +389,18 @@ export default function ReviewsPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-16 bg-blue-600 text-white">
+        <section className="py-16 bg-yellow-600 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl font-bold mb-4">
               Ready to Start Your Driving Journey?
             </h2>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto mb-8">
+            <p className="text-xl text-yellow-100 max-w-3xl mx-auto mb-8">
               Join our satisfied students and book your first lesson today.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button 
                 size="lg" 
-                className="bg-white text-blue-700 hover:bg-blue-50"
+                className="bg-white text-yellow-700 hover:bg-yellow-50"
                 asChild
               >
                 <Link href="/book">
@@ -413,7 +411,7 @@ export default function ReviewsPage() {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="border-white text-white hover:bg-white/10"
+                className="border-white text-white bg-white/10"
                 asChild
               >
                 <Link href="/packages">
@@ -424,8 +422,6 @@ export default function ReviewsPage() {
           </div>
         </section>
       </main>
-      
-      <Footer />
     </div>
   );
 }

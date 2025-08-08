@@ -119,8 +119,8 @@ export function Hero() {
             </div>
             
             {/* Decorative elements */}
-            <div className="absolute -top-6 -right-6 h-24 w-24 bg-yellow-950 rounded-full opacity-70 blur-xl"></div>
-            <div className="absolute -bottom-8 -left-8 h-32 w-32 bg-yellow-500 rounded-full opacity-70 blur-xl"></div>
+            <div className="absolute top-14 -right-1 h-24 w-24 bg-yellow-950 rounded-full opacity-70 blur-xl"></div>
+            <div className="absolute -bottom-3 left-12 h-32 w-32 bg-yellow-500 rounded-full opacity-70 blur-xl"></div>
           </motion.div>
         </div>
       </div>
