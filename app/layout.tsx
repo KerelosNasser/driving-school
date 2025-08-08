@@ -20,6 +20,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Brisbane Driving School - Professional Driving Lessons",
+  icons: {
+    icon: "./car.ico",
+    shortcut: "./car.ico",
+  },
   description: "Learn to drive with Brisbane's most trusted driving school. Professional instructors, flexible scheduling, and comprehensive packages.",
   keywords: "driving lessons Brisbane, driving school, learn to drive, driving instructor",
   openGraph: {
