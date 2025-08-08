@@ -3,13 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Navigation } from '@/components/navigation';
-import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { 
   Award, 
-  Calendar, 
-  Car, 
+  Car,
   Clock, 
   MapPin, 
   Phone, 
@@ -25,8 +22,6 @@ export default function AboutPage() {
   const [selectedArea, setSelectedArea] = useState<number | null>(null);
   
   // Brisbane center coordinates
-  const brisbaneCenter = { lat: -27.4698, lng: 153.0251 };
-
   return (
     <div className="min-h-screen bg-background">
       
