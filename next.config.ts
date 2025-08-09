@@ -23,9 +23,6 @@ const nextConfig: NextConfig = {
   },
   // Enable strict mode for better error catching
   reactStrictMode: true,
-  // Optimize production builds
-  swcMinify: true,
-  // Enable experimental features for better performance
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-*', 'framer-motion'],
   },
