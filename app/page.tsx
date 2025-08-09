@@ -1,5 +1,4 @@
-import { Navigation } from "@/components/navigation";
-import { Footer } from "@/components/footer";
+
 import { Features } from "@/components/home/features";
 import { PackagesPreview } from "@/components/home/packages-preview";
 import { InstructorBio } from "@/components/home/instructor-bio";
