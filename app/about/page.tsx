@@ -16,7 +16,13 @@ import {
   Briefcase,
   GraduationCap
 } from 'lucide-react';
-import LeafletServiceAreaMap, { serviceAreas } from '@/components/maps/LeafletServiceAreaMap';
+import { serviceAreas } from '@/components/maps/LeafletServiceAreaMap';
+import dynamic from 'next/dynamic';
+
+const LeafletServiceAreaMap = dynamic(() => import('@/components/maps/LeafletServiceAreaMap'), { 
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-gray-200 animate-pulse" />
+});
 
 export default function AboutPage() {
   const [selectedArea, setSelectedArea] = useState<number | null>(null);
