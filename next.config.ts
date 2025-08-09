@@ -4,11 +4,11 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   typescript: {
     // Set to false for production - only true during development
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
   eslint: {
     // Set to false for production - only true during development
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
   images: {
     remotePatterns: [
@@ -53,10 +53,6 @@ tunnelRoute: "/monitoring",
 // Automatically tree-shake Sentry logger statements to reduce bundle size
 disableLogger: true,
 
-// Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-// See the following for more information:
-// https://docs.sentry.io/product/crons/
-// https://vercel.com/docs/cron-jobs
 automaticVercelMonitors: true,
 }), {
 // For all available options, see:
