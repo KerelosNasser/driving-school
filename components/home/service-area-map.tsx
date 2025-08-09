@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin } from 'lucide-react';
-import LeafletServiceAreaMap, { serviceAreas } from '@/components/maps/LeafletServiceAreaMap';
+import LeafletServiceAreaMap from '@/components/maps/LeafletServiceAreaMap';
+import { serviceAreas } from '@/lib/data';
 
 export function ServiceAreaMap() {
   const [selectedArea, setSelectedArea] = useState<number | null>(null);

@@ -3,7 +3,7 @@ import { Star, ArrowRight, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import type { Review } from '@/lib/types';
+import {Review} from "@/lib/types";
 
 // Fallback review data in case the Supabase fetch fails
 const fallbackReviews: Review[] = [
@@ -50,7 +50,15 @@ async function getReviews() {
       console.error('Error fetching reviews or no reviews found, using fallback.');
       return fallbackReviews;
     }
-    return data as Review[];
+
+    // Ensure all required fields have proper values
+    return data.map(review => ({
+      ...review,
+      user_name: review.user_name || 'Anonymous',
+      comment: review.comment || '',
+      rating: Math.min(5, Math.max(1, review.rating || 5)), // Ensure rating is between 1-5
+      created_at: review.created_at || new Date().toISOString()
+    })) as Review[];
   } catch (error) {
     console.error('Error in reviews fetch:', error);
     return fallbackReviews;

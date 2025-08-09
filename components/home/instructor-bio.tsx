@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Award, Star, Calendar, Clock, MapPin, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function InstructorBio() {
   return (
@@ -19,11 +20,13 @@ export function InstructorBio() {
             className="relative"
           >
             <div className="relative rounded-lg overflow-hidden shadow-xl">
-              {/* Placeholder for actual image - in production, use next/image */}
-              <img 
+              <Image 
                 src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=987&q=80" 
                 alt="Michael Thompson - Driving Instructor" 
+                width={600}
+                height={600}
                 className="w-full h-auto object-cover rounded-lg"
+                priority
               />
               
               {/* Experience badge */}
