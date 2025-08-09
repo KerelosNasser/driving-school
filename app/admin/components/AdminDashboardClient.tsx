@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -11,45 +11,8 @@ import { ReviewsTab } from './ReviewsTab';
 import { CalendarTab } from './CalendarTab';
 import { MapTab } from './MapTab';
 import { FormsTab } from './FormsTab';
-import { MergedUser } from '../page'; // Import the MergedUser type
-
-// Define types for our data
-interface Review {
-  id: string;
-  user_id: string;
-  user_name: string;
-  rating: number;
-  comment: string;
-  approved: boolean;
-  created_at: string;
-}
-
-interface User {
-  id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  created_at: string;
-  clerk_id: string;
-}
-
-interface Package {
-  id: string;
-  name: string;
-  price: number;
-}
-
-interface Booking {
-  id: string;
-  user_id: string;
-  package_id: string | null;
-  date: string;
-  time: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  created_at: string;
-  users: User;
-  packages: Package | null;
-}
+import { MergedUser } from '../page';
+import { Booking, Review } from '@/lib/types';
 
 interface AdminDashboardClientProps {
   initialUsers: MergedUser[];
@@ -62,10 +25,18 @@ export function AdminDashboardClient({
   initialReviews,
   initialBookings,
 }: AdminDashboardClientProps) {
-  const [users, setUsers] = useState<MergedUser[]>(initialUsers);
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [loading, setLoading] = useState(false);
+
+  // Handler for booking updates
+  const handleBookingUpdate = useCallback((updatedBooking: Booking) => {
+    setBookings(prevBookings => 
+      prevBookings.map(booking => 
+        booking.id === updatedBooking.id ? updatedBooking : booking
+      )
+    );
+  }, []);
 
   // Handler for approving or rejecting reviews
   const handleReviewApproval = async (reviewId: string, approved: boolean) => {
@@ -78,7 +49,6 @@ export function AdminDashboardClient({
 
       if (error) throw error;
 
-      // Update the local state to reflect the change
       setReviews((prevReviews) =>
         prevReviews.map((review) =>
           review.id === reviewId ? { ...review, approved } : review
@@ -108,14 +78,17 @@ export function AdminDashboardClient({
         <TabsTrigger value="forms">Forms</TabsTrigger>
       </TabsList>
       <TabsContent value="overview">
-        <OverviewTab bookings={bookings} users={users} reviews={reviews} loading={loading} />
+        <OverviewTab bookings={bookings} users={initialUsers} reviews={reviews} loading={loading} />
       </TabsContent>
       <TabsContent value="bookings">
-        <BookingsTab bookings={bookings} loading={loading} />
+        <BookingsTab 
+          bookings={bookings} 
+          loading={loading} 
+          onBookingUpdate={handleBookingUpdate}
+        />
       </TabsContent>
       <TabsContent value="users">
-        {/* The UsersTab now receives the merged user data */}
-        <UsersTab users={users || initialUsers} loading={loading || !initialUsers} />
+        <UsersTab users={initialUsers} loading={false} />
       </TabsContent>
       <TabsContent value="reviews">
         <ReviewsTab

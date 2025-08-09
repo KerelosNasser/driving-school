@@ -43,10 +43,18 @@ export interface Booking {
   date: string;
   start_time: string;
   end_time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected';
   notes?: string;
   created_at: string;
   updated_at?: string;
+  users?: User;
+  packages?: Package;
+}
+
+export interface BookingStatusUpdate {
+  id: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected';
+  notes?: string;
 }
 
 // Add more types as needed for your application
