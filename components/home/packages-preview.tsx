@@ -54,7 +54,14 @@ async function getPackages() {
       console.error('Error fetching packages or no packages found, using fallback.');
       return fallbackPackages;
     }
-    return data as Package[];
+    
+    // Ensure features is always an array
+    return data.map(pkg => ({
+      ...pkg,
+      features: Array.isArray(pkg.features) 
+        ? pkg.features 
+        : (typeof pkg.features === 'string' ? JSON.parse(pkg.features) : []) 
+    })) as Package[];
   } catch (error) {
     console.error('Error in packages fetch:', error);
     return fallbackPackages;
