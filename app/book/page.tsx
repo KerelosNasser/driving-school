@@ -4,16 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
-import { format, addDays, isAfter, isBefore, setHours, setMinutes } from 'date-fns';
-import { Navigation } from '@/components/navigation';
-import { Footer } from '@/components/footer';
+import { format, addDays, isAfter, isBefore } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SignInButton } from '@clerk/nextjs';
 import { Calendar as CalendarIcon, Clock, MapPin, Car, CheckCircle, ArrowRight, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -79,6 +75,7 @@ export default function BookingPage() {
     };
 
     fetchPackages();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fallback package data in case the Supabase fetch fails
@@ -170,7 +167,7 @@ export default function BookingPage() {
         alert('There was an error processing your payment. Please try again.');
       } else if (url) {
         // Save booking to Supabase with pending status
-        const { data: bookingData, error: bookingError } = await supabase
+        const { error: bookingError } = await supabase
           .from('bookings')
           .insert([
             {
@@ -200,7 +197,7 @@ export default function BookingPage() {
   };
 
   // Function to check if a time slot is available
-  const isTimeSlotAvailable = (time: string) => {
+  const isTimeSlotAvailable = (_time?: string) => {
     // In a real implementation, we would check against existing bookings
     // For now, we'll just return true for all time slots
     return true;

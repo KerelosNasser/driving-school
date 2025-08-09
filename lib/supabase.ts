@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
 
 // Types for our database tables
 export type User = {

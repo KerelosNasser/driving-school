@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -70,7 +70,7 @@ export function AdminDashboardClient({
   // Handler for approving or rejecting reviews
   const handleReviewApproval = async (reviewId: string, approved: boolean) => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('reviews')
         .update({ approved })
         .eq('id', reviewId)

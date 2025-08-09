@@ -1,14 +1,11 @@
 'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { supabase } from '@/lib/supabase';
-import { Navigation } from '@/components/navigation';
-import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Star } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function SubmitReviewPage() {
     const [rating, setRating] = useState(0);
@@ -53,7 +50,7 @@ export default function SubmitReviewPage() {
             setComment('');
             setRating(0);
             setTimeout(() => router.push('/reviews'), 3000);
-        } catch (err: any) {
+        } catch (err: Error | unknown) {
             setError('Failed to submit review. Please try again.');
             console.error('Error submitting review:', err);
         } finally {

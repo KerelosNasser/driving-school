@@ -1,6 +1,5 @@
 
-import { Navigation } from "@/components/navigation";
-import { Footer } from "@/components/footer";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

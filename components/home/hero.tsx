@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Calendar, Car, Award, Clock } from 'lucide-react';
@@ -97,22 +98,25 @@ export function Hero() {
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
             >
-              {/* Placeholder for actual image - in production, use next/image */}
+              {/* Using Next.js Image component for optimization */}
               <div className="aspect-w-4 aspect-h-3 bg-yellow-800 relative">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <img
+                  <Image
                     src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
                     alt="Driving instructor with student in car"
+                    width={1000}
+                    height={750}
                     className="w-full h-full object-cover"
+                    priority
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-yellow-900/60 to-transparent"></div>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-6">
                   <div className="bg-white/90 backdrop-blur-sm text-yellow-900 p-4 rounded-lg shadow-lg">
                     <p className="font-medium">
-                      &#34;The best driving school in Brisbane! I passed my test on the first attempt thanks to their excellent instruction."
+                      &quot;The best driving school in Brisbane! I passed my test on the first attempt thanks to their excellent instruction.&quot;
                     </p>
-                    <p className="mt-2 text-sm text--700">— Sarah T., Recent Graduate</p>
+                    <p className="mt-2 text-sm text-yellow-700">— Sarah T., Recent Graduate</p>
                   </div>
                 </div>
               </div>

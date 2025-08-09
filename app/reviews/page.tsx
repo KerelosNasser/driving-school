@@ -4,11 +4,121 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Star, Quote, Search, ArrowRight, Filter, ThumbsUp } from 'lucide-react';
-import { Navigation } from '@/components/navigation';
-import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import type { Review } from '@/lib/supabase';
+
+// Fallback review data in case the Supabase fetch fails (moved to module scope)
+const fallbackReviews: Review[] = [
+  {
+    id: '1',
+    user_id: 'user1',
+    rating: 5,
+    comment: "Michael is an amazing instructor! He was patient, encouraging, and really helped me build my confidence on the road. I passed my test on the first attempt thanks to his excellent instruction and guidance. I would highly recommend Brisbane Driving School to anyone looking to learn how to drive.",
+    created_at: '2025-07-15T10:30:00Z',
+    approved: true,
+    user_name: 'Sarah Johnson'
+  },
+  {
+    id: '2',
+    user_id: 'user2',
+    rating: 5,
+    comment: "Best driving instructor in Brisbane! The lessons were structured perfectly for my learning style, and Michael's calm demeanor made me feel at ease even in stressful traffic situations. He has a knack for explaining complex driving concepts in a way that's easy to understand. I'm now a confident driver thanks to his teaching.",
+    created_at: '2025-07-10T14:45:00Z',
+    approved: true,
+    user_name: 'James Wilson'
+  },
+  {
+    id: '3',
+    user_id: 'user3',
+    rating: 4,
+    comment: "Very professional service. The online booking system was convenient, and the instructor was always on time. Would definitely recommend to anyone learning to drive in Brisbane. Michael is knowledgeable about all the test routes and gave me great tips for passing my driving test.",
+    created_at: '2025-07-05T09:15:00Z',
+    approved: true,
+    user_name: 'Emma Thompson'
+  },
+  {
+    id: '4',
+    user_id: 'user4',
+    rating: 5,
+    comment: "Michael's tips and tricks for the driving test were invaluable. He knows exactly what the examiners look for and prepared me thoroughly. Thank you for helping me pass my test with flying colors! I couldn't have done it without your guidance and support.",
+    created_at: '2025-06-28T16:20:00Z',
+    approved: true,
+    user_name: 'David Chen'
+  },
+  {
+    id: '5',
+    user_id: 'user5',
+    rating: 5,
+    comment: "I was extremely nervous about learning to drive, but Michael made the whole experience enjoyable. His teaching methods are clear and effective. Highly recommend! He has a great sense of humor which helped me relax during lessons, and his patience is remarkable.",
+    created_at: '2025-06-20T11:10:00Z',
+    approved: true,
+    user_name: 'Olivia Martinez'
+  },
+  {
+    id: '6',
+    user_id: 'user6',
+    rating: 4,
+    comment: "Great value for money. The package deals are well worth it, and the quality of instruction is top-notch. I feel much more confident on the road now. Michael doesn't just teach you how to pass the test, but how to be a safe and responsible driver for life.",
+    created_at: '2025-06-15T13:30:00Z',
+    approved: true,
+    user_name: 'Ryan Taylor'
+  },
+  {
+    id: '7',
+    user_id: 'user7',
+    rating: 5,
+    comment: "After trying two other driving schools, I found Brisbane Driving School and couldn't be happier. Michael's teaching style is perfect for anxious learners like me. He's patient, encouraging, and breaks everything down into manageable steps. I finally passed my test after struggling for months!",
+    created_at: '2025-06-10T15:45:00Z',
+    approved: true,
+    user_name: 'Jessica Brown'
+  },
+  {
+    id: '8',
+    user_id: 'user8',
+    rating: 5,
+    comment: "As a mature-age student, I was worried about learning to drive later in life, but Michael was fantastic. He adapted his teaching to my needs and never made me feel rushed or inadequate. His dual-control car is modern and comfortable, which made learning easier.",
+    created_at: '2025-06-05T09:00:00Z',
+    approved: true,
+    user_name: 'Michael Anderson'
+  },
+  {
+    id: '9',
+    user_id: 'user9',
+    rating: 4,
+    comment: "Flexible scheduling was a huge plus for me as I work irregular hours. Michael was always accommodating and responsive to my needs. The online booking system is straightforward and user-friendly. Good experience overall.",
+    created_at: '2025-05-28T14:20:00Z',
+    approved: true,
+    user_name: 'Sophia Lee'
+  },
+  {
+    id: '10',
+    user_id: 'user10',
+    rating: 5,
+    comment: "I had a specific goal of becoming comfortable driving on highways, and Michael designed lessons specifically to address this. His knowledge of Brisbane roads is impressive, and he knows all the best practice spots for different skills. Highly recommended!",
+    created_at: '2025-05-20T11:30:00Z',
+    approved: true,
+    user_name: 'Daniel White'
+  },
+  {
+    id: '11',
+    user_id: 'user11',
+    rating: 5,
+    comment: "The best investment I've made in my driving journey. Michael doesn't just teach you to drive; he teaches you to drive safely and confidently. His attention to detail and focus on defensive driving techniques have made me a much better driver.",
+    created_at: '2025-05-15T16:45:00Z',
+    approved: true,
+    user_name: 'Emily Wilson'
+  },
+  {
+    id: '12',
+    user_id: 'user12',
+    rating: 4,
+    comment: "I appreciated how Michael focused on building good habits from the start. He's thorough and professional, and genuinely cares about his students becoming safe drivers. The car was always clean and well-maintained, which made for a pleasant learning environment.",
+    created_at: '2025-05-10T10:15:00Z',
+    approved: true,
+    user_name: 'Thomas Garcia'
+  }
+];
 
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -25,15 +135,12 @@ export default function ReviewsPage() {
           .select('*')
           .eq('approved', true)
           .order('created_at', { ascending: false });
-        
         if (error) {
           console.error('Error fetching reviews:', error);
-          // Fallback to static data if there's an error
           setReviews(fallbackReviews);
         } else if (data && data.length > 0) {
           setReviews(data as Review[]);
         } else {
-          // Use fallback data if no reviews are found
           setReviews(fallbackReviews);
         }
       } catch (error) {
@@ -45,119 +152,7 @@ export default function ReviewsPage() {
     };
 
     fetchReviews();
-  }, []);
-
-  // Fallback review data in case the Supabase fetch fails
-  const fallbackReviews: Review[] = [
-    {
-      id: '1',
-      user_id: 'user1',
-      rating: 5,
-      comment: "Michael is an amazing instructor! He was patient, encouraging, and really helped me build my confidence on the road. I passed my test on the first attempt thanks to his excellent instruction and guidance. I would highly recommend Brisbane Driving School to anyone looking to learn how to drive.",
-      created_at: '2025-07-15T10:30:00Z',
-      approved: true,
-      user_name: 'Sarah Johnson'
-    },
-    {
-      id: '2',
-      user_id: 'user2',
-      rating: 5,
-      comment: "Best driving instructor in Brisbane! The lessons were structured perfectly for my learning style, and Michael's calm demeanor made me feel at ease even in stressful traffic situations. He has a knack for explaining complex driving concepts in a way that's easy to understand. I'm now a confident driver thanks to his teaching.",
-      created_at: '2025-07-10T14:45:00Z',
-      approved: true,
-      user_name: 'James Wilson'
-    },
-    {
-      id: '3',
-      user_id: 'user3',
-      rating: 4,
-      comment: "Very professional service. The online booking system was convenient, and the instructor was always on time. Would definitely recommend to anyone learning to drive in Brisbane. Michael is knowledgeable about all the test routes and gave me great tips for passing my driving test.",
-      created_at: '2025-07-05T09:15:00Z',
-      approved: true,
-      user_name: 'Emma Thompson'
-    },
-    {
-      id: '4',
-      user_id: 'user4',
-      rating: 5,
-      comment: "Michael's tips and tricks for the driving test were invaluable. He knows exactly what the examiners look for and prepared me thoroughly. Thank you for helping me pass my test with flying colors! I couldn't have done it without your guidance and support.",
-      created_at: '2025-06-28T16:20:00Z',
-      approved: true,
-      user_name: 'David Chen'
-    },
-    {
-      id: '5',
-      user_id: 'user5',
-      rating: 5,
-      comment: "I was extremely nervous about learning to drive, but Michael made the whole experience enjoyable. His teaching methods are clear and effective. Highly recommend! He has a great sense of humor which helped me relax during lessons, and his patience is remarkable.",
-      created_at: '2025-06-20T11:10:00Z',
-      approved: true,
-      user_name: 'Olivia Martinez'
-    },
-    {
-      id: '6',
-      user_id: 'user6',
-      rating: 4,
-      comment: "Great value for money. The package deals are well worth it, and the quality of instruction is top-notch. I feel much more confident on the road now. Michael doesn't just teach you how to pass the test, but how to be a safe and responsible driver for life.",
-      created_at: '2025-06-15T13:30:00Z',
-      approved: true,
-      user_name: 'Ryan Taylor'
-    },
-    {
-      id: '7',
-      user_id: 'user7',
-      rating: 5,
-      comment: "After trying two other driving schools, I found Brisbane Driving School and couldn't be happier. Michael's teaching style is perfect for anxious learners like me. He's patient, encouraging, and breaks everything down into manageable steps. I finally passed my test after struggling for months!",
-      created_at: '2025-06-10T15:45:00Z',
-      approved: true,
-      user_name: 'Jessica Brown'
-    },
-    {
-      id: '8',
-      user_id: 'user8',
-      rating: 5,
-      comment: "As a mature-age student, I was worried about learning to drive later in life, but Michael was fantastic. He adapted his teaching to my needs and never made me feel rushed or inadequate. His dual-control car is modern and comfortable, which made learning easier.",
-      created_at: '2025-06-05T09:00:00Z',
-      approved: true,
-      user_name: 'Michael Anderson'
-    },
-    {
-      id: '9',
-      user_id: 'user9',
-      rating: 4,
-      comment: "Flexible scheduling was a huge plus for me as I work irregular hours. Michael was always accommodating and responsive to my needs. The online booking system is straightforward and user-friendly. Good experience overall.",
-      created_at: '2025-05-28T14:20:00Z',
-      approved: true,
-      user_name: 'Sophia Lee'
-    },
-    {
-      id: '10',
-      user_id: 'user10',
-      rating: 5,
-      comment: "I had a specific goal of becoming comfortable driving on highways, and Michael designed lessons specifically to address this. His knowledge of Brisbane roads is impressive, and he knows all the best practice spots for different skills. Highly recommended!",
-      created_at: '2025-05-20T11:30:00Z',
-      approved: true,
-      user_name: 'Daniel White'
-    },
-    {
-      id: '11',
-      user_id: 'user11',
-      rating: 5,
-      comment: "The best investment I've made in my driving journey. Michael doesn't just teach you to drive; he teaches you to drive safely and confidently. His attention to detail and focus on defensive driving techniques have made me a much better driver.",
-      created_at: '2025-05-15T16:45:00Z',
-      approved: true,
-      user_name: 'Emily Wilson'
-    },
-    {
-      id: '12',
-      user_id: 'user12',
-      rating: 4,
-      comment: "I appreciated how Michael focused on building good habits from the start. He's thorough and professional, and genuinely cares about his students becoming safe drivers. The car was always clean and well-maintained, which made for a pleasant learning environment.",
-      created_at: '2025-05-10T10:15:00Z',
-      approved: true,
-      user_name: 'Thomas Garcia'
-    }
-  ];
+  }, []); // fallbackReviews is now in module scope, so no dependency needed
 
   // Filter reviews based on search term and rating filter
   const filteredReviews = reviews.filter(review => {

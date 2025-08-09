@@ -40,7 +40,7 @@ export const CalendarTab = ({ bookings }: CalendarTabProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
-  const handleEventClick = (clickInfo: any) => {
+  const handleEventClick = (clickInfo: { event: { id: string } }) => {
     const bookingId = clickInfo.event.id;
     const booking = bookings.find(b => b.id === bookingId);
     if (booking) {

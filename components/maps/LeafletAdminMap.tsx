@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default markers in Next.js
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (L.Icon.Default.prototype as { _getIconUrl?: () => string })._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: '/leaflet/marker-icon-2x.png',
   iconUrl: '/leaflet/marker-icon.png',
@@ -14,12 +14,16 @@ L.Icon.Default.mergeOptions({
 });
 
 interface MapProps {
-  bookings: any[];
+  bookings: {
+    id: string;
+    user: {
+      latitude: number;
+      longitude: number;
+    };
+  }[];
 }
 
 const LeafletAdminMapComponent = ({ bookings }: MapProps) => {
-  const [map, setMap] = useState<L.Map | null>(null);
-
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Import Leaflet only on client side
@@ -73,8 +77,6 @@ const LeafletAdminMapComponent = ({ bookings }: MapProps) => {
             `);
           }
         });
-
-        setMap(mapInstance);
 
         // Cleanup on unmount
         return () => {
