@@ -83,7 +83,7 @@ export const BookingsTab = ({ bookings, loading, onBookingUpdate }: BookingsTabP
     
     const success = await updateBookingStatus({
       id: selectedBooking.id,
-      status: newStatus as any,
+      status: newStatus as 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected',
     });
     
     if (success) {
@@ -148,7 +148,7 @@ export const BookingsTab = ({ bookings, loading, onBookingUpdate }: BookingsTabP
                       </div>
                     </div>
                     <div className="text-sm text-gray-500">
-                      Booked for {new Date(booking.date).toLocaleDateString()} at {booking.start_time || booking.time}
+                      Booked for {new Date(booking.date).toLocaleDateString()} at {booking.start_time || booking.end_time}
                     </div>
                     <div className="text-sm text-gray-500">
                       Package: {booking.packages?.name || 'Unknown Package'}

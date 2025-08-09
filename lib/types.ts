@@ -36,6 +36,7 @@ export interface User {
 }
 
 export interface Booking {
+  time: string;
   id: string;
   user_id: string;
   package_id?: string;
