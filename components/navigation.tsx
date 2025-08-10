@@ -26,7 +26,7 @@ export function Navigation() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <Car className="h-8 w-8 text-yellow-600" />
-            <span className="font-bold text-xl text-gray-900">Brisbane Driving School</span>
+            <span className="font-bold text-xl text-gray-900">EG Driving School</span>
           </Link>
 
           {/* Desktop Navigation */}

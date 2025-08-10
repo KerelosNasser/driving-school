@@ -5,7 +5,8 @@ import { InstructorBio } from "@/components/home/instructor-bio";
 import { ServiceAreaMap } from "@/components/home/service-area-map";
 import { ReviewsPreview } from "@/components/home/reviews-preview";
 import { BookingCTA } from "@/components/home/booking-cta";
-import {Hero} from "@/components/home/hero";
+import { Hero } from "@/components/home/hero";
+import { Gallery } from "@/components/home/gallery";
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
 
 export default function Home() {
@@ -15,6 +16,7 @@ export default function Home() {
         <Hero />
         <Features />
         <PackagesPreview />
+        <Gallery />
         <InstructorBio />
         <ServiceAreaMap />
         <ReviewsPreview />

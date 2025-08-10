@@ -10,7 +10,7 @@ export function ServiceAreaMap() {
   const [selectedArea, setSelectedArea] = useState<number | null>(null);
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-12 sm:py-16 lg:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <motion.div
@@ -19,29 +19,29 @@ export function ServiceAreaMap() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
               Service Areas
             </h2>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              We provide driving lessons throughout Brisbane and surrounding suburbs
+            <p className="mt-4 text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto px-4">
+              We provide driving lessons throughout our service areas and surrounding suburbs
             </p>
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Service areas list */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="bg-gray-50 p-6 rounded-xl shadow-md"
+            className="bg-gray-50 p-4 sm:p-6 rounded-xl shadow-md order-2 lg:order-1"
           >
-            <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center">
               <MapPin className="h-5 w-5 text-yellow-600 mr-2" />
               Covered Areas
             </h3>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+            <div className="space-y-3 max-h-[300px] sm:max-h-[400px] overflow-y-auto pr-2">
               {serviceAreas.map((area) => (
                 <div 
                   key={area.id}
@@ -52,14 +52,14 @@ export function ServiceAreaMap() {
                   }`}
                   onClick={() => setSelectedArea(area.id)}
                 >
-                  <div className="font-medium text-gray-900">{area.name}</div>
+                  <div className="font-medium text-gray-900 text-sm sm:text-base">{area.name}</div>
                   {area.popular && (
-                    <div className="text-sm text-yellow-600 mt-1">Popular area</div>
+                    <div className="text-xs sm:text-sm text-yellow-600 mt-1">Popular area</div>
                   )}
                 </div>
               ))}
             </div>
-            <div className="mt-6 text-sm text-gray-600">
+            <div className="mt-6 text-xs sm:text-sm text-gray-600">
               <p>Don&apos;t see your suburb? We likely cover it too! Contact us to confirm.</p>
             </div>
           </motion.div>
@@ -70,7 +70,7 @@ export function ServiceAreaMap() {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="lg:col-span-2 rounded-xl overflow-hidden shadow-lg h-[500px]"
+            className="lg:col-span-2 rounded-xl overflow-hidden shadow-lg h-[300px] sm:h-[400px] lg:h-[500px] order-1 lg:order-2"
           >
             <LeafletServiceAreaMap 
               selectedAreaId={selectedArea}

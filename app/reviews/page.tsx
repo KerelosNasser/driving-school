@@ -14,7 +14,7 @@ const fallbackReviews: Review[] = [
     id: '1',
     user_id: 'user1',
     rating: 5,
-    comment: "Michael is an amazing instructor! He was patient, encouraging, and really helped me build my confidence on the road. I passed my test on the first attempt thanks to his excellent instruction and guidance. I would highly recommend Brisbane Driving School to anyone looking to learn how to drive.",
+    comment: "Michael is an amazing instructor! He was patient, encouraging, and really helped me build my confidence on the road. I passed my test on the first attempt thanks to his excellent instruction and guidance. I would highly recommend EG Driving School to anyone looking to learn how to drive.",
     created_at: '2025-07-15T10:30:00Z',
     approved: true,
     user_name: 'Sarah Johnson'
@@ -68,7 +68,7 @@ const fallbackReviews: Review[] = [
     id: '7',
     user_id: 'user7',
     rating: 5,
-    comment: "After trying two other driving schools, I found Brisbane Driving School and couldn't be happier. Michael's teaching style is perfect for anxious learners like me. He's patient, encouraging, and breaks everything down into manageable steps. I finally passed my test after struggling for months!",
+    comment: "After trying two other driving schools, I found EG Driving School and couldn't be happier. Michael's teaching style is perfect for anxious learners like me. He's patient, encouraging, and breaks everything down into manageable steps. I finally passed my test after struggling for months!",
     created_at: '2025-06-10T15:45:00Z',
     approved: true,
     user_name: 'Jessica Brown'
@@ -223,7 +223,7 @@ export default function ReviewsPage() {
                 Student Reviews
               </h1>
               <p className="text-xl text-yellow-100 max-w-3xl mx-auto">
-                See what our students have to say about their experience with Brisbane Driving School
+                See what our students have to say about their experience with EG Driving School
               </p>
             </motion.div>
           </div>

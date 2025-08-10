@@ -64,7 +64,7 @@ async function sendAdminNotification(booking: any) {
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@brisbanedrivingschool.com';
   
   await resend.emails.send({
-    from: 'Brisbane Driving School <noreply@brisbanedrivingschool.com>',
+    from: 'EG Driving School <noreply@egdrivingschool.com>',
     to: [adminEmail],
     subject: `New Booking Requires Confirmation - ${booking.users.full_name}`,
     html: `
@@ -92,7 +92,7 @@ async function sendAdminNotification(booking: any) {
 
 async function sendCustomerConfirmation(booking: any) {
   await resend.emails.send({
-    from: 'Brisbane Driving School <noreply@brisbanedrivingschool.com>',
+    from: 'EG Driving School <noreply@egdrivingschool.com>',
     to: [booking.users.email],
     subject: 'Payment Confirmed - Booking Awaiting Approval',
     html: `

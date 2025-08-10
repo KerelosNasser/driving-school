@@ -20,32 +20,32 @@ export function Hero() {
         }} />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 md:py-32 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Hero content */}
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
                 Learn to Drive with Confidence
               </h1>
-              <p className="mt-6 text-xl text-yellow-100">
-                Professional driving lessons in Brisbane with experienced instructors tailored to your needs.
+              <p className="mt-4 sm:mt-6 text-lg sm:text-xl text-yellow-100 max-w-2xl mx-auto lg:mx-0">
+                Professional driving lessons with experienced instructors at EG Driving School - tailored to your needs.
               </p>
             </motion.div>
 
             <motion.div
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <Button
                 size="lg"
-                className="bg-white text-yellow-700 hover:bg-yellow-50"
+                className="bg-white text-yellow-700 hover:bg-yellow-50 w-full sm:w-auto"
                 asChild
               >
                 <Link href="/book">Book Your First Lesson</Link>
@@ -53,7 +53,7 @@ export function Hero() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white text-white bg-white/10"
+                className="border-white text-white bg-white/10 hover:bg-white/20 w-full sm:w-auto"
                 asChild
               >
                 <Link href="/packages">View Packages</Link>
@@ -61,26 +61,26 @@ export function Hero() {
             </motion.div>
 
             <motion.div
-              className="grid grid-cols-2 gap-4 pt-4"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 max-w-md mx-auto lg:max-w-none lg:mx-0"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <div className="flex items-center space-x-2">
-                <Award className="h-5 w-5 text-yellow-300" />
-                <span>Licensed Instructors</span>
+              <div className="flex items-center justify-center lg:justify-start space-x-2">
+                <Award className="h-5 w-5 text-yellow-300 flex-shrink-0" />
+                <span className="text-sm sm:text-base">Licensed Instructors</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <Car className="h-5 w-5 text-yellow-300" />
-                <span>Modern Vehicles</span>
+              <div className="flex items-center justify-center lg:justify-start space-x-2">
+                <Car className="h-5 w-5 text-yellow-300 flex-shrink-0" />
+                <span className="text-sm sm:text-base">Modern Vehicles</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-5 w-5 text-yellow-300" />
-                <span>Flexible Scheduling</span>
+              <div className="flex items-center justify-center lg:justify-start space-x-2">
+                <Calendar className="h-5 w-5 text-yellow-300 flex-shrink-0" />
+                <span className="text-sm sm:text-base">Flexible Scheduling</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <Clock className="h-5 w-5 text-yellow-300" />
-                <span>Personalized Pace</span>
+              <div className="flex items-center justify-center lg:justify-start space-x-2">
+                <Clock className="h-5 w-5 text-yellow-300 flex-shrink-0" />
+                <span className="text-sm sm:text-base">Personalized Pace</span>
               </div>
             </motion.div>
           </div>
@@ -90,7 +90,7 @@ export function Hero() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7 }}
-            className="relative"
+            className="relative order-first lg:order-last"
           >
             <div
               className="relative rounded-lg overflow-hidden shadow-2xl transform transition-transform duration-300"
@@ -111,20 +111,20 @@ export function Hero() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-yellow-900/60 to-transparent"></div>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <div className="bg-white/90 backdrop-blur-sm text-yellow-900 p-4 rounded-lg shadow-lg">
-                    <p className="font-medium">
-                      &quot;The best driving school in Brisbane! I passed my test on the first attempt thanks to their excellent instruction.&quot;
+                <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
+                  <div className="bg-white/90 backdrop-blur-sm text-yellow-900 p-3 sm:p-4 rounded-lg shadow-lg">
+                    <p className="font-medium text-sm sm:text-base">
+                      &quot;The best driving school! I passed my test on the first attempt thanks to their excellent instruction.&quot;
                     </p>
-                    <p className="mt-2 text-sm text-yellow-700">— Sarah T., Recent Graduate</p>
+                    <p className="mt-2 text-xs sm:text-sm text-yellow-700">— Sarah T., Recent Graduate</p>
                   </div>
                 </div>
               </div>
             </div>
             
             {/* Decorative elements */}
-            <div className="absolute top-14 -right-1 h-24 w-24 bg-yellow-950 rounded-full opacity-70 blur-xl"></div>
-            <div className="absolute -bottom-3 left-12 h-32 w-32 bg-yellow-500 rounded-full opacity-70 blur-xl"></div>
+            <div className="absolute top-14 -right-1 h-16 w-16 sm:h-24 sm:w-24 bg-yellow-950 rounded-full opacity-70 blur-xl"></div>
+            <div className="absolute -bottom-3 left-12 h-20 w-20 sm:h-32 sm:w-32 bg-yellow-500 rounded-full opacity-70 blur-xl"></div>
           </motion.div>
         </div>
       </div>
