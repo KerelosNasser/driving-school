@@ -6,10 +6,11 @@ import { ServiceAreaMap } from "@/components/home/service-area-map";
 import { ReviewsPreview } from "@/components/home/reviews-preview";
 import { BookingCTA } from "@/components/home/booking-cta";
 import {Hero} from "@/components/home/hero";
+import { AIChatbot } from '@/components/chatbot/AIChatbot';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <main>
         <Hero />
         <Features />
@@ -19,6 +20,9 @@ export default function Home() {
         <ReviewsPreview />
         <BookingCTA />
       </main>
+      
+      {/* AI Chatbot */}
+      <AIChatbot delayMs={10000} />
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { CalendarTab } from './CalendarTab';
 import { MapTab } from './MapTab';
 import { FormsTab } from './FormsTab';
 import { MergedUser } from '../page';
-import { Booking, Review } from '@/lib/types';
+import { Booking, Review,  } from '@/lib/types';
 
 interface AdminDashboardClientProps {
   initialUsers: MergedUser[];
@@ -27,7 +27,7 @@ export function AdminDashboardClient({
 }: AdminDashboardClientProps) {
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
 
   // Handler for booking updates
   const handleBookingUpdate = useCallback((updatedBooking: Booking) => {
