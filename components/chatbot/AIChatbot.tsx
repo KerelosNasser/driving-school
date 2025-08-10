@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Loader2, Sparkles, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +31,37 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user, isLoaded } = useUser();
 
+  // Persist chat history in localStorage
+  const STORAGE_KEY = 'driving-school-chat-history';
+
+  // Load chat history on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedHistory = localStorage.getItem(STORAGE_KEY);
+      if (savedHistory) {
+        try {
+          const parsedHistory = JSON.parse(savedHistory);
+          // Convert timestamp strings back to Date objects
+          const historyWithDates = parsedHistory.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+          setMessages(historyWithDates);
+          setHasGreeted(true); // Don't show greeting if history exists
+        } catch (error) {
+          console.error('Error loading chat history:', error);
+        }
+      }
+    }
+  }, []);
+
+  // Save chat history to localStorage whenever messages change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && messages.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    }
+  }, [messages]);
+
   // Show chatbot after delay with enhanced notification
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -46,14 +77,26 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
     return () => clearTimeout(timer);
   }, [delayMs, hasInteracted]);
 
-  // Auto-scroll to bottom
+  // Enhanced auto-scroll to bottom with better smooth behavior
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end',
+          inline: 'nearest'
+        });
+      }
+    };
 
-  // Initial greeting when chatbot opens
+    // Slight delay to ensure DOM is updated
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timeoutId);
+  }, [messages, isLoading]);
+
+  // Initial greeting when chatbot opens (only if no history)
   useEffect(() => {
-    if (isOpen && !hasGreeted && isLoaded) {
+    if (isOpen && !hasGreeted && isLoaded && messages.length === 0) {
       setHasInteracted(true);
       const greeting = user 
         ? `Hi ${user.firstName || 'there'}! 🚗 I'm your EG Driving School AI assistant. How can I help you today?`
@@ -67,12 +110,32 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
       }]);
       setHasGreeted(true);
     }
-  }, [isOpen, hasGreeted, user, isLoaded]);
+  }, [isOpen, hasGreeted, user, isLoaded, messages.length]);
 
   const handleChatbotOpen = () => {
     setIsOpen(true);
     setShowPulse(false);
     setHasInteracted(true);
+  };
+
+  const clearChatHistory = () => {
+    setMessages([]);
+    setHasGreeted(false);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    // Add fresh greeting
+    const greeting = user 
+      ? `Hi ${user.firstName || 'there'}! 🚗 I'm your EG Driving School AI assistant. How can I help you today?`
+      : "Hello! 🚗 I'm your EG Driving School AI assistant with comprehensive knowledge about our packages, services, booking system, and more. How can I assist you today?";
+    
+    setMessages([{
+      id: Date.now().toString(),
+      content: greeting,
+      sender: 'bot',
+      timestamp: new Date()
+    }]);
+    setHasGreeted(true);
   };
 
   const sendMessage = async () => {
@@ -148,7 +211,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-16 right-16 z-50"
+            className="fixed bottom-4 right-4 z-50 sm:bottom-16 sm:right-16"
           >
             {/* Pulsing Background Ring */}
             {showPulse && (
@@ -199,7 +262,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
             >
               <Button
                 onClick={handleChatbotOpen}
-                className="h-16 w-16 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-2xl border-2 border-white relative overflow-hidden"
+                className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-2xl border-2 border-white relative overflow-hidden"
                 size="icon"
               >
                 <motion.div
@@ -213,14 +276,16 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                     repeatDelay: 1,
                   }}
                 />
-                <MessageCircle className="h-8 w-8 relative z-10" />
+                <MessageCircle className="h-6 w-6 sm:h-8 sm:w-8 relative z-10" />
               </Button>
             </motion.div>
+            
+            {/* Tooltip - hidden on mobile for better UX */}
             <motion.div
               initial={{ opacity: 0, y: 10, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: 0.5 }}
-              className="absolute -top-16 -left-32 bg-gradient-to-r from-gray-900 to-gray-800 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap shadow-xl border border-gray-700"
+              className="absolute -top-16 -left-32 bg-gradient-to-r from-gray-900 to-gray-800 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap shadow-xl border border-gray-700 hidden sm:block"
             >
               <div className="flex items-center gap-2">
                 <Bot className="h-4 w-4" />
@@ -234,6 +299,8 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Enhanced Mobile-Responsive Chat Window */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -241,10 +308,10 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 100, scale: 0.8 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-6 right-6 z-50 w-96 h-[600px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)]"
+            className="fixed inset-4 sm:bottom-6 sm:right-6 sm:top-auto sm:left-auto z-50 sm:w-96 sm:h-[600px] flex"
           >
-            <Card className="h-full flex flex-col shadow-2xl border-2 border-yellow-200">
-              <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-t-lg p-4">
+            <Card className="w-full h-full flex flex-col shadow-2xl border-2 border-yellow-200">
+              <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-t-lg p-4 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <motion.div
@@ -257,22 +324,35 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                       <CardTitle className="text-lg">Brisbane Driving School</CardTitle>
                       <div className="flex items-center gap-1 mt-1">
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <span className="text-yellow-100 text-xs">AI Assistant • Online • Enhanced</span>
+                        <span className="text-yellow-100 text-xs">EG AI Assistant • Online </span>
                       </div>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsOpen(false)}
-                    className="text-white hover:bg-yellow-700 h-8 w-8"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {messages.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={clearChatHistory}
+                        className="text-white hover:bg-yellow-700 h-8 w-8"
+                        title="Clear chat history"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsOpen(false)}
+                      className="text-white hover:bg-yellow-700 h-8 w-8"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               
-              <CardContent className="flex-1 flex flex-col p-0">
+              <CardContent className="flex-1 flex flex-col p-0 min-h-0">
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white">
                   {messages.map((message) => (
                     <motion.div
@@ -328,7 +408,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                   
                   <div ref={messagesEndRef} />
                 </div>
-                <div className="border-t p-4 bg-white">
+                <div className="border-t p-4 bg-white flex-shrink-0">
                   <div className="flex gap-2">
                     <Input
                       value={inputValue}

@@ -100,8 +100,16 @@ async function getComprehensiveData(userId?: string) {
   }
 }
 
-function getEnhancedResponse(message: string, userContext?: any, comprehensiveData?: any): string {
+function getEnhancedResponse(message: string, userContext?: any, comprehensiveData?: any, conversationHistory?: any[]): string {
   const lowerMessage = message.toLowerCase();
+  
+  // Analyze conversation history for context
+  const hasAskedAboutPackages = conversationHistory?.some((msg: any) => 
+    msg.content.toLowerCase().includes('package') || msg.content.toLowerCase().includes('price')
+  );
+  const hasAskedAboutBooking = conversationHistory?.some((msg: any) => 
+    msg.content.toLowerCase().includes('book') || msg.content.toLowerCase().includes('schedule')
+  );
   
   // Greeting responses
   if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
@@ -132,6 +140,11 @@ function getEnhancedResponse(message: string, userContext?: any, comprehensiveDa
       response += "You can book additional lessons directly through our booking page. What type of package interests you?";
     } else {
       response += "To book lessons, you'll need to sign up first. Once logged in, you can easily book and manage your lessons. Would you like me to guide you through the process?";
+    }
+    
+    // Add contextual suggestion if they've asked about packages before
+    if (hasAskedAboutPackages && !hasAskedAboutBooking) {
+      response += "\n\n🎯 **Ready to book?** I can guide you through our online booking system step by step!";
     }
     
     return response;
@@ -265,25 +278,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get enhanced response with comprehensive data
-    let response = getEnhancedResponse(message, userContext, comprehensiveData);
+    // Get enhanced response with comprehensive data and conversation history
+    let response = getEnhancedResponse(message, userContext, comprehensiveData, conversationHistory);
     
     // Add context-aware personalization
     if (userContext?.recentBookings && userContext.recentBookings.length > 0) {
       const recentBooking = userContext.recentBookings[0];
       if (message.toLowerCase().includes('booking') || message.toLowerCase().includes('lesson')) {
         response += `\n\n💡 **Quick Info:** Your most recent booking is for ${recentBooking.packages?.name || 'a lesson'} on ${new Date(recentBooking.date).toLocaleDateString()}. Status: ${recentBooking.status}`;
-      }
-    }
-
-    // Add conversation context
-    if (conversationHistory && conversationHistory.length > 0) {
-      const recentMessages = conversationHistory.slice(-3);
-      const hasAskedAboutPackages = recentMessages.some((msg: any) => msg.content.toLowerCase().includes('package'));
-      const hasAskedAboutBooking = recentMessages.some((msg: any) => msg.content.toLowerCase().includes('book'));
-      
-      if (hasAskedAboutPackages && message.toLowerCase().includes('book')) {
-        response += "\n\n🎯 **Ready to book?** I can guide you through our online booking system step by step!";
       }
     }
 
