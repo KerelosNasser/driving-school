@@ -20,9 +20,8 @@ export default function Home() {
         <ReviewsPreview />
         <BookingCTA />
       </main>
-      
       {/* AI Chatbot */}
-      <AIChatbot delayMs={10000} />
+      <AIChatbot delayMs={5000} />
     </div>
   );
 }

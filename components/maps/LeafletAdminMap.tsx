@@ -26,59 +26,75 @@ interface MapProps {
 const LeafletAdminMapComponent = ({ bookings }: MapProps) => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Import Leaflet only on client side
       import('leaflet').then((L) => {
-        // Brisbane center coordinates
         const center: L.LatLngExpression = [-27.4698, 153.0251];
         
-        // Initialize map
         const mapInstance = L.map('admin-map', {
           center: center,
           zoom: 11,
           scrollWheelZoom: true,
         });
 
-        // Add tile layer (OpenStreetMap)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 19,
         }).addTo(mapInstance);
 
-        // Custom icon for bookings
-        const bookingIcon = L.divIcon({
-          html: `
-            <div style="
-              background-color: #eab308;
-              width: 30px;
-              height: 30px;
-              border-radius: 50%;
-              border: 3px solid white;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            "></div>
-          `,
-          className: 'custom-div-icon',
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
-        });
+        // Create different icons for different statuses
+        const createIcon = (status: string) => {
+          const colors = {
+            pending: '#eab308',
+            confirmed: '#3b82f6',
+            completed: '#10b981',
+            cancelled: '#ef4444',
+            rejected: '#6b7280'
+          };
+          
+          return L.divIcon({
+            html: `
+              <div style="
+                background-color: ${colors[status as keyof typeof colors] || '#6b7280'};
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                border: 3px solid white;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: 12px;
+              ">
+                ${status.charAt(0).toUpperCase()}
+              </div>
+            `,
+            className: 'custom-div-icon',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+          });
+        };
 
-        // Add markers for bookings
-        bookings.forEach((booking) => {
-          if (booking.user && booking.user.latitude && booking.user.longitude) {
-            const marker = L.marker([booking.user.latitude, booking.user.longitude], {
-              icon: bookingIcon,
-            }).addTo(mapInstance);
+        // Add markers for confirmed bookings only
+        bookings
+          .filter(booking => booking.status === 'confirmed' && booking.user?.latitude && booking.user?.longitude)
+          .forEach((booking) => {
+            const marker = L.marker(
+              [booking.user.latitude, booking.user.longitude], 
+              { icon: createIcon(booking.status) }
+            ).addTo(mapInstance);
 
-            // Add popup with booking info
             marker.bindPopup(`
               <div style="min-width: 200px;">
-                <h4 style="margin: 0 0 8px 0; font-weight: bold;">Booking #${booking.id.slice(0, 8)}</h4>
-                <p style="margin: 4px 0;">Location: ${booking.user.latitude.toFixed(4)}, ${booking.user.longitude.toFixed(4)}</p>
+                <h4 style="margin: 0 0 8px 0; font-weight: bold;">${booking.user.full_name}</h4>
+                <p style="margin: 4px 0;"><strong>Package:</strong> ${booking.package?.name}</p>
+                <p style="margin: 4px 0;"><strong>Date:</strong> ${booking.date}</p>
+                <p style="margin: 4px 0;"><strong>Time:</strong> ${booking.time}</p>
+                <p style="margin: 4px 0;"><strong>Status:</strong> <span style="color: ${colors[booking.status]}; font-weight: bold;">${booking.status}</span></p>
               </div>
             `);
-          }
-        });
+          });
 
-        // Cleanup on unmount
         return () => {
           mapInstance.remove();
         };
