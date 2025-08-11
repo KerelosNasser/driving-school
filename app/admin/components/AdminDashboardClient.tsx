@@ -11,19 +11,22 @@ import { ReviewsTab } from './ReviewsTab';
 import { CalendarTab } from './CalendarTab';
 import { MapTab } from './MapTab';
 import { FormsTab } from './FormsTab';
+import { PackagesTab } from './PackagesTab';
 import { MergedUser } from '../page';
-import { Booking, Review,  } from '@/lib/types';
+import { Booking, Review, Package } from '@/lib/types';
 
 interface AdminDashboardClientProps {
   initialUsers: MergedUser[];
   initialReviews: Review[];
   initialBookings: Booking[];
+  initialPackages: Package[];
 }
 
 export function AdminDashboardClient({
   initialUsers,
   initialReviews,
   initialBookings,
+  initialPackages,
 }: AdminDashboardClientProps) {
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
@@ -72,6 +75,7 @@ export function AdminDashboardClient({
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="bookings">Bookings</TabsTrigger>
         <TabsTrigger value="users">Users</TabsTrigger>
+        <TabsTrigger value="packages">Packages</TabsTrigger>
         <TabsTrigger value="reviews">Reviews</TabsTrigger>
         <TabsTrigger value="calendar">Calendar</TabsTrigger>
         <TabsTrigger value="map">Map</TabsTrigger>
@@ -89,6 +93,9 @@ export function AdminDashboardClient({
       </TabsContent>
       <TabsContent value="users">
         <UsersTab users={initialUsers} loading={false} />
+      </TabsContent>
+      <TabsContent value="packages">
+        <PackagesTab initialPackages={initialPackages} />
       </TabsContent>
       <TabsContent value="reviews">
         <ReviewsTab

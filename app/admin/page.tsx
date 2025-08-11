@@ -183,10 +183,11 @@ async function getMergedUsers(): Promise<MergedUser[]> {
 // Main Admin Page (Server Component)
 export default async function AdminDashboardPage() {
   // Fetch all data on the server
-  const [users, reviews, bookings] = await Promise.all([
+  const [users, reviews, bookings, packages] = await Promise.all([
     getMergedUsers(),
     supabase.from('reviews').select('*'),
     supabase.from('bookings').select('*, users(*), packages(*)'),
+    supabase.from('packages').select('*').order('created_at', { ascending: false })
   ]);
 
   return (
@@ -198,6 +199,7 @@ export default async function AdminDashboardPage() {
         initialUsers={users || []}
         initialReviews={(reviews.data as Review[]) || []}
         initialBookings={(bookings.data as Booking[]) || []}
+        initialPackages={(packages.data as Package[]) || []}
       />
     </div>
   );
