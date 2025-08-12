@@ -37,7 +37,8 @@ export const metadata: Metadata = {
     ],
   },
   alternates: {
-    canonical: "https://your-domain.vercel.app",
+    canonical: process.env.NEXT_PUBLIC_SITE_URL,
+
   },
 }
 
