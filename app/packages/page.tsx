@@ -9,34 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
 import type { Package } from '@/lib/supabase';
-import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: "Driving Lesson Packages - EG Driving School",
-  description: "Choose from our comprehensive driving lesson packages. Beginner, Standard, and Premium options available. Flexible scheduling, professional instructors, and competitive pricing.",
-  keywords: [
-    "driving lesson packages",
-    "driving lesson prices",
-    "beginner driving lessons",
-    "premium driving course",
-    "driving school packages"
-  ],
-  openGraph: {
-    title: "Driving Lesson Packages - EG Driving School",
-    description: "Choose from our comprehensive driving lesson packages with professional instructors.",
-    images: [
-      {
-        url: "/og-image-packages.jpg",
-        width: 1200,
-        height: 630,
-        alt: "EG Driving School Packages",
-      },
-    ],
-  },
-  alternates: {
-    canonical: "https://your-domain.vercel.app/packages",
-  },
-}
 
 export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
