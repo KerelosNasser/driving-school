@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /admin
+Disallow: /api/
+Disallow: /_next/
+Disallow: /monitoring
+
+# Allow important pages
+Allow: /packages
+Allow: /about
+Allow: /contact
+Allow: /book
+Allow: /reviews
+
+# Sitemap location
+Sitemap: https://your-domain.vercel.app/sitemap.xml

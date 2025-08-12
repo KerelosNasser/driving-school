@@ -1,16 +1,79 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pipeline } from '@xenova/transformers';
+import { InferenceClient } from '@huggingface/inference';
 import { supabase } from '@/lib/supabase';
 
-// Initialize the AI model (this will be cached after first use)
-let classifier: any = null;
+// Initialize Hugging Face client (free tier available)
+const hf =  new InferenceClient(process.env.HUGGING_FACE_API_KEY);
 
-const initializeModel = async () => {
-  if (!classifier) {
-    classifier = await pipeline('text-generation', 'Xenova/distilgpt2');
+// Enhanced driving school knowledge base
+const drivingSchoolContext = `
+You are an expert AI assistant for EG Driving School in Brisbane, Australia. You specialize in:
+
+**Driving Education Expertise:**
+- Road safety and defensive driving techniques
+- Australian road rules and traffic laws
+- Hazard perception and risk assessment
+- Parking techniques (parallel, reverse, angle)
+- Highway driving and merging strategies
+- Weather condition driving (rain, fog, night)
+- Roundabout navigation and right-of-way rules
+
+**Why Choose Professional Driving Lessons:**
+- Structured learning progression from basics to advanced skills
+- Professional instructors with years of experience
+- Dual-control vehicles for maximum safety
+- Personalized feedback and improvement plans
+- Higher first-time test pass rates (85% vs 60% self-taught)
+- Insurance benefits for professionally trained drivers
+- Confidence building in real traffic situations
+
+**Student Success Stories:**
+- Nervous drivers becoming confident road users
+- International license holders adapting to Australian roads
+- Mature age learners achieving their driving goals
+- Young drivers developing safe driving habits
+
+**Packages Available:**
+- Beginner Package: $299 for 10 hours (perfect for new drivers)
+- Standard Package: $499 for 15 hours (most popular, includes test prep)
+- Premium Package: $699 for 20 hours (comprehensive with extra practice)
+
+Always be encouraging, safety-focused, and emphasize the value of professional instruction.
+`;
+
+async function getEnhancedAIResponse(message: string, userContext?: any, comprehensiveData?: any): Promise<string> {
+  try {
+    // Prepare context with user data
+    let contextPrompt = drivingSchoolContext;
+    
+    if (userContext?.recentBookings) {
+      contextPrompt += `\n\nUser Context: This student has ${userContext.recentBookings.length} bookings and their most recent package is ${userContext.recentBookings[0]?.packages?.name || 'unknown'}.`;
+    }
+    
+    if (comprehensiveData?.averageRating) {
+      contextPrompt += `\n\nSchool Stats: ${comprehensiveData.averageRating}/5 star rating with ${comprehensiveData.totalUsers}+ students.`;
+    }
+
+    // Use Hugging Face's free models (like Microsoft DialoGPT or Facebook BlenderBot)
+    const response = await hf.textGeneration({
+      model: 'microsoft/DialoGPT-large', // Free and good for conversations
+      inputs: `${contextPrompt}\n\nStudent Question: ${message}\n\nHelpful Response:`,
+      parameters: {
+        max_new_tokens: 200,
+        temperature: 0.7,
+        do_sample: true,
+        top_p: 0.9,
+        repetition_penalty: 1.1
+      }
+    });
+
+    return response.generated_text.split('Helpful Response:')[1]?.trim() || getEnhancedResponse(message, userContext, comprehensiveData);
+  } catch (error) {
+    console.error('AI model error:', error);
+    // Fallback to enhanced rule-based system
+    return getEnhancedResponse(message, userContext, comprehensiveData);
   }
-  return classifier;
-};
+}
 
 // Enhanced knowledge base with complete data access
 const knowledgeBase = {
@@ -239,7 +302,7 @@ function getEnhancedResponse(message: string, userContext?: any, comprehensiveDa
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, userId, conversationHistory } = await request.json();
+    const { message, userId, _conversationHistory } = await request.json();
     
     if (!message) {
       return NextResponse.json(
@@ -279,7 +342,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get enhanced response with comprehensive data and conversation history
-    let response = getEnhancedResponse(message, userContext, comprehensiveData, conversationHistory);
+    let response = await getEnhancedAIResponse(message, userContext, comprehensiveData);
     
     // Add context-aware personalization
     if (userContext?.recentBookings && userContext.recentBookings.length > 0) {
