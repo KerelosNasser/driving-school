@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { InferenceClient } from '@huggingface/inference';
 import { supabase } from '@/lib/supabase';
 
-// Initialize Hugging Face client (free tier available)
-const hf =  new InferenceClient(process.env.HUGGING_FACE_API_KEY);
-
-// Enhanced driving school knowledge base
 const drivingSchoolContext = `
 You are an expert AI assistant for EG Driving School in Brisbane, Australia. You specialize in:
 
@@ -38,8 +33,103 @@ You are an expert AI assistant for EG Driving School in Brisbane, Australia. You
 - Standard Package: $499 for 15 hours (most popular, includes test prep)
 - Premium Package: $699 for 20 hours (comprehensive with extra practice)
 
-Always be encouraging, safety-focused, and emphasize the value of professional instruction.
+Always be encouraging, safety-focused,straight to the point, and emphasize the value of professional instruction.
 `;
+
+// AI Provider Configuration
+interface AIProvider {
+  name: string;
+  endpoint: string;
+  apiKey: string | null;
+  headers: Record<string, string>;
+  payload: (message: string, context: string) => any;
+  parseResponse: (response: any) => string;
+}
+
+const getAIProviders = (): AIProvider[] => [
+    {
+    name: 'Hyperbolic',
+    endpoint: 'https://api.hyperbolic.xyz/v1/chat/completions',
+    apiKey: process.env.HYPERBOLIC_API_KEY || '',
+    headers: {
+      'Authorization': `Bearer ${process.env.HYPERBOLIC_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    payload: (message: string, context: string) => ({
+      model: 'meta-llama/Llama-3.2-3B-Instruct', // Free tier model
+      messages: [
+        { role: 'system', content: context },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 300,
+      temperature: 0.7,
+      stream: false
+    }),
+    parseResponse: (response: any) => response.choices?.[0]?.message?.content || ''
+  },
+   {
+    name: 'OpenRouter',
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    apiKey: process.env.OPENROUTER_API_KEY || '',
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://localhost:3000',
+      'X-Title': 'EG Driving School Chatbot'
+    },
+    payload: (message: string, context: string) => ({
+      model: 'meta-llama/llama-3.2-3b-instruct:free', // Free tier model
+      messages: [
+        { role: 'system', content: context },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 300,
+      temperature: 0.7,
+      stream: false
+    }),
+    parseResponse: (response: any) => response.choices?.[0]?.message?.content || ''
+  },
+  {
+    name: 'Groq',
+    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    apiKey: process.env.GROQ_API_KEY || '',
+    headers: {
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    payload: (message: string, context: string) => ({
+      model: 'llama-3.1-8b-instant', // Free tier model
+      messages: [
+        { role: 'system', content: context },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 300,
+      temperature: 0.7,
+      stream: false
+    }),
+    parseResponse: (response: any) => response.choices?.[0]?.message?.content || ''
+  },
+];
+
+async function callAIProvider(provider: AIProvider, message: string, context: string): Promise<string> {
+  if (!provider.apiKey) {
+    throw new Error(`No API key for ${provider.name}`);
+  }
+
+  const response = await fetch(provider.endpoint, {
+    method: 'POST',
+    headers: provider.headers,
+    body: JSON.stringify(provider.payload(message, context))
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`${provider.name} API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return provider.parseResponse(data);
+}
 
 async function getEnhancedAIResponse(
   message: string,
@@ -47,65 +137,52 @@ async function getEnhancedAIResponse(
   comprehensiveData?: any,
   conversationHistory?: any[]
 ): Promise<string> {
-  try {
-    // System prompt with clear instructions for the Llama model
-    const systemPrompt = `
-      You are a friendly and professional AI assistant for EG Driving School, a premier driving school in Brisbane, Australia.
-      Your goal is to provide helpful, accurate, and encouraging information to students and potential customers.
-      You must prioritize answers from the provided data.
-      If the user asks a question not covered by the data, use your general knowledge to provide a helpful response, but always relate it back to driving or road safety.
+  
+  // Prepare comprehensive context
+  const dataContext = `
+    **Driving School Information:**
+    ${drivingSchoolContext}
+
+    **Live Data:**
+    - **Packages:** ${JSON.stringify(comprehensiveData?.packages || knowledgeBase.packages, null, 2)}
+    - **Reviews:** ${JSON.stringify(comprehensiveData?.reviews, null, 2)}
+    - **Service Areas:** ${JSON.stringify(knowledgeBase.areas, null, 2)}
+    - **Contact Info:** ${JSON.stringify(knowledgeBase.contact, null, 2)}
+  `;
+
+  let userPrompt = "";
+  if (userContext?.userData) {
+    userPrompt = `
+      **User Information:**
+      - **Name:** ${userContext.userData.full_name}
+      - **Recent Bookings:** ${JSON.stringify(userContext.recentBookings, null, 2)}
     `;
-
-    // Prepare the data context
-    const dataContext = `
-      **Driving School Information:**
-      ${drivingSchoolContext}
-
-      **Live Data:**
-      - **Packages:** ${JSON.stringify(comprehensiveData?.packages, null, 2)}
-      - **Reviews:** ${JSON.stringify(comprehensiveData?.reviews, null, 2)}
-      - **Service Areas:** ${JSON.stringify(knowledgeBase.areas, null, 2)}
-      - **Contact Info:** ${JSON.stringify(knowledgeBase.contact, null, 2)}
-    `;
-
-    // Prepare the user context
-    let userPrompt = "";
-    if (userContext?.userData) {
-      userPrompt = `
-        **User Information:**
-        - **Name:** ${userContext.userData.full_name}
-        - **Recent Bookings:** ${JSON.stringify(userContext.recentBookings, null, 2)}
-      `;
-    }
-
-    // Use chatCompletion since the selected provider supports the 'conversational' task
-    const response = await hf.chatCompletion({
-      model: 'HuggingFaceH4/zephyr-7b-beta',
-      messages: [
-        { role: 'system', content: `${systemPrompt}\n${dataContext}\n${userPrompt}`.trim() },
-        { role: 'user', content: message }
-      ],
-      max_tokens: 250,
-      temperature: 0.8,
-      top_p: 0.95,
-    });
-
-    // Extract the generated text
-    let generatedText = response.choices?.[0]?.message?.content ?? '';
-    if (generatedText.includes('<|eot_id|>')) {
-      generatedText = generatedText.split('<|eot_id|>')[0];
-    }
-    if (generatedText.includes('<|start_header_id|>assistant<|end_header_id|>')) {
-      generatedText = generatedText.split('<|start_header_id|>assistant<|end_header_id|>')[1];
-    }
-
-
-    return generatedText.trim() || getEnhancedResponse(message, userContext, comprehensiveData, conversationHistory);
-  } catch (error) {
-    console.error('AI model error:', error);
-    // Fallback to the rule-based system
-    return getEnhancedResponse(message, userContext, comprehensiveData, conversationHistory);
   }
+
+  const fullContext = `${dataContext}\n${userPrompt}\n\nPlease respond as a friendly, professional driving school assistant. Keep responses under 250 words and be encouraging.`;
+
+  // Try each AI provider in order
+  const providers = getAIProviders();
+  
+  for (const provider of providers) {
+    try {
+      console.log(`🤖 Trying ${provider.name} AI provider...`);
+      
+      const response = await callAIProvider(provider, message, fullContext);
+      
+      if (response && response.trim().length > 10) {
+        console.log(`✅ Success with ${provider.name}!`);
+        return response.trim();
+      }
+    } catch (error) {
+      console.log(`❌ ${provider.name} failed:`, error);
+      continue;
+    }
+  }
+
+  // If all AI providers fail, use intelligent fallback
+  console.log('🔄 All AI providers failed, using intelligent fallback');
+  return getIntelligentResponse(message, userContext, comprehensiveData, conversationHistory);
 }
 
 // Enhanced knowledge base with complete data access
@@ -196,60 +273,52 @@ async function getComprehensiveData(userId?: string) {
   }
 }
 
-function getEnhancedResponse(message: string, userContext?: any, comprehensiveData?: any, conversationHistory?: any[]): string {
+function getIntelligentResponse(message: string, userContext?: any, comprehensiveData?: any, _conversationHistory?: any[]): string {
   const lowerMessage = message.toLowerCase();
   
-  // Analyze conversation history for context
-  const hasAskedAboutPackages = conversationHistory?.some((msg: any) => 
-    msg.content.toLowerCase().includes('package') || msg.content.toLowerCase().includes('price')
-  );
-  const hasAskedAboutBooking = conversationHistory?.some((msg: any) => 
-    msg.content.toLowerCase().includes('book') || msg.content.toLowerCase().includes('schedule')
-  );
+  // Conversational responses
+  if (lowerMessage.includes('how are you') || lowerMessage.includes('how\'re you')) {
+    return "I'm doing great, thank you for asking! 😊 I'm here and ready to help you with all your driving lesson questions. Whether you're looking for package information, want to book lessons, or need details about our services, I've got you covered! What would you like to know?";
+  }
   
   // Greeting responses
   if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
-    const stats = comprehensiveData ? `We currently serve ${comprehensiveData.totalUsers}+ students with an average rating of ${comprehensiveData.averageRating} stars!` : "";
-    return `Hello! 🚗 I'm your Brisbane Driving School AI assistant with complete access to our database. ${stats} What would you like to know about our packages, your bookings, or our services?`;
+    const stats = comprehensiveData ? `We currently serve ${comprehensiveData.totalUsers}+ students with an average rating of ${comprehensiveData.averageRating} stars! ⭐` : "";
+    return `Hello! 🚗 Welcome to EG Driving School! I'm your AI assistant with complete access to our database. ${stats} What would you like to know about our packages, your bookings, or our services?`;
   }
   
   // Package inquiries with real-time data
   if (lowerMessage.includes('package') || lowerMessage.includes('price') || lowerMessage.includes('cost')) {
     const packages = comprehensiveData?.packages || knowledgeBase.packages;
     const packageInfo = packages.map((pkg: any) => 
-      `**${pkg.name}**: $${pkg.price} for ${pkg.hours} hours - ${pkg.description}\nFeatures: ${Array.isArray(pkg.features) ? pkg.features.join(', ') : pkg.features}`
+      `**${pkg.name}**: $${pkg.price} for ${pkg.hours} hours\n   ${pkg.description}\n   Features: ${Array.isArray(pkg.features) ? pkg.features.join(', ') : pkg.features}`
     ).join('\n\n');
-    return `Here are our current packages with live pricing:\n\n${packageInfo}\n\n💡 Our Standard Package is most popular! Would you like to book one or need more details?`;
+    return `🌟 Here are our current packages with live pricing:\n\n${packageInfo}\n\n💡 Our Standard Package is most popular! Would you like to book one or need more details?`;
   }
   
-  // Booking inquiries with personalized data
+  // Booking inquiries
   if (lowerMessage.includes('book') || lowerMessage.includes('schedule') || lowerMessage.includes('appointment')) {
-    let response = "Great! I can help you book your lessons. ";
+    let response = "Excellent! I'd love to help you book your driving lessons. 🚗 ";
     
     if (userContext?.userId) {
       if (userContext.recentBookings && userContext.recentBookings.length > 0) {
         const upcomingBookings = userContext.recentBookings.filter((b: any) => new Date(b.date) > new Date());
         if (upcomingBookings.length > 0) {
-          response += `I can see you have ${upcomingBookings.length} upcoming lesson(s). `;
+          response += `I can see you have ${upcomingBookings.length} upcoming lesson(s) scheduled. `;
         }
       }
       response += "You can book additional lessons directly through our booking page. What type of package interests you?";
     } else {
-      response += "To book lessons, you'll need to sign up first. Once logged in, you can easily book and manage your lessons. Would you like me to guide you through the process?";
-    }
-    
-    // Add contextual suggestion if they've asked about packages before
-    if (hasAskedAboutPackages && !hasAskedAboutBooking) {
-      response += "\n\n🎯 **Ready to book?** I can guide you through our online booking system step by step!";
+      response += "To get started, you'll need to create an account first. Once logged in, you can easily book and manage your lessons. Would you like me to guide you through the process?";
     }
     
     return response;
   }
   
-  // My bookings with real data
-  if (lowerMessage.includes('my booking') || lowerMessage.includes('my lesson') || lowerMessage.includes('when is my')) {
+  // My bookings
+  if (lowerMessage.includes('my booking') || lowerMessage.includes('my lesson')) {
     if (!userContext?.userId) {
-      return "Please sign in to view your bookings. Once logged in, I can show you all your upcoming lessons and booking history.";
+      return "Please sign in to view your bookings. Once logged in, I can show you all your upcoming lessons and booking history. 📅";
     }
     
     if (userContext.recentBookings && userContext.recentBookings.length > 0) {
@@ -269,68 +338,14 @@ function getEnhancedResponse(message: string, userContext?: any, comprehensiveDa
         response += `\n**Completed:** ${completed.length} lessons\n`;
       }
       
-      response += `\nNeed to reschedule or have questions about any lesson?`;
-      return response;
+      return response + `\nNeed to reschedule or have questions?`;
     } else {
-      return "I don't see any bookings for your account yet. Would you like to book your first lesson? I can help you choose the perfect package!";
+      return "I don't see any bookings yet! Would you like to book your first lesson? I can help you choose the perfect package! 🌟";
     }
   }
   
-  // Service area inquiries
-  if (lowerMessage.includes('area') || lowerMessage.includes('location') || lowerMessage.includes('where')) {
-    return `🗺️ **Service Areas:**\nWe provide driving lessons across Brisbane including: ${knowledgeBase.areas.join(', ')}.\n\n✨ We offer pick-up and drop-off service within these areas for Premium Package students!`;
-  }
-  
-  // Services inquiries
-  if (lowerMessage.includes('service') || lowerMessage.includes('offer') || lowerMessage.includes('teach')) {
-    return `🚗 **Our Services:**\n\n${knowledgeBase.services.map(service => `• ${service}`).join('\n')}\n\nWhich service interests you most? I can provide detailed information!`;
-  }
-  
-  // Reviews and testimonials with real data
-  if (lowerMessage.includes('review') || lowerMessage.includes('testimonial') || lowerMessage.includes('feedback')) {
-    let response = `⭐ **Student Reviews:**\n\n`;
-    
-    if (comprehensiveData?.reviews && comprehensiveData.reviews.length > 0) {
-      response += `Average Rating: ${comprehensiveData.averageRating}/5.0 stars\n\n`;
-      response += `**Recent Reviews:**\n`;
-      comprehensiveData.reviews.slice(0, 2).forEach((review: any) => {
-        response += `• "${review.comment}" - ${review.user_name} (${review.rating}/5 ⭐)\n`;
-      });
-      response += `\nWe have ${comprehensiveData.reviews.length}+ verified reviews!`;
-    } else {
-      response += "We're proud of our excellent student reviews! Our instructors are highly rated for patience, professionalism, and effective teaching.";
-    }
-    
-    return response;
-  }
-  
-  // Contact inquiries
-  if (lowerMessage.includes('contact') || lowerMessage.includes('phone') || lowerMessage.includes('call')) {
-    return `📞 **Contact Information:**\n\n• Phone: ${knowledgeBase.contact.phone}\n• Email: ${knowledgeBase.contact.email}\n• Hours: ${knowledgeBase.contact.hours}\n• Location: ${knowledgeBase.contact.address}\n\nFeel free to call us for immediate assistance!`;
-  }
-  
-  // Test/exam inquiries
-  if (lowerMessage.includes('test') || lowerMessage.includes('exam') || lowerMessage.includes('license')) {
-    return "🎯 **Test Preparation:**\nWe offer comprehensive test preparation including:\n• Mock driving tests\n• Theory practice\n• Test route familiarization\n• Last-minute test tips\n\nOur Premium Package includes dedicated test prep. Ready to book?";
-  }
-  
-  // Pricing comparisons
-  if (lowerMessage.includes('compare') || lowerMessage.includes('difference')) {
-    return `💰 **Package Comparison:**\n\n🥉 **Starter ($299.99):** Great for basic skills\n🥈 **Standard ($499.99):** Most popular, includes test prep\n🥇 **Premium ($799.99):** Complete package with extras\n\nNeed help choosing? I can recommend based on your experience level!`;
-  }
-  
-  // Availability inquiries
-  if (lowerMessage.includes('available') || lowerMessage.includes('when can') || lowerMessage.includes('next')) {
-    return "📅 **Availability:**\nWe offer lessons 7 days a week:\n• Monday-Friday: 8AM-6PM\n• Saturday: 9AM-4PM\n• Sunday: 10AM-3PM\n\nMost slots available with 24-48 hours notice. Premium students get priority booking!";
-  }
-  
-  // Policy inquiries
-  if (lowerMessage.includes('cancel') || lowerMessage.includes('reschedule') || lowerMessage.includes('refund')) {
-    return `📋 **Our Policies:**\n\n• **Cancellation:** ${knowledgeBase.policies.cancellation}\n• **Rescheduling:** ${knowledgeBase.policies.rescheduling}\n• **Payment:** ${knowledgeBase.policies.payment}\n• **Refunds:** ${knowledgeBase.policies.refund}\n\nNeed to make changes to your booking?`;
-  }
-  
-  // Default enhanced response
-  return "I'm your comprehensive AI assistant with access to all our data! I can help with:\n\n🎯 Package selection & pricing\n📅 Booking & scheduling\n📊 Your account & lesson history\n⭐ Reviews & testimonials\n📞 Contact information\n🗺️ Service areas\n\nWhat would you like to know? You can also call us at 0400 000 000 for immediate assistance!";
+  // Default response
+  return "I'm here to help with all your driving school needs! 🚗 I can assist with:\n\n🎯 Package selection & pricing\n📅 Booking & scheduling\n📊 Your lessons & progress\n⭐ Student reviews\n📞 Contact information\n🗺️ Service areas\n\nWhat would you like to know? You can also call us at 0400 000 000!";
 }
 
 export async function POST(request: NextRequest) {
@@ -343,6 +358,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    console.log('🤖 Processing message:', message.substring(0, 50) + '...');
+
+    // Check which AI providers are available
+    const providers = getAIProviders();
+    const availableProviders = providers.filter(p => p.apiKey);
+    console.log(`🔧 Available AI providers: ${availableProviders.map(p => p.name).join(', ')}`);
 
     // Get comprehensive data from database
     const comprehensiveData = await getComprehensiveData(userId);
@@ -374,21 +396,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get enhanced response with comprehensive data and conversation history
-    let response = await getEnhancedAIResponse(message, userContext, comprehensiveData);
+    // Get enhanced response with AI or fallback
+    let response = await getEnhancedAIResponse(message, userContext, comprehensiveData, _conversationHistory);
     
     // Add context-aware personalization
     if (userContext?.recentBookings && userContext.recentBookings.length > 0) {
       const recentBooking = userContext.recentBookings[0];
       if (message.toLowerCase().includes('booking') || message.toLowerCase().includes('lesson')) {
-        response += `\n\n💡 **Quick Info:** Your most recent booking is for ${recentBooking.packages?.name || 'a lesson'} on ${new Date(recentBooking.date).toLocaleDateString()}. Status: ${recentBooking.status}`;
+        response += `\n\n💡 **Quick Update:** Your most recent booking is for ${recentBooking.packages?.name || 'a lesson'} on ${new Date(recentBooking.date).toLocaleDateString()}. Status: ${recentBooking.status}`;
       }
     }
 
+    console.log('✅ Response generated successfully');
     return NextResponse.json({ response });
     
   } catch (error) {
-    console.error('Chatbot API error:', error);
+    console.error('❌ Chatbot API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
