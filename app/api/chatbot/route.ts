@@ -41,37 +41,70 @@ You are an expert AI assistant for EG Driving School in Brisbane, Australia. You
 Always be encouraging, safety-focused, and emphasize the value of professional instruction.
 `;
 
-async function getEnhancedAIResponse(message: string, userContext?: any, comprehensiveData?: any): Promise<string> {
+async function getEnhancedAIResponse(
+  message: string,
+  userContext?: any,
+  comprehensiveData?: any,
+  conversationHistory?: any[]
+): Promise<string> {
   try {
-    // Prepare context with user data
-    let contextPrompt = drivingSchoolContext;
-    
-    if (userContext?.recentBookings) {
-      contextPrompt += `\n\nUser Context: This student has ${userContext.recentBookings.length} bookings and their most recent package is ${userContext.recentBookings[0]?.packages?.name || 'unknown'}.`;
-    }
-    
-    if (comprehensiveData?.averageRating) {
-      contextPrompt += `\n\nSchool Stats: ${comprehensiveData.averageRating}/5 star rating with ${comprehensiveData.totalUsers}+ students.`;
+    // System prompt with clear instructions for the Llama model
+    const systemPrompt = `
+      You are a friendly and professional AI assistant for EG Driving School, a premier driving school in Brisbane, Australia.
+      Your goal is to provide helpful, accurate, and encouraging information to students and potential customers.
+      You must prioritize answers from the provided data.
+      If the user asks a question not covered by the data, use your general knowledge to provide a helpful response, but always relate it back to driving or road safety.
+    `;
+
+    // Prepare the data context
+    const dataContext = `
+      **Driving School Information:**
+      ${drivingSchoolContext}
+
+      **Live Data:**
+      - **Packages:** ${JSON.stringify(comprehensiveData?.packages, null, 2)}
+      - **Reviews:** ${JSON.stringify(comprehensiveData?.reviews, null, 2)}
+      - **Service Areas:** ${JSON.stringify(knowledgeBase.areas, null, 2)}
+      - **Contact Info:** ${JSON.stringify(knowledgeBase.contact, null, 2)}
+    `;
+
+    // Prepare the user context
+    let userPrompt = "";
+    if (userContext?.userData) {
+      userPrompt = `
+        **User Information:**
+        - **Name:** ${userContext.userData.full_name}
+        - **Recent Bookings:** ${JSON.stringify(userContext.recentBookings, null, 2)}
+      `;
     }
 
-    // Use Hugging Face's free models (like Microsoft DialoGPT or Facebook BlenderBot)
-    const response = await hf.textGeneration({
-      model: 'microsoft/DialoGPT-large', // Free and good for conversations
-      inputs: `${contextPrompt}\n\nStudent Question: ${message}\n\nHelpful Response:`,
-      parameters: {
-        max_new_tokens: 200,
-        temperature: 0.7,
-        do_sample: true,
-        top_p: 0.9,
-        repetition_penalty: 1.1
-      }
+    // Use chatCompletion since the selected provider supports the 'conversational' task
+    const response = await hf.chatCompletion({
+      model: 'HuggingFaceH4/zephyr-7b-beta',
+      messages: [
+        { role: 'system', content: `${systemPrompt}\n${dataContext}\n${userPrompt}`.trim() },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 250,
+      temperature: 0.8,
+      top_p: 0.95,
     });
 
-    return response.generated_text.split('Helpful Response:')[1]?.trim() || getEnhancedResponse(message, userContext, comprehensiveData);
+    // Extract the generated text
+    let generatedText = response.choices?.[0]?.message?.content ?? '';
+    if (generatedText.includes('<|eot_id|>')) {
+      generatedText = generatedText.split('<|eot_id|>')[0];
+    }
+    if (generatedText.includes('<|start_header_id|>assistant<|end_header_id|>')) {
+      generatedText = generatedText.split('<|start_header_id|>assistant<|end_header_id|>')[1];
+    }
+
+
+    return generatedText.trim() || getEnhancedResponse(message, userContext, comprehensiveData, conversationHistory);
   } catch (error) {
     console.error('AI model error:', error);
-    // Fallback to enhanced rule-based system
-    return getEnhancedResponse(message, userContext, comprehensiveData);
+    // Fallback to the rule-based system
+    return getEnhancedResponse(message, userContext, comprehensiveData, conversationHistory);
   }
 }
 

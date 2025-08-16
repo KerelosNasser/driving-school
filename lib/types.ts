@@ -1,5 +1,3 @@
-// Base types for the application
-
 export interface Package {
   id: string;
   name: string;

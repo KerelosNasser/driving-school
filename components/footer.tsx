@@ -10,7 +10,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <h3 className="text-xl font-bold">Brisbane Driving School</h3>
+            <h3 className="text-xl font-bold">EG Driving School</h3>
             <p className="text-gray-300">Professional driving lessons in Brisbane with experienced instructors.</p>
             <div className="flex space-x-4">
               <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-gray-300 hover:text-white transition-colors">
@@ -96,7 +96,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-          <p>© {currentYear} Brisbane Driving School. All rights reserved.</p>
+          <p>© {currentYear} EG Driving School. All rights reserved.</p>
           <div className="mt-2 space-x-4">
             <Link href="/privacy" className="hover:text-white transition-colors">
               Privacy Policy

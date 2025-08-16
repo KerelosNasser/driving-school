@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export const createServerSupabaseClient = async () => {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,7 +11,7 @@ export const createServerSupabaseClient = async () => {
       cookies: {
         async get(name: string) {
           try {
-            return (await cookieStore.get(name))?.value;
+            return cookieStore.get(name)?.value;
           } catch (error) {
             console.error('Cookie access error:', error);
             return null;
@@ -19,7 +19,7 @@ export const createServerSupabaseClient = async () => {
         },
         async set(name: string, value: string, options: CookieOptions) {
           try {
-            await cookieStore.set({ name, value, ...options });
+            cookieStore.set({ name, value, ...options });
           } catch (error) {
             console.error('Cookie set error:', error);
           }
@@ -27,10 +27,10 @@ export const createServerSupabaseClient = async () => {
         async remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({
-              name, 
-              value: '', 
-              ...options, 
-              maxAge: 0 
+              name,
+              value: '',
+              ...options,
+              maxAge: 0
             });
           } catch (error) {
             console.error('Cookie remove error:', error);

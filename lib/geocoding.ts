@@ -30,7 +30,7 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
       }),
       {
         headers: {
-          'User-Agent': 'BrisbaneDrivingSchool/1.0',
+          'User-Agent': 'EGDrivingSchool/1.0',
         },
       }
     );

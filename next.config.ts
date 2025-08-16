@@ -22,7 +22,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Fix duplicate Sentry configuration
 export default withSentryConfig(nextConfig, {
   org: "kero-w4",
   project: "driving-school",
