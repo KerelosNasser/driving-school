@@ -6,6 +6,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 interface EmailRequest {
   bookingId: string;
   userEmail: string;
+
+
+
   userName: string;
   status: string;
   date: string;

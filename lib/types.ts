@@ -55,3 +55,23 @@ export interface BookingStatusUpdate {
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected';
   notes?: string;
 }
+
+export interface SiteContent {
+  id: string;
+  content_key: string;
+  content_type: 'image' | 'text' | 'json' | 'boolean';
+  content_value: string | null;
+  content_json: any;
+  page_section: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GalleryImage {
+  id: number;
+  src: string;
+  alt: string;
+  title: string;
+}

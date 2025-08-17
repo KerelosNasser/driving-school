@@ -14,6 +14,7 @@ import { FormsTab } from './FormsTab';
 import { PackagesTab } from './PackagesTab';
 import { MergedUser } from '../page';
 import { Booking, Review, Package } from '@/lib/types';
+import ContentManagementTab from './ContentManagementTab';
 
 interface AdminDashboardClientProps {
   initialUsers: MergedUser[];
@@ -77,6 +78,7 @@ export function AdminDashboardClient({
         <TabsTrigger value="users">Users</TabsTrigger>
         <TabsTrigger value="packages">Packages</TabsTrigger>
         <TabsTrigger value="reviews">Reviews</TabsTrigger>
+        <TabsTrigger value="content">Content</TabsTrigger>
         <TabsTrigger value="calendar">Calendar</TabsTrigger>
         <TabsTrigger value="map">Map</TabsTrigger>
         <TabsTrigger value="forms">Forms</TabsTrigger>
@@ -103,6 +105,9 @@ export function AdminDashboardClient({
           loading={loading}
           handleReviewApproval={handleReviewApproval}
         />
+      </TabsContent>
+      <TabsContent value="content">
+        <ContentManagementTab />
       </TabsContent>
       <TabsContent value="calendar">
         <CalendarTab bookings={bookings} />
