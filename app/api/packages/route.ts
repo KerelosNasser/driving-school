@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    if (error.message === 'Rate limit exceeded') {
+    if (error instanceof Error && error.message === 'Rate limit exceeded') {
       return NextResponse.json(
         { error: 'Too many requests' },
         { status: 429 }
@@ -114,12 +114,11 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Invalidate cache
     packagesCache = null;
 
     return NextResponse.json({ package: newPackage }, { status: 201 });
   } catch (error) {
-    if (error.message === 'Rate limit exceeded') {
+    if (error instanceof Error && error.message === 'Rate limit exceeded') {
       return NextResponse.json(
         { error: 'Too many requests' },
         { status: 429 }

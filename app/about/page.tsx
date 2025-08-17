@@ -84,11 +84,15 @@ export default function AboutPage() {
               </div>
               
               <p className="text-gray-700">
-                Hi there! I&apos;m Michael, a passionate driving instructor with over 15 years of experience teaching people of all ages how to drive safely and confidently on Brisbane roads.
+                Hi there! I&apos;m Michael, a passionate driving instructor with over 15 years
+                of experience teaching people of all ages how to drive safely and confidently
+                on Brisbane roads.
               </p>
               
               <p className="text-gray-700">
-                I believe in creating a relaxed, supportive learning environment where you can develop your skills at your own pace. My teaching approach is patient, thorough, and tailored to your individual needs.
+                I believe in creating a relaxed, supportive learning environment where you can
+                develop your skills at your own pace. My teaching approach is patient,
+                thorough, and tailored to your individual needs.
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -140,13 +144,14 @@ export default function AboutPage() {
             <div>
               <h2 className="text-3xl font-bold text-gray-900">Our Service Areas</h2>
               <p className="mt-4 text-lg text-gray-600">
-                We cover a wide range of suburbs across Brisbane. Select an area on the map to see more details or choose from the list below.
+                We cover a wide range of suburbs across Brisbane. Select an area on the map
+                to see more details or choose from the list below.
               </p>
             </div>
             <div className="h-[500px] w-full rounded-xl border-4 border-white shadow-2xl overflow-hidden">
-              <LeafletServiceAreaMap 
-                selectedAreaId={selectedAreaId} 
-                onAreaSelect={handleAreaSelect} 
+              <LeafletServiceAreaMap
+                selectedAreaId={selectedAreaId}
+                onAreaSelect={handleAreaSelect}
               />
             </div>
           </div>

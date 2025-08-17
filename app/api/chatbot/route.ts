@@ -56,7 +56,7 @@ const getAIProviders = (): AIProvider[] => [
       'Content-Type': 'application/json'
     },
     payload: (message: string, context: string) => ({
-      model: 'meta-llama/Llama-3.2-3B-Instruct', // Free tier model
+      model: 'meta-llama/Llama-3.2-3B-Instruct',
       messages: [
         { role: 'system', content: context },
         { role: 'user', content: message }
@@ -78,7 +78,7 @@ const getAIProviders = (): AIProvider[] => [
       'X-Title': 'EG Driving School Chatbot'
     },
     payload: (message: string, context: string) => ({
-      model: 'meta-llama/llama-3.2-3b-instruct:free', // Free tier model
+      model: 'meta-llama/llama-3.2-3b-instruct:free',
       messages: [
         { role: 'system', content: context },
         { role: 'user', content: message }
@@ -98,7 +98,7 @@ const getAIProviders = (): AIProvider[] => [
       'Content-Type': 'application/json'
     },
     payload: (message: string, context: string) => ({
-      model: 'llama-3.1-8b-instant', // Free tier model
+      model: 'llama-3.1-8b-instant',
       messages: [
         { role: 'system', content: context },
         { role: 'user', content: message }
@@ -185,7 +185,6 @@ async function getEnhancedAIResponse(
   return getIntelligentResponse(message, userContext, comprehensiveData, conversationHistory);
 }
 
-// Enhanced knowledge base with complete data access
 const knowledgeBase = {
   packages: [
     {
@@ -235,7 +234,7 @@ const knowledgeBase = {
   ],
   contact: {
     phone: "0400 000 000",
-    email: "info@brisbanedrivingschool.com",
+    email: "info@EGdrivingschool.com",
     hours: "Monday to Friday: 8AM - 6PM, Saturday: 9AM - 4PM, Sunday: Closed",
     address: "Brisbane CBD, Queensland"
   },

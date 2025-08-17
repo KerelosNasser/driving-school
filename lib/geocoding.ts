@@ -73,7 +73,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<Geocodin
       }),
       {
         headers: {
-          'User-Agent': 'BrisbaneDrivingSchool/1.0',
+          'User-Agent': 'EGDrivingSchool/1.0',
         },
       }
     );

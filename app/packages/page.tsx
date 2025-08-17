@@ -143,7 +143,8 @@ export default function PackagesPage() {
                 Driving Lesson Packages
               </h1>
               <p className="text-xl text-yellow-100 max-w-3xl mx-auto">
-                Choose the package that best suits your needs and start your journey to becoming a confident driver.
+                Choose the package that best suits your needs and start your journey to becoming a
+                confident driver.
               </p>
             </motion.div>
           </div>

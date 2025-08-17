@@ -152,7 +152,7 @@ export default function ReviewsPage() {
     };
 
     fetchReviews();
-  }, []); // fallbackReviews is now in module scope, so no dependency needed
+  }, []);
 
   // Filter reviews based on search term and rating filter
   const filteredReviews = reviews.filter(review => {

@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const emailContent = getEmailContent(status, userName, date, time, packageName);
 
     const { data, error } = await resend.emails.send({
-      from: 'Brisbane Driving School <noreply@brisbanedrivingschool.com>',
+      from: 'EG Driving School <noreply@egdrivingschool.com>',
       to: [userEmail],
       subject: emailContent.subject,
       html: emailContent.html,

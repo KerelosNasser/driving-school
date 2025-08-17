@@ -55,5 +55,3 @@ export interface BookingStatusUpdate {
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected';
   notes?: string;
 }
-
-// Add more types as needed for your application

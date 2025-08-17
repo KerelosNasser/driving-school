@@ -3,9 +3,8 @@ import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {});
 
-// Google Form URL - Replace with your actual form URL
-const GOOGLE_FORM_URL = process.env.NEXT_PUBLIC_GOOGLE_FORM_URL || 
-  'https://docs.google.com/forms/d/e/YOUR_FORM_ID/viewform';
+const GOOGLE_FORM_URL = process.env.NEXT_PUBLIC_GOOGLE_FORM_URL ||
+  'https://docs.google.com/forms/d/e/FORM_ID/viewform';
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest) {
       customer_email: bookingDetails.userEmail,
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       sessionId: session.id,
       url: session.url,
     });

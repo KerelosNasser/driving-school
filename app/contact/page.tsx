@@ -1,5 +1,3 @@
-
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +16,8 @@ export default function ContactPage() {
               <div>
                 <h1 className="text-4xl md:text-5xl font-bold text-gray-900">Contact Us</h1>
                 <p className="mt-4 text-lg text-gray-600">
-                  We'd love to hear from you! Whether you have a question about our packages, need assistance with booking, or just want to say hello, feel free to reach out.
+                  We'd love to hear from you! Whether you have a question about our packages, need assistance
+                   with booking, or just want to say hello, feel free to reach out.
                 </p>
               </div>
               <div className="space-y-4">

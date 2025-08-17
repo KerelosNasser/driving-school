@@ -15,12 +15,12 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await resend.emails.send({
-      from: 'Brisbane Driving School <noreply@brisbanedrivingschool.com>',
+      from: 'EG Driving School <noreply@egdrivingschool.com>',
       to: [userEmail],
       subject: 'How was your driving lesson? Leave us a review!',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #eab308;">Thank you for choosing Brisbane Driving School!</h2>
+          <h2 style="color: #eab308;">Thank you for choosing EG Driving School!</h2>
           <p>Hi ${userName},</p>
           <p>We hope you had a great experience with your recent driving lesson. Your feedback is incredibly valuable to us and helps other students make informed decisions.</p>
           
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
           
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="font-size: 12px; color: #6b7280;">
-            📧 Email: info@brisbanedrivingschool.com<br>
+            📧 Email: info@egdrivingschool.com<br>
             📱 Phone: (07) 1234 5678
           </p>
         </div>
