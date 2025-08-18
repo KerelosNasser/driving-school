@@ -1,85 +1,14 @@
 // lib/content-utils.ts
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import {SiteContent, ValidationError} from './types';
 
 // Utility function for combining classes
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Types
-export interface SiteContent {
-  id: string;
-  content_key: string;
-  content_type: 'image' | 'text' | 'json' | 'boolean';
-  content_value: string | null;
-  content_json: any;
-  page_section: string;
-  display_order: number;
-  is_active: boolean;
-  file_path?: string;
-  file_url?: string;
-  file_name?: string;
-  file_size?: number;
-  file_type?: string;
-  alt_text?: string;
-  title?: string;
-  description?: string;
-  is_draft: boolean;
-  version?: number;
-  parent_id?: string;
-  published_at?: string;
-  created_at: string;
-  updated_at: string;
-  created_by?: string;
-  updated_by?: string;
-}
 
-export interface GalleryImage {
-  id: number;
-  src: string;
-  alt: string;
-  title: string;
-  isUploaded?: boolean;
-  file_path?: string;
-  file_name?: string;
-  file_size?: number;
-  file_type?: string;
-}
-
-export interface UploadResult {
-  success: boolean;
-  data?: {
-    originalName: string;
-    size: number;
-    type: string;
-    images: Array<{
-      size: string;
-      path: string;
-      url: string;
-      width?: number;
-      height?: number;
-    }>;
-    primaryUrl: string;
-    primaryPath: string;
-  };
-  error?: string;
-  details?: string;
-}
-
-export interface ContentResponse {
-  data: SiteContent[];
-  count: number;
-  error?: string;
-  details?: string;
-}
-
-export interface ValidationError {
-  field: string;
-  message: string;
-}
-
-// Constants
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 export const IMAGE_SIZES = {

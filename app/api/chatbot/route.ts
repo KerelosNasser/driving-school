@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { AIProvider } from '@/lib/types';
 
 const drivingSchoolContext = `
 You are an expert AI assistant for EG Driving School in Brisbane, Australia. You specialize in:
@@ -37,14 +38,6 @@ Always be encouraging, safety-focused,straight to the point, and emphasize the v
 `;
 
 // AI Provider Configuration
-interface AIProvider {
-  name: string;
-  endpoint: string;
-  apiKey: string | null;
-  headers: Record<string, string>;
-  payload: (message: string, context: string) => any;
-  parseResponse: (response: any) => string;
-}
 
 const getAIProviders = (): AIProvider[] => [
     {

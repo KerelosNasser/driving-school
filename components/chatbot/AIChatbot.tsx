@@ -7,17 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser } from '@clerk/nextjs';
+import {ChatbotProps, Message} from "@/lib/types";
 
-interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'bot';
-  timestamp: Date;
-}
-
-interface ChatbotProps {
-  delayMs?: number;
-}
 
 export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
   const [isOpen, setIsOpen] = useState(false);

@@ -1,20 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import {EmailRequest} from "@/lib/types";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-interface EmailRequest {
-  bookingId: string;
-  userEmail: string;
-
-
-
-  userName: string;
-  status: string;
-  date: string;
-  time: string;
-  packageName?: string;
-}
 
 function getEmailContent(status: string, userName: string, date: string, time: string, packageName?: string) {
   const statusMessages = {
