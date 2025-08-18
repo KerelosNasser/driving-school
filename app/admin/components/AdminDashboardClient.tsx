@@ -14,7 +14,7 @@ import { FormsTab } from './FormsTab';
 import { PackagesTab } from './PackagesTab';
 import { MergedUser } from '../page';
 import { Booking, Review, Package } from '@/lib/types';
-import ContentManagementTab from './ContentManagementTab';
+import { EnhancedContentManagement } from './ContentManagementTab';
 
 interface AdminDashboardClientProps {
   initialUsers: MergedUser[];
@@ -107,7 +107,7 @@ export function AdminDashboardClient({
         />
       </TabsContent>
       <TabsContent value="content">
-        <ContentManagementTab />
+        <EnhancedContentManagement />
       </TabsContent>
       <TabsContent value="calendar">
         <CalendarTab bookings={bookings} />

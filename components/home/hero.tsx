@@ -6,8 +6,36 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Calendar, Car, Award, Clock } from 'lucide-react';
 
-export function Hero() {
+interface HeroProps {
+  title?: string;
+  subtitle?: string;
+  imageUrl?: string | null;
+  imageAlt?: string | null;
+  features?: ({ text?: string | null })[];
+}
+
+const featureIcons = [Award, Car, Calendar, Clock];
+
+export function Hero({ 
+  title = 'Learn to Drive with Confidence',
+  subtitle = 'Professional driving lessons with experienced instructors at EG Driving School - tailored to your needs.',
+  imageUrl = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+  imageAlt = 'Driving instructor with student in car',
+  features = [],
+}: HeroProps) {
   const [isHovered, setIsHovered] = useState(false);
+
+  const defaultFeatures = [
+    { text: 'Licensed Instructors' },
+    { text: 'Modern Vehicles' },
+    { text: 'Flexible Scheduling' },
+    { text: 'Personalized Pace' },
+  ];
+
+  const displayFeatures = features.map((feature, index) => ({
+    icon: featureIcons[index],
+    text: feature.text || defaultFeatures[index].text,
+  }));
 
   return (
     <section className="relative bg-gradient-to-r from-yellow-900 to-yellow-700 text-white overflow-hidden">
@@ -29,10 +57,10 @@ export function Hero() {
               transition={{ duration: 0.5 }}
             >
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-                Learn to Drive with Confidence
+                {title}
               </h1>
               <p className="mt-4 sm:mt-6 text-lg sm:text-xl text-yellow-100 max-w-2xl mx-auto lg:mx-0">
-                Professional driving lessons with experienced instructors at EG Driving School - tailored to your needs.
+                {subtitle}
               </p>
             </motion.div>
 
@@ -65,22 +93,12 @@ export function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <div className="flex items-center justify-center lg:justify-start space-x-2">
-                <Award className="h-5 w-5 text-yellow-300 flex-shrink-0" />
-                <span className="text-sm sm:text-base">Licensed Instructors</span>
-              </div>
-              <div className="flex items-center justify-center lg:justify-start space-x-2">
-                <Car className="h-5 w-5 text-yellow-300 flex-shrink-0" />
-                <span className="text-sm sm:text-base">Modern Vehicles</span>
-              </div>
-              <div className="flex items-center justify-center lg:justify-start space-x-2">
-                <Calendar className="h-5 w-5 text-yellow-300 flex-shrink-0" />
-                <span className="text-sm sm:text-base">Flexible Scheduling</span>
-              </div>
-              <div className="flex items-center justify-center lg:justify-start space-x-2">
-                <Clock className="h-5 w-5 text-yellow-300 flex-shrink-0" />
-                <span className="text-sm sm:text-base">Personalized Pace</span>
-              </div>
+              {displayFeatures.map((feature, index) => (
+                  <div key={index} className="flex items-center justify-center lg:justify-start space-x-2">
+                    <feature.icon className="h-5 w-5 text-yellow-300 flex-shrink-0" />
+                    <span className="text-sm sm:text-base">{feature.text}</span>
+                  </div>
+                ))}
             </motion.div>
           </div>
 
@@ -101,8 +119,8 @@ export function Hero() {
               <div className="aspect-w-4 aspect-h-3 bg-yellow-800 relative">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Image
-                    src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-                    alt="Driving instructor with student in car"
+                    src={imageUrl || ''}
+                    alt={imageAlt || ''}
                     width={1000}
                     height={750}
                     className="w-full h-full object-cover"

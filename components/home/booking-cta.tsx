@@ -4,8 +4,25 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Calendar, Phone, Mail, ArrowRight } from 'lucide-react';
+import { PageContent } from '@/lib/content';
 
-export function BookingCTA() {
+interface BookingCTAProps {
+  title?: string;
+  subtitle?: string;
+  phoneText?: string;
+  phoneNumber?: string;
+  emailText?: string;
+  emailAddress?: string;
+}
+
+export function BookingCTA({ 
+  title = 'Ready to Start Your Driving Journey?',
+  subtitle = "Book your first lesson today and take the first step towards getting your license with Brisbane's most trusted driving instructor.",
+  phoneText = 'Call us at',
+  phoneNumber = '0400 000 000',
+  emailText = 'Email us at',
+  emailAddress = 'info@brisbanedrivingschool.com',
+}: BookingCTAProps) {
   return (
     <section className="py-20 bg-gradient-to-r from-yellow-600 to-yellow-800 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -19,10 +36,10 @@ export function BookingCTA() {
             className="space-y-6"
           >
             <h2 className="text-3xl md:text-4xl font-bold leading-tight">
-              Ready to Start Your Driving Journey?
+              {title}
             </h2>
             <p className="text-xl text-yellow-100">
-              Book your first lesson today and take the first step towards getting your license with Brisbane&apos;s most trusted driving instructor.
+              {subtitle}
             </p>
             
             <div className="space-y-4 pt-2">
@@ -36,13 +53,13 @@ export function BookingCTA() {
                 <div className="bg-white/20 p-2 rounded-full">
                   <Phone className="h-5 w-5" />
                 </div>
-                <div>Call us at <a href="tel:+61400000000" className="underline hover:text-yellow-200">0400 000 000</a></div>
+                <div>{phoneText} <a href={`tel:${phoneNumber}`} className="underline hover:text-yellow-200">{phoneNumber}</a></div>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="bg-white/20 p-2 rounded-full">
                   <Mail className="h-5 w-5" />
                 </div>
-                <div>Email us at <a href="mailto:info@brisbanedrivingschool.com" className="underline hover:text-yellow-200">info@brisbanedrivingschool.com</a></div>
+                <div>{emailText} <a href={`mailto:${emailAddress}`} className="underline hover:text-yellow-200">{emailAddress}</a></div>
               </div>
             </div>
             

@@ -65,42 +65,7 @@ export interface SiteContent {
   page_section: string;
   display_order: number;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface GalleryImage {
-  id: number;
-  src: string;
-  alt: string;
-  title: string;
-}
-export interface AIProvider {
-  name: string;
-  endpoint: string;
-  apiKey: string | null;
-  headers: Record<string, string>;
-  payload: (message: string, context: string) => any;
-  parseResponse: (response: any) => string;
-}
-export interface EmailRequest {
-  bookingId: string;
-  userEmail: string;
-  userName: string;
-  status: string;
-  date: string;
-  time: string;
-  packageName?: string;
-}
-export interface SiteContent {
-  id: string;
-  content_key: string;
-  content_type: 'image' | 'text' | 'json' | 'boolean';
-  content_value: string | null;
-  content_json: any;
-  page_section: string;
-  display_order: number;
-  is_active: boolean;
+  is_draft: boolean;
   file_path?: string;
   file_url?: string;
   file_name?: string;
@@ -109,14 +74,8 @@ export interface SiteContent {
   alt_text?: string;
   title?: string;
   description?: string;
-  is_draft: boolean;
-  version?: number;
-  parent_id?: string;
-  published_at?: string;
   created_at: string;
   updated_at: string;
-  created_by?: string;
-  updated_by?: string;
 }
 
 export interface GalleryImage {
@@ -129,6 +88,25 @@ export interface GalleryImage {
   file_name?: string;
   file_size?: number;
   file_type?: string;
+}
+
+export interface AIProvider {
+  name: string;
+  endpoint: string;
+  apiKey: string | null;
+  headers: Record<string, string>;
+  payload: (message: string, context: string) => any;
+  parseResponse: (response: any) => string;
+}
+
+export interface EmailRequest {
+  bookingId: string;
+  userEmail: string;
+  userName: string;
+  status: string;
+  date: string;
+  time: string;
+  packageName?: string;
 }
 
 export interface UploadResult {
@@ -162,6 +140,7 @@ export interface ValidationError {
   field: string;
   message: string;
 }
+
 export interface Message {
   id: string;
   content: string;
@@ -172,4 +151,3 @@ export interface Message {
 export interface ChatbotProps {
   delayMs?: number;
 }
-

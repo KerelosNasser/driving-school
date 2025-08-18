@@ -1,8 +1,13 @@
-
 import { createClerkClient } from '@clerk/nextjs/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { Toaster } from 'sonner';
 import { AdminDashboardClient } from './components/AdminDashboardClient';
+
+// Create a server-side Supabase client for admin operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // Define the new, merged user type
 export interface MergedUser {
@@ -75,7 +80,7 @@ async function getMergedUsers(): Promise<MergedUser[]> {
     console.log(`Found ${clerkUsers.length} Clerk users`);
 
     // Fetch users from Supabase
-    const { data: supabaseUsers, error: supabaseError } = await supabase
+    const { data: supabaseUsers, error: supabaseError } = await supabaseAdmin
       .from('users')
       .select('*');
 
@@ -185,9 +190,9 @@ export default async function AdminDashboardPage() {
   // Fetch all data on the server
   const [users, reviews, bookings, packages] = await Promise.all([
     getMergedUsers(),
-    supabase.from('reviews').select('*'),
-    supabase.from('bookings').select('*, users(*), packages(*)'),
-    supabase.from('packages').select('*').order('created_at', { ascending: false })
+    supabaseAdmin.from('reviews').select('*'),
+    supabaseAdmin.from('bookings').select('*, users(*), packages(*)'),
+    supabaseAdmin.from('packages').select('*').order('created_at', { ascending: false })
   ]);
 
   return (
