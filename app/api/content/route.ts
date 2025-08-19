@@ -33,7 +33,8 @@ const contentCreateSchema = z.object({
 // Helper function to get file URL from Supabase storage
 function getFileUrl(filePath: string): string {
   if (!filePath) return '';
-  const { data } = supabase.storage.from('content-images').getPublicUrl(filePath);
+  // Use consistent bucket name: content-files
+  const { data } = supabase.storage.from('content-files').getPublicUrl(filePath);
   return data.publicUrl;
 }
 
@@ -219,7 +220,7 @@ export async function DELETE(request: NextRequest) {
     // Delete the file from storage if it exists
     if (content.file_path) {
       const { error: storageError } = await supabase.storage
-        .from('content-images')
+        .from('content-files') // Changed from 'content-images'
         .remove([content.file_path]);
       
       if (storageError) {

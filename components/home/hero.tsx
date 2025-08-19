@@ -7,20 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Car, Award, Clock } from 'lucide-react';
 
 interface HeroProps {
-  title?: string;
-  subtitle?: string;
-  imageUrl?: string | null;
-  imageAlt?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
   features?: ({ text?: string | null })[];
 }
 
 const featureIcons = [Award, Car, Calendar, Clock];
 
-export function Hero({ 
+export function Hero({
   title = 'Learn to Drive with Confidence',
   subtitle = 'Professional driving lessons with experienced instructors at EG Driving School - tailored to your needs.',
-  imageUrl = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-  imageAlt = 'Driving instructor with student in car',
   features = [],
 }: HeroProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -115,17 +111,8 @@ export function Hero({
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
             >
-              {/* Using Next.js Image component for optimization */}
               <div className="aspect-w-4 aspect-h-3 bg-yellow-800 relative">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Image
-                    src={imageUrl || ''}
-                    alt={imageAlt || ''}
-                    width={1000}
-                    height={750}
-                    className="w-full h-full object-cover"
-                    priority
-                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-yellow-900/60 to-transparent"></div>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
@@ -138,7 +125,7 @@ export function Hero({
                 </div>
               </div>
             </div>
-            
+
             {/* Decorative elements */}
             <div className="absolute top-14 -right-1 h-16 w-16 sm:h-24 sm:w-24 bg-yellow-950 rounded-full opacity-70 blur-xl"></div>
             <div className="absolute -bottom-3 left-12 h-20 w-20 sm:h-32 sm:w-32 bg-yellow-500 rounded-full opacity-70 blur-xl"></div>

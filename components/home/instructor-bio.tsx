@@ -17,12 +17,12 @@ interface InstructorBioProps {
   features?: (string | null | undefined)[];
 }
 
-export function InstructorBio({ 
+export function InstructorBio({
   title = 'Meet Your Instructor',
   name = 'Michael Thompson',
   bioP1 = "Hi there! I'm Michael, a passionate driving instructor with over 15 years of experience teaching people of all ages how to drive safely and confidently on Brisbane roads.",
   bioP2 = "I believe in creating a relaxed, supportive learning environment where you can develop your skills at your own pace. My teaching approach is patient, thorough, and tailored to your individual needs.",
-  imageUrl = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
+  imageUrl = 'https://img1.wsimg.com/isteam/ip/14e0fa52-5b69-4038-a086-1acfa9374b62/20230411_110458.jpg/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=w:1200,h:1600,cg:true',
   imageAlt = 'A friendly and professional driving instructor',
   experience = '15+ Years Experience',
   rating = '4.9',
@@ -69,8 +69,8 @@ export function InstructorBio({
               <Image
                 src={imageUrl || ''}
                 alt={imageAlt || ''}
-                layout="fill"
-                objectFit="cover"
+                fill
+                style={{ objectFit: 'cover' }}
                 className="transform transition-transform duration-500 hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>

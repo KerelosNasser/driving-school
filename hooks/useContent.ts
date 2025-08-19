@@ -5,7 +5,8 @@ import {
   ContentFilters, 
   ContentSortOptions, 
   ContentStats,
-  ContentServiceError 
+  ContentServiceError,
+  GetAllContentOptions
 } from '@/lib/content-service';
 import { SiteContent } from '@/lib/types';
 
@@ -16,6 +17,18 @@ export interface UseEnhancedContentOptions {
   autoFetch?: boolean;
 }
 
+export interface UseEnhancedContentParams {
+  section?: string;
+  contentType?: 'text' | 'image' | 'json' | 'boolean';
+  search?: string;
+  isActive?: boolean;
+  isDraft?: boolean;
+  sortBy?: 'created_at' | 'updated_at' | 'content_key' | 'page_section' | 'display_order';
+  sortOrder?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
+}
+
 export interface UseEnhancedContentReturn {
   // State
   content: SiteContent[];
@@ -23,24 +36,22 @@ export interface UseEnhancedContentReturn {
   saving: boolean;
   uploading: boolean;
   error: string | null;
-  total: number;
+  totalCount: number;
   stats: ContentStats | null;
   sections: string[];
   
   // Actions
-  fetchContent: () => Promise<void>;
+  fetchContent: (params?: UseEnhancedContentParams) => Promise<void>;
   createContent: (content: Omit<SiteContent, 'id' | 'created_at' | 'updated_at'>) => Promise<SiteContent | null>;
   updateContent: (id: string, updates: Partial<SiteContent>) => Promise<SiteContent | null>;
   deleteContent: (id: string) => Promise<boolean>;
-  bulkDeleteContent: (ids: string[]) => Promise<boolean>;
-  bulkUpdateContent: (ids: string[], updates: Partial<SiteContent>) => Promise<boolean>;
+  bulkDelete: (ids: string[]) => Promise<boolean>;
+  bulkUpdate: (ids: string[], updates: Partial<SiteContent>) => Promise<boolean>;
   duplicateContent: (id: string) => Promise<SiteContent | null>;
-  uploadFile: (file: File, path: string, onProgress?: (progress: number) => void) => Promise<{ path: string; url: string } | null>;
+  uploadFile: (file: File, onProgress?: (progress: number) => void) => Promise<string | null>;
   refreshSections: () => Promise<void>;
   
   // Utilities
-  setFilters: (filters: ContentFilters) => void;
-  setSort: (sort: ContentSortOptions) => void;
   clearError: () => void;
 }
 
@@ -50,11 +61,9 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [total, setTotal] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState<ContentStats | null>(null);
   const [sections, setSections] = useState<string[]>([]);
-  const [filters, setFilters] = useState<ContentFilters>(options.filters || {});
-  const [sort, setSort] = useState<ContentSortOptions>(options.sort || { field: 'created_at', direction: 'desc' });
 
   const handleError = useCallback((error: unknown, defaultMessage: string) => {
     const message = error instanceof ContentServiceError ? error.message : defaultMessage;
@@ -63,26 +72,45 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
     console.error(error);
   }, []);
 
-  const fetchContent = useCallback(async () => {
+  const fetchContent = useCallback(async (params?: UseEnhancedContentParams) => {
     setLoading(true);
     setError(null);
     
     try {
-      const result = await enhancedContentService.getAll({
-        filters,
-        sort,
-        limit: options.limit
-      });
+      // Convert params to the format expected by enhancedContentService
+      const serviceOptions: GetAllContentOptions = {};
+      
+      if (params) {
+        serviceOptions.filters = {
+          section: params.section,
+          contentType: params.contentType,
+          isActive: params.isActive,
+          isDraft: params.isDraft,
+          search: params.search
+        };
+        
+        if (params.sortBy && params.sortOrder) {
+          serviceOptions.sort = {
+            field: params.sortBy,
+            direction: params.sortOrder
+          };
+        }
+        
+        serviceOptions.limit = params.limit;
+        serviceOptions.offset = params.offset;
+      }
+      
+      const result = await enhancedContentService.getAll(serviceOptions);
       
       setContent(result.data);
-      setTotal(result.total);
+      setTotalCount(result.total);
       setStats(result.stats);
     } catch (error) {
       handleError(error, 'Failed to fetch content');
     } finally {
       setLoading(false);
     }
-  }, [filters, sort, options.limit, handleError]);
+  }, [handleError]);
 
   const refreshSections = useCallback(async () => {
     try {
@@ -100,7 +128,7 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
     try {
       const created = await enhancedContentService.create(newContent);
       setContent(prev => [created, ...prev]);
-      setTotal(prev => prev + 1);
+      setTotalCount(prev => prev + 1);
       toast.success('Content created successfully');
       return created;
     } catch (error) {
@@ -134,7 +162,7 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
     try {
       // Optimistic update
       setContent(prev => prev.filter(item => item.id !== id));
-      setTotal(prev => prev - 1);
+      setTotalCount(prev => prev - 1);
       
       await enhancedContentService.delete(id);
       toast.success('Content deleted successfully');
@@ -147,13 +175,13 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
     }
   }, [handleError, fetchContent]);
 
-  const bulkDeleteContent = useCallback(async (ids: string[]) => {
+  const bulkDelete = useCallback(async (ids: string[]) => {
     setError(null);
     
     try {
       // Optimistic update
       setContent(prev => prev.filter(item => !ids.includes(item.id)));
-      setTotal(prev => prev - ids.length);
+      setTotalCount(prev => prev - ids.length);
       
       await enhancedContentService.bulkDelete(ids);
       toast.success(`${ids.length} items deleted successfully`);
@@ -166,7 +194,7 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
     }
   }, [handleError, fetchContent]);
 
-  const bulkUpdateContent = useCallback(async (ids: string[], updates: Partial<SiteContent>) => {
+  const bulkUpdate = useCallback(async (ids: string[], updates: Partial<SiteContent>) => {
     setSaving(true);
     setError(null);
     
@@ -191,7 +219,7 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
     try {
       const duplicated = await enhancedContentService.duplicate(id);
       setContent(prev => [duplicated, ...prev]);
-      setTotal(prev => prev + 1);
+      setTotalCount(prev => prev + 1);
       toast.success('Content duplicated successfully');
       return duplicated;
     } catch (error) {
@@ -204,16 +232,20 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
 
   const uploadFile = useCallback(async (
     file: File, 
-    path: string, 
     onProgress?: (progress: number) => void
   ) => {
     setUploading(true);
     setError(null);
     
     try {
+      // Generate a unique path for the file
+      const timestamp = Date.now();
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const path = `uploads/${timestamp}_${sanitizedName}`;
+      
       const result = await enhancedContentService.uploadFile(file, path, onProgress);
       toast.success('File uploaded successfully');
-      return result;
+      return result.url;
     } catch (error) {
       handleError(error, 'Failed to upload file');
       return null;
@@ -226,7 +258,7 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
     setError(null);
   }, []);
 
-  // Auto-fetch on mount and when dependencies change
+  // Auto-fetch on mount
   useEffect(() => {
     if (options.autoFetch !== false) {
       fetchContent();
@@ -245,7 +277,7 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
     saving,
     uploading,
     error,
-    total,
+    totalCount,
     stats,
     sections,
     
@@ -254,15 +286,11 @@ export function useEnhancedContent(options: UseEnhancedContentOptions = {}): Use
     createContent,
     updateContent,
     deleteContent,
-    bulkDeleteContent,
-    bulkUpdateContent,
+    bulkDelete,
+    bulkUpdate,
     duplicateContent,
     uploadFile,
     refreshSections,
-    
-    // Utilities
-    setFilters,
-    setSort,
     clearError
   };
 }

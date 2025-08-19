@@ -59,21 +59,21 @@ export interface BookingStatusUpdate {
 export interface SiteContent {
   id: string;
   content_key: string;
-  content_type: 'image' | 'text' | 'json' | 'boolean';
+  content_type: 'text' | 'image' | 'json' | 'boolean';
   content_value: string | null;
-  content_json: any;
+  content_json: any | null;
   page_section: string;
   display_order: number;
+  file_path: string | null;
+  file_url: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  file_type: string | null;
+  alt_text: string | null;
+  title: string | null;
+  description: string | null;
   is_active: boolean;
   is_draft: boolean;
-  file_path?: string;
-  file_url?: string;
-  file_name?: string;
-  file_size?: number;
-  file_type?: string;
-  alt_text?: string;
-  title?: string;
-  description?: string;
   created_at: string;
   updated_at: string;
 }

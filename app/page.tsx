@@ -38,9 +38,8 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: process.env.NEXT_PUBLIC_SITE_URL,
-
   },
-}
+};
 
 export default async function Home() {
   const content = await getPageContent('home');
@@ -49,13 +48,12 @@ export default async function Home() {
     <>
       <OrganizationSchema />
       <LocalBusinessSchema />
+      
       <div className="min-h-screen">
         <main>
           <Hero 
             title={content.hero_title?.content_value}
             subtitle={content.hero_subtitle?.content_value}
-            imageUrl={content.hero_image?.file_url}
-            imageAlt={content.hero_image?.alt_text}
             features={[
               { text: content.hero_feature_1?.content_value },
               { text: content.hero_feature_2?.content_value },
@@ -63,26 +61,54 @@ export default async function Home() {
               { text: content.hero_feature_4?.content_value },
             ]}
           />
+          
           <Features 
             title={content.features_title?.content_value}
             subtitle={content.features_subtitle?.content_value}
             features={[
-              { title: content.features_item_1_title?.content_value, description: content.features_item_1_description?.content_value },
-              { title: content.features_item_2_title?.content_value, description: content.features_item_2_description?.content_value },
-              { title: content.features_item_3_title?.content_value, description: content.features_item_3_description?.content_value },
-              { title: content.features_item_4_title?.content_value, description: content.features_item_4_description?.content_value },
-              { title: content.features_item_5_title?.content_value, description: content.features_item_5_description?.content_value },
-              { title: content.features_item_6_title?.content_value, description: content.features_item_6_description?.content_value },
-              { title: content.features_item_7_title?.content_value, description: content.features_item_7_description?.content_value },
-              { title: content.features_item_8_title?.content_value, description: content.features_item_8_description?.content_value },
+              { 
+                title: content.features_item_1_title?.content_value, 
+                description: content.features_item_1_description?.content_value 
+              },
+              { 
+                title: content.features_item_2_title?.content_value, 
+                description: content.features_item_2_description?.content_value 
+              },
+              { 
+                title: content.features_item_3_title?.content_value, 
+                description: content.features_item_3_description?.content_value 
+              },
+              { 
+                title: content.features_item_4_title?.content_value, 
+                description: content.features_item_4_description?.content_value 
+              },
+              { 
+                title: content.features_item_5_title?.content_value, 
+                description: content.features_item_5_description?.content_value 
+              },
+              { 
+                title: content.features_item_6_title?.content_value, 
+                description: content.features_item_6_description?.content_value 
+              },
+              { 
+                title: content.features_item_7_title?.content_value, 
+                description: content.features_item_7_description?.content_value 
+              },
+              { 
+                title: content.features_item_8_title?.content_value, 
+                description: content.features_item_8_description?.content_value 
+              },
             ]}
           />
+          
           <PackagesPreview />
+          
           <Gallery 
             title={content.gallery_title?.content_value}
             subtitle={content.gallery_subtitle?.content_value}
             images={content.gallery_images?.content_json}
           />
+          
           <InstructorBio 
             title={content.instructor_title?.content_value}
             name={content.instructor_name?.content_value}
@@ -101,9 +127,12 @@ export default async function Home() {
               content.instructor_feature_4?.content_value,
             ]}
           />
+          
           <ServiceAreaMap />
+          
           <ReviewsPreview />
-          <BookingCTA 
+          
+          <BookingCTA
             title={content.cta_title?.content_value}
             subtitle={content.cta_subtitle?.content_value}
             phoneText={content.cta_phone_text?.content_value}
@@ -112,9 +141,10 @@ export default async function Home() {
             emailAddress={content.cta_email_address?.content_value}
           />
         </main>
+        
         {/* AI Chatbot */}
         <AIChatbot delayMs={5000} />
       </div>
     </>
-    );
+  );
 }

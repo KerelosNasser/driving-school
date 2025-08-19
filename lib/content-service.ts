@@ -136,14 +136,14 @@ class EnhancedContentService {
       const { data, error } = await supabase
         .from('site_content')
         .insert([content])
-        .select()
-        .single();
+        .select();
 
       if (error) {
         throw new ContentServiceError(`Failed to create content: ${error.message}`, error.code);
       }
 
-      return data;
+      // Return the first item from the array
+      return data[0];
     } catch (error) {
       if (error instanceof ContentServiceError) throw error;
       throw new ContentServiceError(`Unexpected error creating content: ${error}`);
@@ -156,14 +156,19 @@ class EnhancedContentService {
         .from('site_content')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
-        .select()
-        .single();
+        .select();
 
       if (error) {
         throw new ContentServiceError(`Failed to update content: ${error.message}`, error.code);
       }
 
-      return data;
+      // Check if we got data back
+      if (!data || data.length === 0) {
+        throw new ContentServiceError('Failed to update content: No data returned');
+      }
+
+      // Return the first (and should be only) item
+      return data[0];
     } catch (error) {
       if (error instanceof ContentServiceError) throw error;
       throw new ContentServiceError(`Unexpected error updating content: ${error}`);
@@ -317,7 +322,7 @@ class EnhancedContentService {
 
       return await this.create({
         ...duplicatedContent,
-        title: duplicatedContent.title || undefined
+        title: duplicatedContent.title || null
       });
     } catch (error) {
       if (error instanceof ContentServiceError) throw error;
