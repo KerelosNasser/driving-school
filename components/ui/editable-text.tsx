@@ -1,144 +1,134 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useEditMode } from '@/app/layout';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/lib/supabase';
+import { useState, useRef, useEffect, ReactNode, KeyboardEvent } from 'react';
+import { cn } from '@/lib/utils';
+import {useEditMode} from "@/contexts/editModeContext";
 
 interface EditableTextProps {
-  children: string;
-  onSave?: (value: string) => void;
-  tagName?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span';
-  multiline?: boolean;
-  className?: string;
-  // New props for Supabase integration
-  tableName?: string;
-  columnName?: string;
-  rowId?: string;
+    children: ReactNode;
+    contentKey: string;
+    tagName?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span' | 'div';
+    className?: string;
+    placeholder?: string;
+    multiline?: boolean;
+    maxLength?: number;
 }
 
-export function EditableText({ 
-  children, 
-  onSave, 
-  tagName: Tag = 'p',
-  multiline = false,
-  className = '',
-  tableName,
-  columnName,
-  rowId
-}: EditableTextProps) {
-  const { isEditMode } = useEditMode();
-  const [isEditing, setIsEditing] = useState(false);
-  const [value, setValue] = useState(children);
-  const [saving, setSaving] = useState(false);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+export function EditableText({
+                                 children,
+                                 contentKey,
+                                 tagName = 'div',
+                                 className = '',
+                                 placeholder = 'Click to edit...',
+                                 multiline = false,
+                                 maxLength = 500
+                             }: EditableTextProps) {
+    const { isEditMode, saveContent, isSaving } = useEditMode();
+    const [isEditing, setIsEditing] = useState(false);
+    const [text, setText] = useState(children?.toString() || '');
+    const editRef = useRef<HTMLDivElement>(null);
 
-  // Update value when children change
-  useEffect(() => {
-    setValue(children);
-  }, [children]);
-
-  // Focus input when editing starts
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isEditing]);
-
-  const saveToSupabase = async (newValue: string) => {
-    if (!tableName || !columnName || !rowId) return false;
-    
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from(tableName)
-        .update({ [columnName]: newValue })
-        .eq('id', rowId);
-      
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error saving to Supabase:', error);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSave = async () => {
-    setIsEditing(false);
-    if (value !== children) {
-      // Try to save to Supabase first if table info is provided
-      if (tableName && columnName && rowId) {
-        const saved = await saveToSupabase(value);
-        if (!saved) {
-          console.error('Failed to save to Supabase');
-          // Revert to original value if save failed
-          setValue(children);
-          return;
+    useEffect(() => {
+        if (!isEditing) {
+            setText(children?.toString() || '');
         }
-      }
-      
-      // Call custom onSave handler if provided
-      if (onSave) {
-        onSave(value);
-      }
-    }
-  };
+    }, [children, isEditing]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !multiline) {
-      handleSave();
-    } else if (e.key === 'Escape') {
-      setValue(children);
-      setIsEditing(false);
-    }
-  };
-
-  const handleClickOutside = (e: MouseEvent) => {
-    if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
-      handleSave();
-    }
-  };
-
-  useEffect(() => {
-    if (isEditing) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [isEditing]);
-
-  if (!isEditMode) {
-    return <Tag className={className}>{children}</Tag>;
-  }
-
-  if (isEditing) {
-    const commonProps = {
-      ref: inputRef as any,
-      value,
-      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setValue(e.target.value),
-      onKeyDown: handleKeyDown,
-      onBlur: handleSave,
-      className: `${className} border-2 border-yellow-500 rounded p-1 focus:outline-none focus:ring-2 focus:ring-yellow-300`,
-      disabled: saving
+    const handleClick = () => {
+        if (!isEditMode || isSaving) return;
+        setIsEditing(true);
+        setTimeout(() => {
+            if (editRef.current) {
+                editRef.current.innerText = text;
+                editRef.current.focus();
+                // Select all text
+                const range = document.createRange();
+                const selection = window.getSelection();
+                range.selectNodeContents(editRef.current);
+                selection?.removeAllRanges();
+                selection?.addRange(range);
+            }
+        }, 10);
     };
 
-    return multiline ? (
-      <Textarea {...commonProps} rows={3} />
-    ) : (
-      <Input {...commonProps} />
-    );
-  }
+    const handleBlur = async () => {
+        if (!isEditing || !editRef.current) return;
+        const finalValue = editRef.current.innerText.trim();
+        setIsEditing(false);
 
-  return (
-    <Tag 
-      className={`${className} cursor-pointer hover:bg-yellow-50 hover:border-yellow-200 border-2 border-transparent rounded p-1 ${saving ? 'opacity-50' : ''}`}
-      onClick={() => setIsEditing(true)}
-    >
-      {saving ? 'Saving...' : children}
-    </Tag>
-  );
+        if (finalValue !== '' && finalValue !== text) {
+            setText(finalValue);
+            await saveContent(contentKey, finalValue);
+        } else if (finalValue === '') {
+            // Revert to previous text on re-render
+        }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Enter' && !multiline) {
+            e.preventDefault();
+            editRef.current?.blur();
+        } else if (e.key === 'Escape') {
+            if (editRef.current) {
+                editRef.current.innerText = text;
+            }
+            editRef.current?.blur();
+        }
+    };
+
+    const handleInput = () => {
+        if (editRef.current) {
+            const newValue = editRef.current.innerText;
+            if (newValue.length > maxLength) {
+                const truncated = newValue.substring(0, maxLength);
+                editRef.current.innerText = truncated;
+                // Move cursor to end
+                const range = document.createRange();
+                const selection = window.getSelection();
+                range.selectNodeContents(editRef.current);
+                range.collapse(false);
+                selection?.removeAllRanges();
+                selection?.addRange(range);
+            }
+        }
+    };
+
+    const Tag = tagName;
+
+    if (!isEditMode) {
+        return <Tag className={className}>{children}</Tag>;
+    }
+
+    return (
+        <Tag
+            ref={editRef}
+            className={cn(
+                className,
+                'editable-element',
+                isEditing ? 'editing' : '',
+                'cursor-pointer transition-all duration-200'
+            )}
+            contentEditable={isEditing}
+            suppressContentEditableWarning={true}
+            onClick={handleClick}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            onInput={handleInput}
+            data-placeholder={placeholder}
+            dir="ltr"
+            style={{
+                minHeight: isEditing ? '1.5em' : 'auto',
+                outline: isEditing ? '2px solid #3b82f6' : 'none',
+                padding: isEditing ? '4px 8px' : '0',
+                borderRadius: isEditing ? '4px' : '0',
+                backgroundColor: isEditing ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+            }}
+        >
+            {isEditing ? null : text}
+            {isEditing && (
+                <style jsx>{`
+                `}</style>
+            )}
+        </Tag>
+    );
 }

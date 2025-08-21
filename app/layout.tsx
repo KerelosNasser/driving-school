@@ -6,7 +6,10 @@ import "./globals.css";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { WebVitals } from "@/components/seo/WebVitals";
+
 import { Suspense } from 'react';
+import { EditModeProvider } from "@/contexts/editModeContext";
+import {AdminEditToolbar} from "@/app/admin/adminEditToolbar";
 
 // Optimized font loading
 const geistSans = Geist({
@@ -92,57 +95,60 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({
-  children,
-}: Readonly<{
+                                     children,
+                                   }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
-      <html lang="en">
+      <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+        <html lang="en">
         <head>
           {/* Critical resource hints */}
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
           <link rel="preconnect" href="https://images.unsplash.com" />
           <link rel="preconnect" href="https://api.stripe.com" />
-          
+
           {/* DNS prefetch for external resources */}
           <link rel="dns-prefetch" href="https://widget.chatbot.com" />
           <link rel="dns-prefetch" href="https://clerk.accounts.dev" />
-          
+
           {/* Favicon and app icons */}
           <link rel="icon" href="/favicon.ico" sizes="any" />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-          
+
           {/* Theme color for mobile browsers */}
           <meta name="theme-color" content="#EDE513FF" />
           <meta name="msapplication-TileColor" content="#EDE513FF" />
-          
+
           {/* Viewport optimization */}
           <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         </head>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
+        <EditModeProvider>
+          <AdminEditToolbar />
           <Navigation />
           <main>
             {children}
           </main>
           <Footer />
-          
-          {/* Performance monitoring */}
-          <Suspense fallback={null}>
-            <WebVitals />
-          </Suspense>
-          
-          <Toaster richColors position="top-right" />
-          
-          {/* Optimized chatbot loading */}
-          {process.env.NEXT_PUBLIC_CHATBOT_WIDGET_ID && (
+        </EditModeProvider>
+
+        {/* Performance monitoring */}
+        <Suspense fallback={null}>
+          <WebVitals />
+        </Suspense>
+
+        <Toaster richColors position="top-right" />
+
+        {/* Optimized chatbot loading */}
+        {process.env.NEXT_PUBLIC_CHATBOT_WIDGET_ID && (
             <script
-              dangerouslySetInnerHTML={{
-                __html: `
+                dangerouslySetInnerHTML={{
+                  __html: `
                   (function() {
                     var chatbot = document.createElement('script');
                     chatbot.src = 'https://widget.chatbot.com/widget.js';
@@ -152,11 +158,11 @@ export default function RootLayout({
                     document.head.appendChild(chatbot);
                   })();
                 `,
-              }}
+                }}
             />
-          )}
+        )}
         </body>
-      </html>
-    </ClerkProvider>
+        </html>
+      </ClerkProvider>
   );
 }
