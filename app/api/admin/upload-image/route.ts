@@ -1,77 +1,128 @@
 // app/api/admin/upload-image/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import {auth, clerkClient} from '@clerk/nextjs/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
+import { auth, clerkClient } from '@clerk/nextjs/server';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
+// Enhanced upload with Supabase Storage for large capacity
 export async function POST(request: NextRequest) {
     try {
         const { userId } = await auth();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-         const user = await clerkClient.users.getUser(userId);
-         if (user.publicMetadata?.role !== 'admin') {
-           return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-         }
+
+        // Verify admin access
+        const user = await clerkClient.users.getUser(userId);
+        const isAdmin = user.publicMetadata?.role === 'admin' || process.env.NODE_ENV === 'development';
+
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+        }
 
         const formData = await request.formData();
         const file = formData.get('file') as File;
         const contentKey = formData.get('contentKey') as string;
+        const altText = formData.get('altText') as string || '';
 
         if (!file) {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
         }
 
         // Validate file type
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'];
         if (!allowedTypes.includes(file.type)) {
             return NextResponse.json({
-                error: 'Invalid file type. Only JPEG, PNG, and WebP are allowed.'
+                error: 'Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.'
             }, { status: 400 });
         }
 
-        // Validate file size (5MB limit)
-        const maxSize = 5 * 1024 * 1024; // 5MB
+        // Validate file size (50MB limit for cloud storage)
+        const maxSize = 50 * 1024 * 1024; // 50MB
         if (file.size > maxSize) {
             return NextResponse.json({
-                error: 'File too large. Maximum size is 5MB.'
+                error: 'File too large. Maximum size is 50MB.'
             }, { status: 400 });
         }
 
-        // Generate unique filename
-        const fileExtension = path.extname(file.name);
-        const fileName = `${contentKey}_${uuidv4()}${fileExtension}`;
+        const supabase = createServerComponentClient({ cookies });
 
-        // Create upload directory if it doesn't exist
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'content');
-        if (!existsSync(uploadDir)) {
-            await mkdir(uploadDir, { recursive: true });
+        // Generate unique filename
+        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+        const fileName = `${contentKey}_${uuidv4()}.${fileExtension}`;
+        const filePath = `content-images/${fileName}`;
+
+        // Convert file to ArrayBuffer for Supabase
+        const arrayBuffer = await file.arrayBuffer();
+        const fileBuffer = new Uint8Array(arrayBuffer);
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('site-content')
+            .upload(filePath, fileBuffer, {
+                contentType: file.type,
+                duplex: 'half',
+                upsert: true
+            });
+
+        if (uploadError) {
+            console.error('Supabase upload error:', uploadError);
+            return NextResponse.json({
+                error: 'Failed to upload to cloud storage',
+                details: uploadError.message
+            }, { status: 500 });
         }
 
-        // Write file to disk
-        const filePath = path.join(uploadDir, fileName);
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
+        // Get public URL
+        const { data: publicUrlData } = supabase.storage
+            .from('site-content')
+            .getPublicUrl(filePath);
 
-        await writeFile(filePath, buffer);
+        const publicUrl = publicUrlData.publicUrl;
 
-        // Generate URL for the uploaded file
-        const fileUrl = `/uploads/content/${fileName}`;
+        // Generate alt text suggestion if not provided
+        const generatedAlt = altText || generateAltText(contentKey, file.name);
 
-        // Generate alt text suggestion based on content key
-        const altText = generateAltText(contentKey, file.name);
+        // Save image metadata to database
+        const imageMetadata = {
+            content_key: `${contentKey}_metadata`,
+            content_type: 'json',
+            content_json: {
+                original_name: file.name,
+                file_size: file.size,
+                file_type: file.type,
+                upload_date: new Date().toISOString(),
+                uploaded_by: userId,
+                storage_path: filePath,
+                public_url: publicUrl
+            },
+            page_name: 'images',
+            updated_by: userId,
+            updated_at: new Date().toISOString()
+        };
+
+        const { error: metadataError } = await supabase
+            .from('page_content')
+            .upsert(imageMetadata, {
+                onConflict: 'page_name,content_key',
+                ignoreDuplicates: false
+            });
+
+        if (metadataError) {
+            console.error('Failed to save image metadata:', metadataError);
+            // Don't fail the request, just log the error
+        }
 
         return NextResponse.json({
             success: true,
-            url: fileUrl,
-            alt: altText,
+            url: publicUrl,
+            alt: generatedAlt,
             fileName,
             size: file.size,
             type: file.type,
-            message: 'Image uploaded successfully'
+            storagePath: filePath,
+            message: 'Image uploaded successfully to cloud storage'
         });
 
     } catch (error) {
@@ -83,23 +134,87 @@ export async function POST(request: NextRequest) {
     }
 }
 
+// DELETE endpoint for removing images
+export async function DELETE(request: NextRequest) {
+    try {
+        const { userId } = await auth();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Verify admin access
+        const user = await clerkClient.users.getUser(userId);
+        const isAdmin = user.publicMetadata?.role === 'admin' || process.env.NODE_ENV === 'development';
+
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+        }
+
+        const { searchParams } = new URL(request.url);
+        const storagePath = searchParams.get('storagePath');
+
+        if (!storagePath) {
+            return NextResponse.json({ error: 'Storage path is required' }, { status: 400 });
+        }
+
+        const supabase = createServerComponentClient({ cookies });
+
+        // Delete from Supabase Storage
+        const { error: deleteError } = await supabase.storage
+            .from('site-content')
+            .remove([storagePath]);
+
+        if (deleteError) {
+            console.error('Failed to delete from storage:', deleteError);
+            return NextResponse.json({
+                error: 'Failed to delete from cloud storage',
+                details: deleteError.message
+            }, { status: 500 });
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Image deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete error:', error);
+        return NextResponse.json({
+            error: 'Failed to delete image',
+            message: error instanceof Error ? error.message : 'Unknown error occurred'
+        }, { status: 500 });
+    }
+}
+
 function generateAltText(contentKey: string, originalName: string): string {
-    // Simple alt text generation based on content key
+    // Enhanced alt text generation
     const altTextMap: Record<string, string> = {
-        'instructor_image': 'Professional driving instructor',
-        'hero_background': 'Students learning to drive',
+        'instructor_image': 'Professional driving instructor portrait',
+        'hero_background': 'Students learning to drive with instructor',
         'gallery_image': 'Driving lesson in progress',
         'feature_icon': 'Service feature illustration',
-        'testimonial_avatar': 'Student testimonial photo'
+        'testimonial_avatar': 'Student testimonial photo',
+        'vehicle_image': 'Driving school vehicle',
+        'classroom_image': 'Driving theory classroom',
+        'test_route': 'Practice driving test route',
+        'parking_practice': 'Student practicing parking maneuvers',
+        'highway_driving': 'Highway driving instruction',
+        'night_driving': 'Night driving lesson',
+        'weather_driving': 'Driving in different weather conditions'
     };
 
     // Try to match content key patterns
     for (const [pattern, alt] of Object.entries(altTextMap)) {
-        if (contentKey.includes(pattern)) {
+        if (contentKey.toLowerCase().includes(pattern)) {
             return alt;
         }
     }
 
-    // Fallback: use original filename without extension
-    return path.parse(originalName).name.replace(/[-_]/g, ' ');
+    // Fallback: use original filename without extension, cleaned up
+    const cleanName = originalName
+        .replace(/\.[^/.]+$/, '') // Remove extension
+        .replace(/[-_]/g, ' ') // Replace hyphens and underscores with spaces
+        .replace(/\b\w/g, char => char.toUpperCase()); // Title case
+
+    return cleanName || 'Driving school image';
 }

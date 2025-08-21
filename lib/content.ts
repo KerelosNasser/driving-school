@@ -1,4 +1,3 @@
-// lib/content.ts
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
@@ -22,17 +21,11 @@ export async function getPageContent(pageName: string): Promise<PageContent> {
   const supabase = createServerComponentClient({ cookies });
 
   try {
-    const { data, error } = await supabase
+    const { data} = await supabase
         .from('page_content')
         .select('*')
         .eq('page_name', pageName);
 
-    // if (error) {
-    //   console.error('Error fetching page content:', error);
-    //   return {};
-    // }
-
-    // Transform array to object with content_key as keys
     const contentMap: PageContent = {};
     data?.forEach((item) => {
       contentMap[item.content_key] = {
@@ -51,10 +44,6 @@ export async function getPageContent(pageName: string): Promise<PageContent> {
     return {};
   }
 }
-
-/**
- * Get a specific content item
- */
 export async function getContentItem(pageName: string, contentKey: string): Promise<ContentItem | null> {
   const supabase = createServerComponentClient({ cookies });
 

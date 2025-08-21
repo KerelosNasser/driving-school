@@ -9,13 +9,14 @@ import { WebVitals } from "@/components/seo/WebVitals";
 
 import { Suspense } from 'react';
 import { EditModeProvider } from "@/contexts/editModeContext";
-import {AdminEditToolbar} from "@/app/admin/adminEditToolbar";
+import { GlobalContentProvider } from "@/contexts/globalContentContext";
+import { AdminEditToolbar } from "@/app/admin/adminEditToolbar";
 
 // Optimized font loading
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-  display: 'swap', // Improved font loading
+  display: 'swap',
   preload: true,
 });
 
@@ -125,16 +126,16 @@ export default function RootLayout({
           {/* Viewport optimization */}
           <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         </head>
-        <body
-            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
+        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <EditModeProvider>
-          <AdminEditToolbar />
-          <Navigation />
-          <main>
-            {children}
-          </main>
-          <Footer />
+          <GlobalContentProvider>
+            <AdminEditToolbar />
+            <Navigation />
+            <main>
+              {children}
+            </main>
+            <Footer />
+          </GlobalContentProvider>
         </EditModeProvider>
 
         {/* Performance monitoring */}
@@ -149,15 +150,15 @@ export default function RootLayout({
             <script
                 dangerouslySetInnerHTML={{
                   __html: `
-                  (function() {
-                    var chatbot = document.createElement('script');
-                    chatbot.src = 'https://widget.chatbot.com/widget.js';
-                    chatbot.setAttribute('data-widget-id', '${process.env.NEXT_PUBLIC_CHATBOT_WIDGET_ID}');
-                    chatbot.async = true;
-                    chatbot.defer = true;
-                    document.head.appendChild(chatbot);
-                  })();
-                `,
+                (function() {
+                  var chatbot = document.createElement('script');
+                  chatbot.src = 'https://widget.chatbot.com/widget.js';
+                  chatbot.setAttribute('data-widget-id', '${process.env.NEXT_PUBLIC_CHATBOT_WIDGET_ID}');
+                  chatbot.async = true;
+                  chatbot.defer = true;
+                  document.head.appendChild(chatbot);
+                })();
+              `,
                 }}
             />
         )}

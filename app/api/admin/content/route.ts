@@ -6,7 +6,6 @@ import { cookies } from 'next/headers';
 
 async function isUserAdmin(userId: string): Promise<boolean> {
     try {
-
         const adminEmails = process.env.ADMIN_EMAILS?.split(',') || [];
 
         // If no admin emails are configured, allow the first user for development
@@ -34,7 +33,7 @@ export async function GET(request: NextRequest) {
         const key = searchParams.get('key');
 
         let query = supabase
-            .from('page_content') 
+            .from('page_content')
             .select('*')
             .eq('page_name', page);
 
@@ -42,7 +41,7 @@ export async function GET(request: NextRequest) {
             query = query.eq('content_key', key);
         }
 
-        const { data, error } = await query;
+        const { data, error } = await query.order('updated_at', { ascending: false });
 
         if (error) {
             console.error('Supabase error:', error);
@@ -52,7 +51,7 @@ export async function GET(request: NextRequest) {
             }, { status: 500 });
         }
 
-        return NextResponse.json({ data });
+        return NextResponse.json({ data: data || [] });
     } catch (error) {
         console.error('API error:', error);
         return NextResponse.json({
@@ -175,6 +174,86 @@ export async function PUT(request: NextRequest) {
     }
 }
 
+// POST - Bulk operations for gallery images and other collections
+export async function POST(request: NextRequest) {
+    try {
+        const { userId } = await auth();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const isAdmin = await isUserAdmin(userId);
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+        }
+
+        const body = await request.json();
+        const { operation, data } = body;
+
+        const supabase = createServerComponentClient({ cookies });
+
+        switch (operation) {
+            case 'bulk_upsert':
+                const contentItems = data.map((item: any) => ({
+                    ...item,
+                    updated_by: userId,
+                    updated_at: new Date().toISOString()
+                }));
+
+                const { data: upsertData, error: upsertError } = await supabase
+                    .from('page_content')
+                    .upsert(contentItems, {
+                        onConflict: 'page_name,content_key',
+                        ignoreDuplicates: false
+                    })
+                    .select();
+
+                if (upsertError) {
+                    return NextResponse.json({
+                        error: 'Failed to bulk upsert content',
+                        details: upsertError.message
+                    }, { status: 500 });
+                }
+
+                return NextResponse.json({
+                    success: true,
+                    data: upsertData,
+                    message: `Bulk upserted ${upsertData?.length || 0} items`
+                });
+
+            case 'bulk_delete':
+                const { keys, page } = data;
+                const { error: deleteError } = await supabase
+                    .from('page_content')
+                    .delete()
+                    .eq('page_name', page)
+                    .in('content_key', keys);
+
+                if (deleteError) {
+                    return NextResponse.json({
+                        error: 'Failed to bulk delete content',
+                        details: deleteError.message
+                    }, { status: 500 });
+                }
+
+                return NextResponse.json({
+                    success: true,
+                    message: `Bulk deleted ${keys.length} items`
+                });
+
+            default:
+                return NextResponse.json({ error: 'Invalid operation' }, { status: 400 });
+        }
+
+    } catch (error) {
+        console.error('API error:', error);
+        return NextResponse.json({
+            error: 'Internal server error',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+    }
+}
+
 // DELETE - Delete content
 export async function DELETE(request: NextRequest) {
     try {
@@ -183,7 +262,6 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Check if user is admin
         const isAdmin = await isUserAdmin(userId);
         if (!isAdmin) {
             return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
