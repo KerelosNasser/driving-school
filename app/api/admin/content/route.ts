@@ -4,7 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
-async function isUserAdmin(userId: string): Promise<boolean> {
+async function isUserAdmin(_userId: string): Promise<boolean> {
     try {
         const adminEmails = process.env.ADMIN_EMAILS?.split(',') || [];
 
@@ -108,7 +108,7 @@ export async function PUT(request: NextRequest) {
         const supabase = createServerComponentClient({ cookies });
 
         // Prepare content data based on type
-        let contentData: any = {
+        const contentData: any = {
             page_name: page,
             content_key: key,
             updated_at: new Date().toISOString(),

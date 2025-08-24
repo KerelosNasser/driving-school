@@ -99,12 +99,10 @@ export function GlobalContentProvider({ children }: { children: ReactNode }) {
     const updateGlobalContent = async (key: keyof GlobalContent, value: any) => {
         if (!isAdmin) return;
 
-        // Update local state immediately for better UX
         setContent(prev => ({ ...prev, [key]: value }));
 
-        // Save to backend
         const type = typeof value === 'object' ? 'json' : 'text';
-        await saveContent(key, value, type, 'global');
+        await saveContent(key, value, type,);
     };
 
     const refreshContent = async () => {

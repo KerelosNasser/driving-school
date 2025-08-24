@@ -77,19 +77,6 @@ export interface SiteContent {
   created_at: string;
   updated_at: string;
 }
-
-export interface GalleryImage {
-  id: number;
-  src: string;
-  alt: string;
-  title: string;
-  isUploaded?: boolean;
-  file_path?: string;
-  file_name?: string;
-  file_size?: number;
-  file_type?: string;
-}
-
 export interface AIProvider {
   name: string;
   endpoint: string;
@@ -108,39 +95,12 @@ export interface EmailRequest {
   time: string;
   packageName?: string;
 }
-
-export interface UploadResult {
-  success: boolean;
-  data?: {
-    originalName: string;
-    size: number;
-    type: string;
-    images: Array<{
-      size: string;
-      path: string;
-      url: string;
-      width?: number;
-      height?: number;
-    }>;
-    primaryUrl: string;
-    primaryPath: string;
-  };
-  error?: string;
-  details?: string;
-}
-
 export interface ContentResponse {
   data: SiteContent[];
   count: number;
   error?: string;
   details?: string;
 }
-
-export interface ValidationError {
-  field: string;
-  message: string;
-}
-
 export interface Message {
   id: string;
   content: string;

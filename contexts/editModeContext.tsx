@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 interface EditModeContextType {
     isEditMode: boolean;
     toggleEditMode: () => void;
-    saveContent: (key: string, value: any, type?: 'text' | 'json' | 'file') => Promise<boolean>;
+    saveContent: (key: string, value: any, type?: 'text' | 'json' | 'file', page?: string) => Promise<boolean>;
     isAdmin: boolean;
     isSaving: boolean;
 }
@@ -39,26 +39,46 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
         }
         setIsEditMode(!isEditMode);
         if (!isEditMode) {
-            toast.success('Edit mode enabled - Click any text to edit');
+            toast.success('Edit mode enabled - Click any text or image to edit');
         } else {
             toast.success('Edit mode disabled');
         }
     };
 
-    const saveContent = async (key: string, value: any, type: 'text' | 'json' | 'file' = 'text'): Promise<boolean> => {
+    const saveContent = async (
+        key: string,
+        value: any,
+        type: 'text' | 'json' | 'file' = 'text',
+        page: string = 'home'
+    ): Promise<boolean> => {
         if (!isAdmin) {
             toast.error('Unauthorized: Admin access required');
             return false;
         }
 
-        if (!value || value.trim() === '' || value === 'Click to edit...' || value === 'Enter your...') {
+        // Skip saving empty/placeholder values
+        if (type === 'text' && (!value || value.trim() === '' || value === 'Click to edit...' || value.includes('Enter your'))) {
             console.log('Skipping save for empty/placeholder value:', key, value);
             return true;
         }
 
+        // For JSON type, validate the data
+        if (type === 'json') {
+            if (value === null || value === undefined) {
+                console.log('Skipping save for null/undefined JSON value:', key);
+                return true;
+            }
+
+            // If it's an array (like gallery images), validate it has content
+            if (Array.isArray(value) && value.length === 0) {
+                console.log('Allowing save of empty array for reset:', key);
+                // Allow empty arrays to be saved for reset purposes
+            }
+        }
+
         setIsSaving(true);
         try {
-            console.log('Saving content:', { key, value, type });
+            console.log('Saving content:', { key, value, type, page });
 
             const response = await fetch('/api/admin/content', {
                 method: 'PUT',
@@ -69,7 +89,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
                     key,
                     value,
                     type,
-                    page: 'home'
+                    page
                 }),
             });
 
@@ -115,13 +135,30 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
 
             const responseData = await response.json();
             console.log('Content saved successfully:', responseData);
-            toast.success(`Saved: ${key.replace(/_/g, ' ')}`);
+
+            // More descriptive success messages based on content type
+            let successMessage = `Saved: ${key.replace(/_/g, ' ')}`;
+            if (type === 'json' && Array.isArray(value)) {
+                successMessage = `Updated ${key.replace(/_/g, ' ')} (${value.length} items)`;
+            } else if (type === 'file') {
+                successMessage = `Image updated: ${key.replace(/_/g, ' ')}`;
+            }
+
+            toast.success(successMessage);
             return true;
 
         } catch (error) {
             console.error('Error saving content:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to save content';
-            toast.error(`Save failed: ${errorMessage}`);
+
+            // More specific error messages
+            if (errorMessage.includes('authentication') || errorMessage.includes('authorization')) {
+                toast.error('Session expired. Please refresh and try again.');
+            } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+                toast.error('Network error. Please check your connection.');
+            } else {
+                toast.error(`Save failed: ${errorMessage}`);
+            }
             return false;
         } finally {
             setIsSaving(false);

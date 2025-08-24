@@ -21,7 +21,7 @@ export async function getPageContent(pageName: string): Promise<PageContent> {
   const supabase = createServerComponentClient({ cookies });
 
   try {
-    const { data} = await supabase
+    const { data } = await supabase
         .from('page_content')
         .select('*')
         .eq('page_name', pageName);
@@ -44,6 +44,7 @@ export async function getPageContent(pageName: string): Promise<PageContent> {
     return {};
   }
 }
+
 export async function getContentItem(pageName: string, contentKey: string): Promise<ContentItem | null> {
   const supabase = createServerComponentClient({ cookies });
 
@@ -195,6 +196,10 @@ export function getContentValue(
     case 'text':
       return item.content_value || fallback;
     case 'json':
+      // Handle different JSON structures
+      if (typeof item.content_json === 'string') {
+        return item.content_json;
+      }
       return JSON.stringify(item.content_json) || fallback;
     case 'file':
       return item.file_url || fallback;
@@ -213,11 +218,18 @@ export function getContentJson<T = any>(
 ): T {
   const item = content[key];
   if (!item || item.content_type !== 'json') return fallback;
+
+  // Handle case where content_json might be null or undefined
+  if (item.content_json === null || item.content_json === undefined) {
+    return fallback;
+  }
+
   return item.content_json || fallback;
 }
 
 /**
  * Helper function to get file URL with fallback
+ * Updated to handle both old and new image storage formats
  */
 export function getContentFile(
     content: PageContent,
@@ -225,11 +237,77 @@ export function getContentFile(
     fallback: string = ''
 ): { url: string; alt: string } {
   const item = content[key];
-  if (!item || item.content_type !== 'file') {
+
+  if (!item) {
     return { url: fallback, alt: '' };
   }
+
+  // Handle different storage formats
+  if (item.content_type === 'file') {
+    return {
+      url: item.file_url || fallback,
+      alt: item.alt_text || '',
+    };
+  }
+
+  // Handle JSON format for image data (new format)
+  if (item.content_type === 'json' && item.content_json) {
+    const jsonData = item.content_json;
+    if (typeof jsonData === 'object' && jsonData.url) {
+      return {
+        url: jsonData.url || fallback,
+        alt: jsonData.alt || '',
+      };
+    }
+  }
+
+  // Handle legacy text format where URL was stored as text
+  if (item.content_type === 'text' && item.content_value) {
+    return {
+      url: item.content_value || fallback,
+      alt: '',
+    };
+  }
+
+  return { url: fallback, alt: '' };
+}
+
+/**
+ * Helper function specifically for getting image data
+ */
+export function getImageData(
+    content: PageContent,
+    key: string,
+    fallbackUrl: string = '',
+    fallbackAlt: string = ''
+): { url: string; alt: string } {
+  const result = getContentFile(content, key, fallbackUrl);
   return {
-    url: item.file_url || fallback,
-    alt: item.alt_text || '',
+    url: result.url || fallbackUrl,
+    alt: result.alt || fallbackAlt
   };
+}
+
+/**
+ * Helper function to validate gallery images array
+ */
+export function validateGalleryImages(images: any): any[] {
+  if (!Array.isArray(images)) {
+    return [];
+  }
+
+  return images.filter(img =>
+      img &&
+      typeof img === 'object' &&
+      typeof img.src === 'string' &&
+      img.src.trim() !== '' &&
+      typeof img.title === 'string' &&
+      img.title.trim() !== ''
+  ).map((img, index) => ({
+    id: img.id || Date.now() + index,
+    src: img.src.trim(),
+    alt: img.alt || `Gallery image ${index + 1}`,
+    title: img.title.trim(),
+    isUploaded: img.isUploaded || false
+  }));
 }

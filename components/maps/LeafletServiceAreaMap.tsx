@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import type { Map, Marker, LatLngExpression, DivIcon } from 'leaflet';
 import { serviceAreas } from '@/lib/data';
 
-// Constants moved outside component to prevent recreation
 const MAP_CONFIG = {
   center: [-27.4698, 153.0251] as LatLngExpression,
   zoom: 11,

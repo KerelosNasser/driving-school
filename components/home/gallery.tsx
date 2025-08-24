@@ -44,20 +44,27 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
   }, [image]);
 
   const handleFileUpload = async (file: File) => {
+    if (!editedImage) return;
+
     setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('contentKey', `gallery_image_${Date.now()}`);
+      formData.append('contentKey', `gallery_image_${editedImage.id}_${Date.now()}`);
+      formData.append('altText', editedImage.alt || `Gallery image ${editedImage.id}`);
 
       const response = await fetch('/api/admin/upload-image', {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
 
       const result = await response.json();
+
       setEditedImage(prev => prev ? {
         ...prev,
         src: result.url,
@@ -67,17 +74,19 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
 
       toast.success('Image uploaded successfully');
     } catch (error) {
-      toast.error('Failed to upload image');
       console.error('Upload error:', error);
+      toast.error(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleSave = () => {
-    if (editedImage) {
+    if (editedImage && editedImage.src && editedImage.title.trim()) {
       onSave(editedImage);
       onClose();
+    } else {
+      toast.error('Please provide both image URL/file and title');
     }
   };
 
@@ -123,6 +132,12 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
                       alt={editedImage.alt}
                       fill
                       className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      onError={(e) => {
+                        console.error('Image failed to load:', editedImage.src);
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
                   />
               ) : (
                   <div className="flex items-center justify-center h-full text-gray-400">
@@ -170,7 +185,7 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
                   <div className="mt-1">
                     <input
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp,image/jpg,image/gif"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) handleFileUpload(file);
@@ -179,7 +194,10 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
                         disabled={isUploading}
                     />
                     {isUploading && (
-                        <div className="mt-2 text-sm text-blue-600">Uploading...</div>
+                        <div className="mt-2 text-sm text-blue-600 flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                          Uploading...
+                        </div>
                     )}
                   </div>
                 </div>
@@ -188,23 +206,24 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
             {/* Image Details */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="image-title">Title</Label>
+                <Label htmlFor="image-title">Title *</Label>
                 <Input
                     id="image-title"
                     value={editedImage.title}
                     onChange={(e) => setEditedImage(prev => prev ? { ...prev, title: e.target.value } : null)}
                     placeholder="Enter image title"
                     className="mt-1"
+                    required
                 />
               </div>
 
               <div>
-                <Label htmlFor="image-alt">Alt Text</Label>
+                <Label htmlFor="image-alt">Alt Text (for accessibility)</Label>
                 <Input
                     id="image-alt"
                     value={editedImage.alt}
                     onChange={(e) => setEditedImage(prev => prev ? { ...prev, alt: e.target.value } : null)}
-                    placeholder="Describe the image for accessibility"
+                    placeholder="Describe the image for screen readers"
                     className="mt-1"
                 />
               </div>
@@ -212,7 +231,7 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
-              <Button onClick={handleSave} className="flex-1">
+              <Button onClick={handleSave} className="flex-1" disabled={!editedImage.src || !editedImage.title.trim()}>
                 <Check className="h-4 w-4 mr-2" />
                 Save
               </Button>
@@ -245,6 +264,7 @@ export function Gallery({
   const [showEditModal, setShowEditModal] = useState(false);
   const [isNewImage, setIsNewImage] = useState(false);
 
+  // Initialize gallery images
   useEffect(() => {
     const fallbackImages: GalleryImage[] = [
       {
@@ -267,16 +287,36 @@ export function Gallery({
       }
     ];
 
+    let imagesToUse = fallbackImages;
+
+    // Process initial images from props/database
     if (initialImages && Array.isArray(initialImages) && initialImages.length > 0) {
-      setGalleryImages(initialImages);
-    } else {
-      setGalleryImages(fallbackImages);
+      // Validate and clean the initial images
+      const validImages = initialImages.filter(img =>
+          img &&
+          typeof img.src === 'string' &&
+          img.src.trim() !== '' &&
+          typeof img.title === 'string' &&
+          img.title.trim() !== ''
+      ).map(img => ({
+        ...img,
+        id: img.id || Date.now() + Math.random(),
+        alt: img.alt || `Gallery image: ${img.title}`,
+        src: img.src.trim(),
+        title: img.title.trim()
+      }));
+
+      if (validImages.length > 0) {
+        imagesToUse = validImages;
+      }
     }
+
+    setGalleryImages(imagesToUse);
   }, [initialImages]);
 
   // Auto-advance carousel
   useEffect(() => {
-    if (!isAutoPlaying || galleryImages.length === 0 || isEditMode) return;
+    if (!isAutoPlaying || galleryImages.length <= 1 || isEditMode) return;
 
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % galleryImages.length);
@@ -286,7 +326,14 @@ export function Gallery({
   }, [isAutoPlaying, galleryImages.length, isEditMode]);
 
   const saveGalleryImages = async (updatedImages: GalleryImage[]) => {
-    await saveContent('gallery_images', updatedImages, 'json');
+    try {
+      await saveContent('gallery_images', updatedImages, 'json');
+      return true;
+    } catch (error) {
+      console.error('Failed to save gallery images:', error);
+      toast.error('Failed to save gallery changes');
+      return false;
+    }
   };
 
   const handleAddImage = () => {
@@ -302,7 +349,7 @@ export function Gallery({
   };
 
   const handleEditImage = (image: GalleryImage) => {
-    setEditingImage(image);
+    setEditingImage({ ...image });
     setIsNewImage(false);
     setShowEditModal(true);
   };
@@ -319,14 +366,16 @@ export function Gallery({
     }
 
     setGalleryImages(updatedImages);
-    await saveGalleryImages(updatedImages);
-    toast.success(isNewImage ? 'Image added successfully' : 'Image updated successfully');
+
+    const success = await saveGalleryImages(updatedImages);
+    if (success) {
+      toast.success(isNewImage ? 'Image added successfully' : 'Image updated successfully');
+    }
   };
 
   const handleDeleteImage = async (id: number) => {
     const updatedImages = galleryImages.filter(img => img.id !== id);
     setGalleryImages(updatedImages);
-    await saveGalleryImages(updatedImages);
 
     // Adjust current index if necessary
     if (currentIndex >= updatedImages.length && updatedImages.length > 0) {
@@ -335,7 +384,10 @@ export function Gallery({
       setCurrentIndex(0);
     }
 
-    toast.success('Image deleted successfully');
+    const success = await saveGalleryImages(updatedImages);
+    if (success) {
+      toast.success('Image deleted successfully');
+    }
   };
 
   const goToSlide = (index: number) => {
@@ -393,64 +445,70 @@ export function Gallery({
           {/* Main Gallery Display */}
           {galleryImages.length > 0 && (
               <div className="relative w-full max-w-4xl mx-auto">
-                <AnimatePresence initial={false}>
-                  <motion.div
-                      key={currentIndex}
-                      initial={{ opacity: 0, x: 100 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -100 }}
-                      transition={{ duration: 0.5, ease: 'easeInOut' }}
-                      className="relative w-full aspect-w-16 aspect-h-9 rounded-lg overflow-hidden shadow-lg bg-gray-100 group"
-                  >
-                    <Image
-                        src={galleryImages[currentIndex].src}
-                        alt={galleryImages[currentIndex].alt}
-                        fill
-                        style={{ objectFit: 'cover' }}
-                        className="transition-transform duration-500 hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <div className="relative w-full h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg overflow-hidden shadow-lg bg-gray-100">
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                        key={currentIndex}
+                        initial={{ opacity: 0, x: 100 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -100 }}
+                        transition={{ duration: 0.5, ease: 'easeInOut' }}
+                        className="absolute inset-0 group"
+                    >
+                      <Image
+                          src={galleryImages[currentIndex].src}
+                          alt={galleryImages[currentIndex].alt}
+                          fill
+                          className="object-cover transition-transform duration-500 hover:scale-105"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1000px"
+                          priority={currentIndex === 0}
+                          onError={(e) => {
+                            console.error('Gallery image failed to load:', galleryImages[currentIndex].src);
+                          }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
 
-                    {/* Edit overlay for current image */}
-                    {isEditMode && (
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                          <Button
-                              onClick={() => handleEditImage(galleryImages[currentIndex])}
-                              className="bg-white/90 text-black hover:bg-white"
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Image
-                          </Button>
-                        </div>
-                    )}
+                      {/* Edit overlay for current image */}
+                      {isEditMode && (
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                            <Button
+                                onClick={() => handleEditImage(galleryImages[currentIndex])}
+                                className="bg-white/90 text-black hover:bg-white"
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Image
+                            </Button>
+                          </div>
+                      )}
 
-                    <div className="absolute bottom-0 left-0 p-4 sm:p-6">
-                      <h3 className="text-white text-lg sm:text-xl font-bold">
-                        {galleryImages[currentIndex].title}
-                      </h3>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
+                      <div className="absolute bottom-0 left-0 p-4 sm:p-6">
+                        <h3 className="text-white text-lg sm:text-xl font-bold">
+                          {galleryImages[currentIndex].title}
+                        </h3>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
 
-                {/* Navigation buttons */}
-                {galleryImages.length > 1 && (
-                    <>
-                      <button
-                          onClick={goToPrevious}
-                          className="absolute top-1/2 -left-4 sm:-left-6 transform -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 sm:p-3 shadow-md transition-all z-10"
-                          aria-label="Previous image"
-                      >
-                        <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
-                      </button>
-                      <button
-                          onClick={goToNext}
-                          className="absolute top-1/2 -right-4 sm:-right-6 transform -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 sm:p-3 shadow-md transition-all z-10"
-                          aria-label="Next image"
-                      >
-                        <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
-                      </button>
-                    </>
-                )}
+                  {/* Navigation buttons */}
+                  {galleryImages.length > 1 && (
+                      <>
+                        <button
+                            onClick={goToPrevious}
+                            className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 sm:p-3 shadow-md transition-all z-10"
+                            aria-label="Previous image"
+                        >
+                          <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </button>
+                        <button
+                            onClick={goToNext}
+                            className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 sm:p-3 shadow-md transition-all z-10"
+                            aria-label="Next image"
+                        >
+                          <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </button>
+                      </>
+                  )}
+                </div>
               </div>
           )}
 
@@ -499,6 +557,7 @@ export function Gallery({
                                   width={120}
                                   height={120}
                                   className="w-full h-full object-cover"
+                                  sizes="120px"
                               />
                             </div>
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors duration-200 rounded-lg flex items-center justify-center">

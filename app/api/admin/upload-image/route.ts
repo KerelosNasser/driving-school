@@ -5,7 +5,6 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
-// Enhanced upload with Supabase Storage for large capacity
 export async function POST(request: NextRequest) {
     try {
         const { userId } = await auth();
@@ -58,7 +57,7 @@ export async function POST(request: NextRequest) {
         const fileBuffer = new Uint8Array(arrayBuffer);
 
         // Upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: _uploadData, error: uploadError } = await supabase.storage
             .from('site-content')
             .upload(filePath, fileBuffer, {
                 contentType: file.type,

@@ -54,9 +54,9 @@ export function Navigation() {
 
           {/* Auth & CTA */}
           <div className="hidden md:flex items-center space-x-4">
-            <a href="tel:+61400000000" className="flex items-center text-gray-700 hover:text-yellow-600">
+            <a href="tel:+61431512095" className="flex items-center text-gray-700 hover:text-yellow-600">
               <Phone className="h-4 w-4 mr-1" />
-              <span className="font-medium">0400 000 000</span>
+              <span className="font-medium">04 3151 2095</span>
             </a>
             
             {isLoaded && (

@@ -9,7 +9,13 @@ import { Gallery } from "@/components/home/gallery";
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import type { Metadata } from 'next'
 import { OrganizationSchema, LocalBusinessSchema } from '@/components/seo/StructuredData'
-import { getPageContent, getContentValue, getContentJson, getContentFile } from '@/lib/content';
+import {
+    getPageContent,
+    getContentValue,
+    getContentJson,
+    getImageData,
+    validateGalleryImages
+} from '@/lib/content';
 
 export const metadata: Metadata = {
     title: "EG Driving School - Professional Driving Lessons & Training",
@@ -63,16 +69,25 @@ export default async function Home() {
         description: getContentValue(content, `features_item_${i + 1}_description`)
     })).filter(feature => feature.title && feature.description);
 
+    // Gallery content with improved handling
     const galleryTitle = getContentValue(content, 'gallery_title', 'Our Learning Experience');
     const gallerySubtitle = getContentValue(content, 'gallery_subtitle', 'See our students and instructors in action.');
-    const galleryImages = getContentJson(content, 'gallery_images', []);
+    const rawGalleryImages = getContentJson(content, 'gallery_images', []);
+    const galleryImages = validateGalleryImages(rawGalleryImages);
 
+    // Instructor content with improved image handling
     const instructorTitle = getContentValue(content, 'instructor_title', 'Meet Your Instructor');
     const instructorName = getContentValue(content, 'instructor_name', 'Michael Thompson');
     const instructorBioP1 = getContentValue(content, 'instructor_bio_p1', "Hi there! I'm Michael, a passionate driving instructor with over 15 years of experience teaching people of all ages how to drive safely and confidently on Brisbane roads.");
     const instructorBioP2 = getContentValue(content, 'instructor_bio_p2', "I believe in creating a relaxed, supportive learning environment where you can develop your skills at your own pace. My teaching approach is patient, thorough, and tailored to your individual needs.");
 
-    const instructorImage = getContentFile(content, 'instructor_image', 'https://img1.wsimg.com/isteam/ip/14e0fa52-5b69-4038-a086-1acfa9374b62/20230411_110458.jpg/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=w:1200,h:1600,cg:true');
+    // Get instructor image data with fallback
+    const instructorImageData = getImageData(
+        content,
+        'instructor_image',
+        'https://img1.wsimg.com/isteam/ip/14e0fa52-5b69-4038-a086-1acfa9374b62/20230411_110458.jpg/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=w:1200,h:1600,cg:true',
+        'Professional driving instructor portrait'
+    );
 
     const instructorExperience = getContentValue(content, 'instructor_experience', '15+ Years Experience');
     const instructorRating = getContentValue(content, 'instructor_rating', '4.9');
@@ -86,6 +101,7 @@ export default async function Home() {
         getContentValue(content, 'instructor_feature_4', 'Keys2drive accredited'),
     ];
 
+    // CTA content
     const ctaTitle = getContentValue(content, 'cta_title', 'Ready to Start Your Driving Journey?');
     const ctaSubtitle = getContentValue(content, 'cta_subtitle', "Book your first lesson today and take the first step towards getting your license with Brisbane's most trusted driving instructor.");
     const ctaPhoneText = getContentValue(content, 'cta_phone_text', 'Call us at');
@@ -125,8 +141,8 @@ export default async function Home() {
                         name={instructorName}
                         bioP1={instructorBioP1}
                         bioP2={instructorBioP2}
-                        imageUrl={instructorImage.url}
-                        imageAlt={instructorImage.alt}
+                        imageUrl={instructorImageData.url}
+                        imageAlt={instructorImageData.alt}
                         experience={instructorExperience}
                         rating={instructorRating}
                         certTitle={instructorCertTitle}
