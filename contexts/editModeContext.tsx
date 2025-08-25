@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 interface EditModeContextType {
@@ -18,6 +19,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
     const [isEditMode, setIsEditMode] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const { user, isLoaded } = useUser();
+    const searchParams = useSearchParams();
 
     // Check if user is admin - you can customize this logic
     const isAdmin = isLoaded && (
@@ -25,12 +27,13 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
         process.env.NODE_ENV === 'development' // Allow in development
     );
 
+    // Check for edit mode URL parameter
     useEffect(() => {
-        // Only allow edit mode for admins
-        if (!isAdmin && isEditMode) {
-            setIsEditMode(false);
+        if (isAdmin && searchParams.get('editMode') === 'true') {
+            setIsEditMode(true);
+            toast.success('Edit mode enabled from admin panel');
         }
-    }, [isAdmin, isEditMode]);
+    }, [isAdmin, searchParams]);
 
     const toggleEditMode = () => {
         if (!isAdmin) {
@@ -39,11 +42,18 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
         }
         setIsEditMode(!isEditMode);
         if (!isEditMode) {
-            toast.success('Edit mode enabled - Click any text or image to edit');
+            toast.success('Edit mode enabled - Click any text to edit');
         } else {
             toast.success('Edit mode disabled');
         }
     };
+
+    useEffect(() => {
+        // Only allow edit mode for admins
+        if (!isAdmin && isEditMode) {
+            setIsEditMode(false);
+        }
+    }, [isAdmin, isEditMode]);
 
     const saveContent = async (
         key: string,

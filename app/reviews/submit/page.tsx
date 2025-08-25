@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star } from 'lucide-react';
+import { StarRating } from '@/components/ui/star-rating';
 import { supabase } from '@/lib/supabase';
 
 export default function SubmitReviewPage() {
@@ -72,13 +72,13 @@ export default function SubmitReviewPage() {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Your Rating</label>
                             <div className="flex items-center space-x-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                    <Star
-                                        key={star}
-                                        className={`h-8 w-8 cursor-pointer ${rating >= star ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
-                                        onClick={() => setRating(star)}
-                                    />
-                                ))}
+                            <StarRating 
+                                rating={rating} 
+                                interactive={true}
+                                onRatingChange={setRating}
+                                size="lg"
+                                uniqueId="submit-rating"
+                            />
                             </div>
                         </div>
                         <div>

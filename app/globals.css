@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Leaflet CSS - Using local package instead of CDN for better compatibility */
+@import "leaflet/dist/leaflet.css";
+
 @custom-variant dark (&:is(.dark *));
 
 /* Enable line-clamp and other utilities */

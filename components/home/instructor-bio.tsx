@@ -1,8 +1,6 @@
 'use client';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { CheckCircle, Star, Award } from 'lucide-react';
-import { useEditMode } from '@/contexts/editModeContext';
 import { EditableText } from '@/components/ui/editable-text';
 import { EditableImage } from '@/components/ui/editable-image';
 
@@ -21,18 +19,18 @@ interface InstructorBioProps {
 }
 
 export function InstructorBio({
-                                  title = 'Meet Your Instructor',
-                                  name = 'Michael Thompson',
-                                  bioP1 = "Hi there! I'm Michael, a passionate driving instructor with over 15 years of experience teaching people of all ages how to drive safely and confidently on Brisbane roads.",
-                                  bioP2 = "I believe in creating a relaxed, supportive learning environment where you can develop your skills at your own pace. My teaching approach is patient, thorough, and tailored to your individual needs.",
-                                  imageUrl = 'https://img1.wsimg.com/isteam/ip/14e0fa52-5b69-4038-a086-1acfa9374b62/20230411_110458.jpg/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=w:1200,h:1600,cg:true',
-                                  imageAlt = 'A friendly and professional driving instructor',
-                                  experience = '15+ Years Experience',
-                                  rating = '4.9',
-                                  certTitle = 'Certified Instructor',
-                                  certSubtitle = 'Queensland Transport Approved',
-                                  features = [],
-                              }: InstructorBioProps) {
+title = 'Meet Your Instructor',
+name = 'Michael Thompson',
+bioP1 = "Hi there! I'm Michael, a passionate driving instructor with over 15 years of experience teaching people of all ages how to drive safely and confidently on Brisbane roads.",
+bioP2 = "I believe in creating a relaxed, supportive learning environment where you can develop your skills at your own pace. My teaching approach is patient, thorough, and tailored to your individual needs.",
+imageUrl = 'https://img1.wsimg.com/isteam/ip/14e0fa52-5b69-4038-a086-1acfa9374b62/20230411_110458.jpg/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=w:1200,h:1600,cg:true',
+imageAlt = 'A friendly and professional driving instructor',
+experience = '15+ Years Experience',
+rating = '4.9',
+certTitle = 'Certified Instructor',
+certSubtitle = 'Queensland Transport Approved',
+features = [],
+}: InstructorBioProps) {
 
     const defaultFeatures = [
         'Dual-control vehicle',
@@ -78,14 +76,14 @@ export function InstructorBio({
                         transition={{ duration: 0.7 }}
                         className="relative"
                     >
-                        <div className="relative w-full h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg overflow-hidden shadow-xl bg-gray-100">
+                        <div className="relative rounded-lg overflow-hidden shadow-xl bg-gray-100">
                             <EditableImage
                                 src={displayImageUrl}
                                 alt={displayImageAlt}
                                 contentKey="instructor_image"
-                                fill
-                                className="object-cover transition-transform duration-500 hover:scale-105"
-                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
+                                width={600}
+                                height={600}
+                                className="w-full h-auto object-cover transition-transform duration-500 hover:scale-105 rounded-lg"
                                 priority
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>

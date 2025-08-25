@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
-import { Menu, X, Car, Phone } from 'lucide-react';
+import { Menu, X, Car, Phone, Edit3, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useEditMode } from '@/contexts/editModeContext';
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, isLoaded } = useUser();
-  const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const { isEditMode, toggleEditMode, isAdmin } = useEditMode();
+  const isAdminUser = user?.emailAddresses[0]?.emailAddress === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
   const navItems = [
     { href: '/', label: 'Home' },
@@ -42,13 +44,35 @@ export function Navigation() {
             ))}
             
             {/* Admin Link */}
-            {isAdmin && (
+            {isAdminUser && (
               <Link
                 href="/admin"
                 className="text-purple-600 hover:text-purple-700 transition-colors font-medium"
               >
                 Admin
               </Link>
+            )}
+            
+            {/* Quick Edit Mode Toggle for Admins */}
+            {isAdminUser && (
+              <Button
+                onClick={toggleEditMode}
+                size="sm"
+                variant={isEditMode ? "destructive" : "secondary"}
+                className="ml-2"
+              >
+                {isEditMode ? (
+                  <>
+                    <EyeOff className="h-3 w-3 mr-1" />
+                    Exit Edit
+                  </>
+                ) : (
+                  <>
+                    <Edit3 className="h-3 w-3 mr-1" />
+                    Edit
+                  </>
+                )}
+              </Button>
             )}
           </div>
 
@@ -100,7 +124,7 @@ export function Navigation() {
                 </Link>
               ))}
               
-              {isAdmin && (
+              {isAdminUser && (
                 <Link
                   href="/admin"
                   className="text-purple-600 hover:text-purple-700 transition-colors font-medium"
@@ -108,6 +132,31 @@ export function Navigation() {
                 >
                   Admin
                 </Link>
+              )}
+              
+              {/* Quick Edit Mode Toggle for Mobile */}
+              {isAdminUser && (
+                <Button
+                  onClick={() => {
+                    toggleEditMode();
+                    setIsOpen(false);
+                  }}
+                  size="sm"
+                  variant={isEditMode ? "destructive" : "secondary"}
+                  className="w-full"
+                >
+                  {isEditMode ? (
+                    <>
+                      <EyeOff className="h-4 w-4 mr-2" />
+                      Exit Edit Mode
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Enable Edit Mode
+                    </>
+                  )}
+                </Button>
               )}
               
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">

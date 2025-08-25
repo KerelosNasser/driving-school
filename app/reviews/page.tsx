@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Star, Quote, Search, ArrowRight, Filter, ThumbsUp } from 'lucide-react';
+import { Quote, Search, ArrowRight, Filter, ThumbsUp, Settings } from 'lucide-react';
+import { StarRating } from '@/components/ui/star-rating';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
+import { useUser } from '@clerk/nextjs';
 import type { Review } from '@/lib/supabase';
 
 // Fallback review data in case the Supabase fetch fails (moved to module scope)
@@ -125,6 +127,10 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRating, setFilterRating] = useState<number | null>(null);
+  const { user } = useUser();
+  
+  // Check if user is admin
+  const isAdmin = user?.publicMetadata?.role === 'admin' || process.env.NODE_ENV === 'development';
 
   // Fetch reviews from Supabase
   useEffect(() => {
@@ -166,14 +172,9 @@ export default function ReviewsPage() {
   });
 
   // Function to render star ratings
-  const renderStars = (rating: number) => {
-    return Array(5).fill(0).map((_, i) => (
-      <Star 
-        key={i} 
-        className={`h-5 w-5 ${i < rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} 
-      />
-    ));
-  };
+  const renderStars = (rating: number, uniqueId?: string) => (
+    <StarRating rating={rating} uniqueId={uniqueId} size="md" />
+  );
 
   // Calculate average rating
   const averageRating = reviews.length > 0 
@@ -211,8 +212,7 @@ export default function ReviewsPage() {
   return (
     <div className="min-h-screen bg-background">
       <main>
-        {/* Hero Section */}
-        <section className="bg-yellow-600 text-white py-16 md:py-24">
+        <section className="bg-yellow-600 text-white py-8 md:py-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -265,12 +265,23 @@ export default function ReviewsPage() {
               {/* CTA */}
               <div className="text-center md:text-right">
                 <p className="text-gray-700 mb-4">Had a great experience?</p>
-                <Button asChild>
-                  <Link href="/reviews/submit">
-                    Leave a Review
-                    <ThumbsUp className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+                <div className="flex flex-col space-y-2">
+                  <Button asChild>
+                    <Link href="/reviews/submit">
+                      Leave a Review
+                      <ThumbsUp className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  {/* Admin Controls */}
+                  {isAdmin && (
+                    <Link href="/admin?tab=reviews">
+                      <Button variant="outline" size="sm" className="w-full flex items-center space-x-2">
+                        <Settings className="h-4 w-4" />
+                        <span>Manage Reviews</span>
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           </div>

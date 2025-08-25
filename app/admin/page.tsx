@@ -2,6 +2,7 @@ import { createClerkClient } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 import { Toaster } from 'sonner';
 import { AdminDashboardClient } from './components/AdminDashboardClient';
+import { Review, Package, Booking as LibBooking, } from '@/lib/types';
 
 // Create a server-side Supabase client for admin operations
 const supabaseAdmin = createClient(
@@ -27,42 +28,28 @@ export interface MergedUser {
   isSynced: boolean;
 }
 
-// Define types for our other data
-interface Review {
-  id: string;
-  user_id: string;
-  user_name: string;
-  rating: number;
-  comment: string;
-  approved: boolean;
-  created_at: string;
-}
-
-interface User {
-  id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  created_at: string;
-  clerk_id: string;
-}
-
-interface Package {
-  id: string;
-  name: string;
-  price: number;
-}
-
-interface Booking {
+// Define types for server-side data fetching that match what comes from Supabase
+interface ServerBooking {
   id: string;
   user_id: string;
   package_id: string | null;
   date: string;
   time: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected';
   created_at: string;
-  users: User;
-  packages: Package | null;
+  users: {
+    id: string;
+    full_name: string;
+    email: string;
+    phone: string;
+    created_at: string;
+    clerk_id: string;
+  };
+  packages: {
+    id: string;
+    name: string;
+    price: number;
+  } | null;
 }
 
 // Server-side function to fetch and merge users
@@ -185,6 +172,38 @@ async function getMergedUsers(): Promise<MergedUser[]> {
   }
 }
 
+// Helper function to transform server booking data to lib types
+function transformBookings(serverBookings: ServerBooking[]): LibBooking[] {
+  return serverBookings.map(booking => ({
+    id: booking.id,
+    user_id: booking.user_id,
+    package_id: booking.package_id,
+    date: booking.date,
+    time: booking.time,
+    start_time: booking.time, // Map time to start_time
+    end_time: booking.time, // Map time to end_time (you may want to calculate this)
+    status: booking.status as LibBooking['status'], // Status should already match
+    created_at: booking.created_at,
+    users: booking.users ? {
+      id: booking.users.id,
+      email: booking.users.email,
+      full_name: booking.users.full_name,
+      phone: booking.users.phone,
+      created_at: booking.users.created_at,
+    } : undefined,
+    packages: booking.packages ? {
+      id: booking.packages.id,
+      name: booking.packages.name,
+      description: '', // Default description
+      price: booking.packages.price,
+      hours: 0, // Default hours
+      features: [],
+      popular: false,
+      created_at: '',
+    } : undefined,
+  }));
+}
+
 // Main Admin Page (Server Component)
 export default async function AdminDashboardPage() {
   // Fetch all data on the server
@@ -195,6 +214,9 @@ export default async function AdminDashboardPage() {
     supabaseAdmin.from('packages').select('*').order('created_at', { ascending: false })
   ]);
 
+  // Transform server bookings to lib types
+  const transformedBookings = transformBookings((bookings.data as ServerBooking[]) || []);
+
   return (
     <div className="container mx-auto py-10">
       <Toaster />
@@ -203,7 +225,7 @@ export default async function AdminDashboardPage() {
       <AdminDashboardClient
         initialUsers={users || []}
         initialReviews={(reviews.data as Review[]) || []}
-        initialBookings={(bookings.data as Booking[]) || []}
+        initialBookings={transformedBookings}
         initialPackages={(packages.data as Package[]) || []}
       />
     </div>

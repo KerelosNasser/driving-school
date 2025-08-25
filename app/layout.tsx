@@ -6,10 +6,12 @@ import "./globals.css";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { WebVitals } from "@/components/seo/WebVitals";
+import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
 
 import { Suspense } from 'react';
 import { EditModeProvider } from "@/contexts/editModeContext";
 import { GlobalContentProvider } from "@/contexts/globalContentContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AdminEditToolbar } from "@/app/admin/adminEditToolbar";
 
 // Optimized font loading
@@ -102,7 +104,7 @@ export default function RootLayout({
 }>) {
   return (
       <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
         <head>
           {/* Critical resource hints */}
           <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -127,16 +129,17 @@ export default function RootLayout({
           <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         </head>
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <EditModeProvider>
-          <GlobalContentProvider>
-            <AdminEditToolbar />
-            <Navigation />
-            <main>
-              {children}
-            </main>
-            <Footer />
-          </GlobalContentProvider>
-        </EditModeProvider>
+        <ThemeProvider>
+          <Suspense fallback={<div>Loading...</div>}>
+            <EditModeProvider>
+              <GlobalContentProvider>
+                <LayoutWrapper>
+                  {children}
+                </LayoutWrapper>
+              </GlobalContentProvider>
+            </EditModeProvider>
+          </Suspense>
+        </ThemeProvider>
 
         {/* Performance monitoring */}
         <Suspense fallback={null}>

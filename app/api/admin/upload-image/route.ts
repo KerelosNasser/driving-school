@@ -83,7 +83,35 @@ export async function POST(request: NextRequest) {
         // Generate alt text suggestion if not provided
         const generatedAlt = altText || generateAltText(contentKey, file.name);
 
-        // Save image metadata to database
+        // Save to both legacy content system and new media library
+        
+        // 1. Save to media library
+        const mediaFileData = {
+            original_name: file.name,
+            file_name: fileName,
+            storage_path: filePath,
+            public_url: publicUrl,
+            file_type: 'image' as const,
+            mime_type: file.type,
+            file_size: file.size,
+            alt_text: generatedAlt,
+            content_key: contentKey,
+            page_name: 'content-images',
+            uploaded_by: userId
+        };
+
+        const { data: mediaFile, error: mediaError } = await supabase
+            .from('media_files')
+            .insert(mediaFileData)
+            .select('*')
+            .single();
+
+        if (mediaError) {
+            console.error('Failed to save to media library:', mediaError);
+            // Continue with legacy system for backward compatibility
+        }
+
+        // 2. Save legacy metadata for backward compatibility
         const imageMetadata = {
             content_key: `${contentKey}_metadata`,
             content_type: 'json',
@@ -94,7 +122,8 @@ export async function POST(request: NextRequest) {
                 upload_date: new Date().toISOString(),
                 uploaded_by: userId,
                 storage_path: filePath,
-                public_url: publicUrl
+                public_url: publicUrl,
+                media_file_id: mediaFile?.id // Link to media library entry
             },
             page_name: 'images',
             updated_by: userId,
@@ -121,6 +150,7 @@ export async function POST(request: NextRequest) {
             size: file.size,
             type: file.type,
             storagePath: filePath,
+            mediaFileId: mediaFile?.id,
             message: 'Image uploaded successfully to cloud storage'
         });
 
@@ -158,7 +188,7 @@ export async function DELETE(request: NextRequest) {
 
         const supabase = createServerComponentClient({ cookies });
 
-        // Delete from Supabase Storage
+        // 1. Delete from Supabase Storage
         const { error: deleteError } = await supabase.storage
             .from('site-content')
             .remove([storagePath]);
@@ -169,6 +199,20 @@ export async function DELETE(request: NextRequest) {
                 error: 'Failed to delete from cloud storage',
                 details: deleteError.message
             }, { status: 500 });
+        }
+
+        // 2. Remove from media library (soft delete)
+        const { error: mediaLibraryError } = await supabase
+            .from('media_files')
+            .update({ 
+                is_active: false, 
+                deleted_at: new Date().toISOString() 
+            })
+            .eq('storage_path', storagePath);
+
+        if (mediaLibraryError) {
+            console.error('Failed to update media library:', mediaLibraryError);
+            // Continue - don't fail the request for this
         }
 
         return NextResponse.json({

@@ -27,20 +27,14 @@ export default function PackagesPage() {
         if (error) {
           console.error('Error fetching packages:', error);
           // Fallback to static data if there's an error
-          setPackages(fallbackPackages);
         } else if (data && data.length > 0) {
           setPackages(data as Package[]);
           // Set the first package as selected by default
           setSelectedPackage(data[0].id);
-        } else {
-          // Use fallback data if no packages are found
-          setPackages(fallbackPackages);
-          setSelectedPackage(fallbackPackages[0].id);
         }
       } catch (error) {
         console.error('Error in packages fetch:', error);
-        setPackages(fallbackPackages);
-        setSelectedPackage(fallbackPackages[0].id);
+
       } finally {
         setLoading(false);
       }
@@ -49,59 +43,6 @@ export default function PackagesPage() {
     fetchPackages();
   }, []);
 
-  // Fallback package data in case the Supabase fetch fails
-  const fallbackPackages: Package[] = [
-    {
-      id: '1',
-      name: 'Starter Package',
-      description: 'Perfect for beginners who are just starting their driving journey',
-      price: 299.99,
-      hours: 5,
-      features: ['5 hours of driving lessons', 'Personalized instruction', 'Flexible scheduling'],
-      popular: false,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: '2',
-      name: 'Standard Package',
-      description: 'Our most popular package for learners with some experience',
-      price: 499.99,
-      hours: 10,
-      features: ['10 hours of driving lessons', 'Personalized instruction', 'Flexible scheduling', 'Test preparation'],
-      popular: true,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: '3',
-      name: 'Premium Package',
-      description: 'Comprehensive package for complete preparation',
-      price: 799.99,
-      hours: 20,
-      features: ['20 hours of driving lessons', 'Personalized instruction', 'Flexible scheduling', 'Test preparation', 'Mock driving test', 'Pick-up and drop-off service'],
-      popular: false,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: '4',
-      name: 'Test Day Package',
-      description: 'For students who just need preparation for their driving test',
-      price: 199.99,
-      hours: 3,
-      features: ['3 hours of driving lessons', 'Test route practice', 'Last-minute tips and tricks', 'Use of instructor\'s vehicle for test'],
-      popular: false,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: '5',
-      name: 'Refresher Package',
-      description: 'For licensed drivers who need to brush up on their skills',
-      price: 249.99,
-      hours: 4,
-      features: ['4 hours of driving lessons', 'Focus on specific skills', 'Confidence building', 'Flexible scheduling'],
-      popular: false,
-      created_at: new Date().toISOString()
-    }
-  ];
 
   // Get the selected package details
   const selectedPackageDetails = packages.find(pkg => pkg.id === selectedPackage) || packages[0];
@@ -132,7 +73,7 @@ export default function PackagesPage() {
     <div className="min-h-screen bg-background">
       <main>
         {/* Hero Section */}
-        <section className="bg-yellow-600 text-white py-16 md:py-24">
+        <section className="bg-yellow-600 text-white py-8 md:py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -226,10 +167,9 @@ export default function PackagesPage() {
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="bg-gray-50 rounded-xl p-8 shadow-md"
-                  >
-                    <div className="max-w-4xl mx-auto">
-                      <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                    className="bg-gray-50 rounded-xl p-8 shadow-md border-2 border-amber-400">
+                    <div className="max-w-4xl mx-auto border-amber-400">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-6 ">
                         {selectedPackageDetails.name} Details
                       </h2>
                       
@@ -325,40 +265,6 @@ export default function PackagesPage() {
                   Yes, all of our packages can be purchased as gift certificates. They make a great gift for new drivers! Contact us for more information.
                 </p>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-16 bg-yellow-600 text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold mb-4">
-              Ready to Start Your Driving Journey?
-            </h2>
-            <p className="text-xl text-yellow-100 max-w-3xl mx-auto mb-8">
-              Book your first lesson today and take the first step towards getting your license.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button 
-                size="lg" 
-                className="bg-white text-yellow-700 hover:bg-yellow-50"
-                asChild
-              >
-                <Link href="/book">
-                  Book Now
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="border-white text-white hover:bg-white/10"
-                asChild
-              >
-                <Link href="/contact">
-                  Contact Us
-                </Link>
-              </Button>
             </div>
           </div>
         </section>

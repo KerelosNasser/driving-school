@@ -1,16 +1,22 @@
+// components/maps/LeafletServiceAreaMap.tsx
 'use client';
 
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import type { Map, Marker, LatLngExpression, DivIcon } from 'leaflet';
-import { serviceAreas } from '@/lib/data';
+import type { Map, Marker, LatLngExpression, LeafletMouseEvent } from 'leaflet';
+
+// Extend Map interface for web connections
+declare module 'leaflet' {
+  interface Map {
+    _webConnections?: L.Polyline[];
+  }
+}
 
 const MAP_CONFIG = {
   center: [-27.4698, 153.0251] as LatLngExpression,
   zoom: 11,
   maxZoom: 19,
-  scrollWheelZoom: true,
-} as const;
+};
 
 const COVERAGE_COORDS: LatLngExpression[] = [
   [-27.3200, 153.0700], [-27.3200, 153.1735], [-27.4418, 153.1735],
@@ -18,205 +24,287 @@ const COVERAGE_COORDS: LatLngExpression[] = [
   [-27.3200, 152.9719],
 ];
 
-const COLORS = {
-  primary: '#ca8a04',
-  secondary: '#eab308',
-  inactive: '#94A3B8',
-  background: '#fef3c7',
-} as const;
+interface ServiceArea {
+  id: number;
+  name: string;
+  lat: number;
+  lng: number;
+  popular: boolean;
+}
 
-interface ServiceAreaMapProps {
+interface EditableServiceAreaMapProps {
   onAreaSelect?: (areaId: number) => void;
   selectedAreaId?: number | null;
-  className?: string;
+  serviceAreas?: ServiceArea[];
+  onMapClick?: (lat: number, lng: number) => void;
+  isEditMode?: boolean;
 }
 
 interface MapMarkers {
   [key: number]: Marker;
 }
 
-// Custom hook for Leaflet initialization
-const useLeaflet = () => {
+function LeafletServiceAreaMap({
+                                         onAreaSelect,
+                                         selectedAreaId,
+                                         serviceAreas = [],
+                                         onMapClick,
+                                         isEditMode = false,
+                                       }: EditableServiceAreaMapProps) {
   const [leaflet, setLeaflet] = useState<typeof import('leaflet') | null>(null);
+  const [markers, setMarkers] = useState<MapMarkers>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<Map | null>(null);
+  const isMountedRef = useRef(false);
 
+  // Load Leaflet following 2025 best practices
   useEffect(() => {
-    let isCancelled = false;
-
     const loadLeaflet = async () => {
-      if (typeof window === 'undefined') return;
-
       try {
-        setLoading(true);
-        setError(null);
+        // Only load if component is mounted and window is available
+        if (typeof window === 'undefined') return;
         
-        // Load CSS first
-        await import('leaflet/dist/leaflet.css');
+        // Import Leaflet - CSS should be in global styles
         const L = await import('leaflet');
+        
+        // Fix default marker icons issue
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        });
 
-        if (!isCancelled) {
-          setLeaflet(L);
-        }
+        setLeaflet(L);
+        isMountedRef.current = true;
       } catch (err) {
-        if (!isCancelled) {
-          setError('Failed to load map library');
-          console.error('Failed to load Leaflet:', err);
-        }
+        console.error('Failed to load Leaflet:', err);
+        setError('Failed to load map library');
       } finally {
-        if (!isCancelled) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     loadLeaflet();
-
+    
     return () => {
-      isCancelled = true;
+      isMountedRef.current = false;
     };
   }, []);
 
-  return { leaflet, loading, error };
-};
+  // Create custom icons
+  const createAreaIcon = useCallback((L: typeof import('leaflet'), area: ServiceArea, isSelected: boolean) => {
+    const size = isSelected ? 36 : 30;
+    const color = isSelected ? '#ca8a04' : area.popular ? '#eab308' : '#94A3B8';
 
-// Icon factory functions
-const createOfficeIcon = (L: typeof import('leaflet')): DivIcon => {
-  return L.divIcon({
-    html: `
-      <div class="office-marker">
-        <div class="office-marker-inner">Main Office</div>
-      </div>
-    `,
-    className: 'custom-office-icon',
-    iconSize: [100, 35],
-    iconAnchor: [50, 17],
-  });
-};
+    return L.divIcon({
+      html: `
+        <div style="
+          width: ${size}px;
+          height: ${size}px;
+          background: ${color};
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: ${isSelected ? '16px' : '14px'};
+          ${area.popular ? 'position: relative;' : ''}
+        ">
+          ${area.popular ? '<div style="position: absolute; top: -8px; right: -8px; font-size: 16px;">⭐</div>' : ''}
+          ${isEditMode ? '<div style="position: absolute; bottom: -8px; right: -8px; background: white; color: #3b82f6; border: 1px solid #3b82f6; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px;">✎</div>' : ''}
+        </div>
+      `,
+      className: 'custom-area-icon',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
+  }, [isEditMode]);
 
-const createAreaIcon = (
-    L: typeof import('leaflet'),
-    isSelected: boolean,
-    isPopular: boolean
-): DivIcon => {
-  const sizeClass = isSelected 
-      ? 'area-marker-large' 
-      : 'area-marker-small';
-      
-  const colorClass = isSelected 
-      ? 'area-marker-primary' 
-      : isPopular 
-          ? 'area-marker-secondary' 
-          : 'area-marker-inactive';
+  const createOfficeIcon = useCallback((L: typeof import('leaflet')) => {
+    return L.divIcon({
+      html: `
+        <div style="
+          background: #ca8a04;
+          color: white;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-weight: bold;
+          font-size: 12px;
+          text-align: center;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          border: 3px solid white;
+          white-space: nowrap;
+        ">
+          🏢 Main Office
+        </div>
+      `,
+      className: 'custom-office-icon',
+      iconSize: [120, 40],
+      iconAnchor: [60, 20],
+    });
+  }, []);
 
-  return L.divIcon({
-    html: `
-      <div class="area-marker ${colorClass} ${sizeClass} ${isSelected ? 'selected' : ''} ${isPopular ? 'popular' : ''}">
-        ${isPopular ? '<div class="popular-star">★</div>' : ''}
-      </div>
-    `,
-    className: 'custom-area-icon',
-    iconSize: [isSelected ? 36 : 30, isSelected ? 36 : 30],
-    iconAnchor: [isSelected ? 18 : 15, isSelected ? 18 : 15],
-  });
-};
-
-const createPopupContent = (area: typeof serviceAreas[0]): string => {
-  return `
-    <div class="area-popup">
-      <h4 class="popup-title">${area.name}</h4>
-      <p class="popup-description">
-        Driving lessons available
-        ${area.popular ? '<br><span class="popular-badge">⭐ Popular area</span>' : ''}
-      </p>
-      <div class="popup-stats">
-        <span class="popup-stat">Emael Ghobrial</span>
-        <span class="popup-stat"> 9+ years service</span>
-      </div>
-    </div>
-  `;
-};
-
-function LeafletServiceAreaMap({
-                                 onAreaSelect,
-                                 selectedAreaId,
-                                 className = ''
-                               }: ServiceAreaMapProps) {
-  const [markers, setMarkers] = useState<MapMarkers>({});
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<Map | null>(null);
-  const { leaflet, loading, error } = useLeaflet();
-
-  // Memoize service areas processing
-  const processedAreas = useMemo(() => {
-    return serviceAreas.map(area => ({
-      ...area,
-      isSelected: selectedAreaId === area.id,
-    }));
-  }, [selectedAreaId]);
-
-  // Initialize map
+  // Initialize map with improved error handling
   const initializeMap = useCallback(async () => {
-    if (!leaflet || !mapContainerRef.current) return;
+    if (!leaflet || !mapContainerRef.current || !isMountedRef.current) return;
 
     const L = leaflet;
 
     try {
-      // Clear existing map if it exists
+      // Clear existing map
       if (mapInstanceRef.current) {
+        // Clean up web connections
+        if (mapInstanceRef.current._webConnections) {
+          mapInstanceRef.current._webConnections.forEach((connection: L.Polyline) => {
+            try {
+              mapInstanceRef.current?.removeLayer(connection);
+            } catch (e) {
+              console.warn('Error removing connection:', e);
+            }
+          });
+        }
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
 
-      const mapInstance = L.map(mapContainerRef.current, MAP_CONFIG);
-
-      // Store reference to the map instance
+      // Create new map instance
+      const mapInstance = L.map(mapContainerRef.current, {
+        ...MAP_CONFIG,
+        preferCanvas: true, // Better performance for many markers
+        zoomControl: true,
+        scrollWheelZoom: true,
+      });
+      
       mapInstanceRef.current = mapInstance;
 
-      // Add tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      // Add tile layer with error handling
+      const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
         maxZoom: MAP_CONFIG.maxZoom,
-      }).addTo(mapInstance);
+        minZoom: 8,
+        errorTileUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2Y5ZjlmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjY2NjIj5UaWxlIEVycm9yPC90ZXh0Pjwvc3ZnPg=='
+      });
+      
+      tileLayer.addTo(mapInstance);
 
       // Add coverage area
       L.polygon(COVERAGE_COORDS, {
-        color: COLORS.secondary,
+        color: isEditMode ? '#3b82f6' : '#eab308',
         weight: 2,
         opacity: 0.8,
-        fillColor: COLORS.background,
-        fillOpacity: 0.2,
-        dashArray: '10, 10',
-      }).addTo(mapInstance);
-// Add pattern overlay
-      L.polygon(COVERAGE_COORDS, {
-        color: 'transparent',
-        fillColor: COLORS.secondary,
-        fillOpacity: 0.05,
-        className: 'coverage-pattern',
-      }).addTo(mapInstance);
+        fillColor: '#fef3c7',
+        fillOpacity: isEditMode ? 0.1 : 0.05,
+        dashArray: isEditMode ? '5, 10' : '10, 10',
+      }).addTo(mapInstance).bindPopup(`
+        <div>
+          <h3>🎯 Service Coverage Area</h3>
+          <p>We provide driving lessons throughout Brisbane</p>
+          ${isEditMode ? '<p style="color: #3b82f6; font-size: 12px;">💡 Click anywhere to add location</p>' : ''}
+        </div>
+      `);
 
       // Add office marker
       const officeIcon = createOfficeIcon(L);
       L.marker(MAP_CONFIG.center, { icon: officeIcon })
           .addTo(mapInstance)
           .bindPopup(`
-          <div class="office-popup">
-            <h3>EG Driving School</h3>
-            <p>📍 123 Main Street, Brisbane</p>
+          <div>
+            <h3>🏢 EG Driving School</h3>
+            <p>📍 Brisbane, Queensland</p>
             <p>📞 (07) 1234 5678</p>
             <p>✉️ info@egdrivingschool.com</p>
           </div>
         `);
-// Add service area markers
-      const newMarkers: MapMarkers = {};
-      processedAreas.forEach((area) => {
-        const areaIcon = createAreaIcon(L, area.isSelected, area.popular);
-        const marker = L.marker([area.lat, area.lng], { icon: areaIcon })
-            .addTo(mapInstance)
-            .bindPopup(createPopupContent(area));
 
-        marker.on('click', () => {
+      // Add spider web connections between service areas
+      if (serviceAreas.length > 1) {
+        const webConnections: L.Polyline[] = [];
+        const mainOffice = MAP_CONFIG.center as [number, number];
+        
+        // Create connections from office to all popular areas
+        const popularAreas = serviceAreas.filter(area => area.popular);
+        popularAreas.forEach(area => {
+          const connection = L.polyline([
+            mainOffice,
+            [area.lat, area.lng]
+          ], {
+            color: '#eab308',
+            weight: 2,
+            opacity: 0.4,
+            dashArray: '5, 10'
+          }).addTo(mapInstance);
+          webConnections.push(connection);
+        });
+
+        // Create connections between nearby service areas (spider web effect)
+        serviceAreas.forEach((area1, i) => {
+          serviceAreas.slice(i + 1).forEach(area2 => {
+            const distance = Math.sqrt(
+              Math.pow(area1.lat - area2.lat, 2) + 
+              Math.pow(area1.lng - area2.lng, 2)
+            );
+            
+            // Connect areas that are relatively close (adjust threshold as needed)
+            if (distance < 0.1) {
+              const connection = L.polyline([
+                [area1.lat, area1.lng],
+                [area2.lat, area2.lng]
+              ], {
+                color: area1.popular && area2.popular ? '#fbbf24' : '#d1d5db',
+                weight: area1.popular && area2.popular ? 2 : 1,
+                opacity: area1.popular && area2.popular ? 0.6 : 0.3,
+                dashArray: area1.popular && area2.popular ? '3, 6' : '2, 8'
+              }).addTo(mapInstance);
+              webConnections.push(connection);
+            }
+          });
+        });
+
+        // Store connections for cleanup
+        mapInstance._webConnections = webConnections;
+      }
+
+      // Add map click handler for edit mode
+      if (isEditMode && onMapClick) {
+        mapInstance.on('click', (e: LeafletMouseEvent) => {
+          // Don't trigger if clicking on marker
+          if (e.originalEvent.target && (e.originalEvent.target as Element).closest('.leaflet-marker-icon')) {
+            return;
+          }
+          onMapClick(e.latlng.lat, e.latlng.lng);
+        });
+        mapInstance.getContainer().style.cursor = isEditMode ? 'crosshair' : '';
+      }
+
+      // Add service area markers
+      const newMarkers: MapMarkers = {};
+      serviceAreas.forEach((area) => {
+        const isSelected = selectedAreaId === area.id;
+        const areaIcon = createAreaIcon(L, area, isSelected);
+
+        const marker = L.marker([area.lat, area.lng], {
+          icon: areaIcon,
+          riseOnHover: true,
+        })
+            .addTo(mapInstance)
+            .bindPopup(`
+            <div>
+              <h4>${area.name}</h4>
+              <p>📍 ${area.lat.toFixed(4)}, ${area.lng.toFixed(4)}</p>
+              <p>Driving lessons available</p>
+              ${area.popular ? '<span style="background: #fef3c7; color: #ca8a04; padding: 2px 8px; border-radius: 12px; font-size: 11px;">⭐ Popular</span>' : ''}
+              ${isEditMode ? '<div style="margin-top: 8px; color: #3b82f6; font-size: 11px;">💡 Click to select</div>' : ''}
+            </div>
+          `);
+
+        marker.on('click', (e) => {
+          e.originalEvent.stopPropagation();
           onAreaSelect?.(area.id);
         });
 
@@ -225,35 +313,41 @@ function LeafletServiceAreaMap({
 
       setMarkers(newMarkers);
 
-      // Fit map to bounds
-      const bounds = L.latLngBounds(COVERAGE_COORDS);
-      mapInstance.fitBounds(bounds, { padding: [50, 50] });
+      // Fit bounds
+      if (serviceAreas.length > 0) {
+        const group = new L.FeatureGroup(Object.values(newMarkers));
+        mapInstance.fitBounds(group.getBounds().pad(0.1));
+      } else {
+        const bounds = L.latLngBounds(COVERAGE_COORDS);
+        mapInstance.fitBounds(bounds, { padding: [20, 20] });
+      }
 
     } catch (err) {
-      console.error('Failed to initialize map:', err);
+      console.error('Map initialization failed:', err);
     }
-  }, [leaflet, processedAreas, onAreaSelect]);
+  }, [leaflet, serviceAreas, selectedAreaId, isEditMode, onAreaSelect, onMapClick, createAreaIcon, createOfficeIcon]);
 
   // Update markers when selection changes
   const updateMarkers = useCallback(() => {
     if (!leaflet || !mapInstanceRef.current || Object.keys(markers).length === 0) return;
 
-    const L = leaflet;
-
-    processedAreas.forEach((area) => {
+    serviceAreas.forEach((area) => {
       const marker = markers[area.id];
       if (!marker) return;
 
-      const newIcon = createAreaIcon(L, area.isSelected, area.popular);
+      const isSelected = selectedAreaId === area.id;
+      const newIcon = createAreaIcon(leaflet, area, isSelected);
       marker.setIcon(newIcon);
 
-      if (area.isSelected) {
+      if (isSelected) {
         marker.openPopup();
-      } else {
-        marker.closePopup();
+        mapInstanceRef.current?.setView([area.lat, area.lng], Math.max(mapInstanceRef.current.getZoom(), 13), {
+          animate: true,
+          duration: 0.5
+        });
       }
     });
-  }, [leaflet, markers, processedAreas]);
+  }, [leaflet, markers, serviceAreas, selectedAreaId, createAreaIcon]);
 
   // Initialize map when leaflet loads
   useEffect(() => {
@@ -269,10 +363,33 @@ function LeafletServiceAreaMap({
     }
   }, [updateMarkers, loading, error]);
 
-  // Cleanup on unmount
+  // Reinitialize when service areas change
+  useEffect(() => {
+    if (!leaflet || !mapInstanceRef.current) return;
+
+    const currentIds = Object.keys(markers).map(Number);
+    const newIds = serviceAreas.map(area => area.id);
+
+    const hasChanges =
+        newIds.length !== currentIds.length ||
+        newIds.some(id => !currentIds.includes(id)) ||
+        currentIds.some(id => !newIds.includes(id));
+
+    if (hasChanges) {
+      initializeMap();
+    }
+  }, [serviceAreas, leaflet, markers, initializeMap]);
+
+  // Cleanup
   useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
+        // Clean up web connections
+        if (mapInstanceRef.current._webConnections) {
+          mapInstanceRef.current._webConnections.forEach((connection: L.Polyline) => {
+            mapInstanceRef.current?.removeLayer(connection);
+          });
+        }
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
@@ -281,232 +398,58 @@ function LeafletServiceAreaMap({
 
   if (error) {
     return (
-      <div className={`leaflet-map-container ${className}`}>
-        <div className="map-error">
-          <p>Failed to load map. Please try again later.</p>
+        <div className="w-full h-full bg-red-50 flex items-center justify-center rounded-lg">
+          <div className="text-center">
+            <div className="text-4xl mb-2">🗺️</div>
+            <h3 className="font-semibold text-red-900">Map Error</h3>
+            <p className="text-red-700 text-sm">Failed to load map</p>
+            <button
+                onClick={() => window.location.reload()}
+                className="mt-2 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
         </div>
-      </div>
     );
   }
 
   return (
-      <>
-        <div className={`leaflet-map-container ${className}`}>
-          <div
-              ref={mapContainerRef}
-              className="leaflet-map"
-              role="application"
-              aria-label="Interactive service area map"
-          />
-          {loading && (
-              <div className="map-loading">
-                <div className="loading-spinner" />
-                <p>Loading map...</p>
+      <div className="w-full h-full relative">
+        <div
+            ref={mapContainerRef}
+            className="w-full h-full rounded-lg"
+            style={{
+              cursor: isEditMode ? 'crosshair' : 'default',
+              background: '#f8f9fa'
+            }}
+        />
+        {loading && (
+            <div className="absolute inset-0 bg-white/90 flex items-center justify-center">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                <p className="text-gray-600">Loading map...</p>
               </div>
-          )}
-        </div>
-
-        <style jsx global>{`
-          .leaflet-map-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-          }
-          
-          .leaflet-map {
-            width: 100%;
-            height: 100%;
-            background: #f8f9fa;
-            border-radius: 0.5rem;
-          }
-          
-          .map-loading {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.8);
-            z-index: 1000;
-          }
-          
-          .loading-spinner {
-            width: 2rem;
-            height: 2rem;
-            border: 3px solid #e2e8f0;
-            border-top: 3px solid #ca8a04;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 0.5rem;
-          }
-          
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-          
-          .map-error {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            background: #f8f9fa;
-            color: #64748b;
-            border-radius: 0.5rem;
-          }
-          
-          .custom-office-icon {
-            background: ${COLORS.primary};
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 12px;
-            text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            border: 2px solid white;
-          }
-          
-          .custom-area-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          
-          .area-marker {
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            border: 2px solid white;
-            transition: all 0.2s ease-in-out;
-          }
-          
-          .area-marker-primary {
-            background: ${COLORS.primary};
-            color: white;
-          }
-          
-          .area-marker-secondary {
-            background: ${COLORS.secondary};
-            color: #333;
-          }
-          
-          .area-marker-inactive {
-            background: ${COLORS.inactive};
-            color: white;
-          }
-          
-          .area-marker-large {
-            width: 36px;
-            height: 36px;
-            font-size: 18px;
-          }
-          
-          .area-marker-small {
-            width: 30px;
-            height: 30px;
-            font-size: 15px;
-          }
-          
-          .popular-star {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            font-size: 16px;
-            color: #f59e0b;
-            text-shadow: 0 0 2px rgba(0,0,0,0.5);
-          }
-          
-          .area-popup {
-            min-width: 200px;
-          }
-          
-          .popup-title {
-            margin: 0 0 8px 0;
-            font-weight: bold;
-            font-size: 16px;
-            color: #1f2937;
-          }
-          
-          .popup-description {
-            margin: 4px 0;
-            font-size: 14px;
-            color: #4b5563;
-          }
-          
-          .popular-badge {
-            background: #fef3c7;
-            color: #ca8a04;
-            padding: 2px 6px;
-            border-radius: 12px;
-            font-weight: bold;
-          }
-          
-          .popup-stats {
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #e5e7eb;
-            font-size: 12px;
-            color: #6b7280;
-            display: flex;
-            justify-content: space-between;
-          }
-          
-          .office-popup h3 {
-            margin: 0 0 8px 0;
-            font-weight: bold;
-            font-size: 18px;
-            color: #1f2937;
-            text-align: center;
-          }
-          
-          @keyframes pulse-coverage {
-            0%, 100% {
-              fill-opacity: 0.05;
-            }
-            50% {
-              fill-opacity: 0.1;
-            }
-          }
-          
-          .office-popup h3 {
-            font-size: 16px;
-          }
-
-          /* Add smooth transitions for all interactive elements */
-          *, *:before, *:after {
-            transition-property: all;
-            transition-duration: 0.3s;
-            transition-timing-function: ease-out;
-          }
-        `}</style>
-      </>
+            </div>
+        )}
+      </div>
   );
 }
 
-// Export as dynamic component to avoid SSR issues
-const LeafletServiceAreaMapComponent = LeafletServiceAreaMap;
-
+// Export as dynamic component with better error boundaries
 const LeafletServiceAreaMapDynamic = dynamic(
-  () => Promise.resolve(LeafletServiceAreaMapComponent),
-  { 
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[500px] bg-gray-100 animate-pulse flex items-center justify-center rounded-lg">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-          <p className="text-gray-600">Loading map...</p>
-        </div>
-      </div>
-    ),
-  }
+    () => Promise.resolve(LeafletServiceAreaMap),
+    {
+      ssr: false,
+      loading: () => (
+          <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center rounded-lg">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+              <p className="text-gray-600">Loading interactive map...</p>
+            </div>
+          </div>
+      ),
+    }
 );
 
 export default LeafletServiceAreaMapDynamic;

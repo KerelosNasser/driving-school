@@ -4,21 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, Calendar, CreditCard } from 'lucide-react';
 
-// Define the shape of the data this component receives
-interface User {
-  id: string;
-  created_at: string;
-}
-
-interface Booking {
-  id: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  created_at: string;
-}
+import { MergedUser } from '../page';
+import { Booking } from '@/lib/types';
 
 interface OverviewTabProps {
-  users: User[];
+  users: MergedUser[];
   bookings: Booking[];
+  reviews?: any[];
   loading: boolean;
 }
 
@@ -37,7 +29,10 @@ export const OverviewTab = ({ users, bookings, loading }: OverviewTabProps) => {
   // Calculate user stats
   const userStats = {
     total: users.length,
-    new: users.filter(u => new Date(u.created_at) > new Date(new Date().setMonth(new Date().getMonth() - 1))).length,
+    new: users.filter(u => {
+      const createdAt = typeof u.clerkCreatedAt === 'string' ? u.clerkCreatedAt : u.clerkCreatedAt.toString();
+      return new Date(createdAt) > new Date(new Date().setMonth(new Date().getMonth() - 1));
+    }).length,
   };
 
   // Calculate booking stats
