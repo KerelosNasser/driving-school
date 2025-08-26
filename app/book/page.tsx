@@ -10,6 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TermsAcceptanceDialog } from '@/components/ui/terms-acceptance-dialog';
 import { SignInButton } from '@clerk/nextjs';
 import { Calendar as CalendarIcon, Clock, MapPin, Car, CheckCircle, ArrowRight, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -41,6 +42,8 @@ export default function BookingPage() {
   const [notes, setNotes] = useState('');
   const [step, setStep] = useState(1);
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(true);
   
   // Minimum date is tomorrow
   const minDate = addDays(new Date(), 1);
@@ -203,6 +206,17 @@ export default function BookingPage() {
     return true;
   };
 
+  // Terms acceptance handlers
+  const handleTermsAccept = () => {
+    setTermsAccepted(true);
+    setShowTermsDialog(false);
+  };
+
+  const handleTermsDecline = () => {
+    // Redirect to packages page if user declines terms
+    router.push('/packages');
+  };
+
   // If user data is still loading, show loading state
   if (!isUserLoaded) {
     return (
@@ -216,7 +230,16 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      {/* Terms & Conditions Acceptance Dialog */}
+      <TermsAcceptanceDialog
+        open={showTermsDialog && !termsAccepted}
+        onAccept={handleTermsAccept}
+        onDecline={handleTermsDecline}
+      />
+      
+      {/* Main booking content - only show if terms are accepted */}
+      <div className={`min-h-screen bg-background ${!termsAccepted ? 'pointer-events-none opacity-50' : ''}`}>
       
       <main>
         {/* Hero Section */}
@@ -598,5 +621,6 @@ export default function BookingPage() {
         </section>
       </main>
     </div>
+    </>
   );
 }

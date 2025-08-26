@@ -3,7 +3,6 @@ import { PackagesPreview } from "@/components/home/packages-preview";
 import { InstructorBio } from "@/components/home/instructor-bio";
 import { ServiceAreaMap } from "@/components/home/service-area-map";
 import { ReviewsPreview } from "@/components/home/reviews-preview";
-import { BookingCTA } from "@/components/home/booking-cta";
 import { Hero } from "@/components/home/hero";
 import { Gallery } from "@/components/home/gallery";
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
@@ -154,14 +153,6 @@ export default async function Home() {
 
                     <ReviewsPreview />
 
-                    <BookingCTA
-                        title={ctaTitle}
-                        subtitle={ctaSubtitle}
-                        phoneText={ctaPhoneText}
-                        phoneNumber={ctaPhoneNumber}
-                        emailText={ctaEmailText}
-                        emailAddress={ctaEmailAddress}
-                    />
                 </main>
 
                 {/* AI Chatbot */}

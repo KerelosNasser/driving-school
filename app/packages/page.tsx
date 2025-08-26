@@ -7,6 +7,7 @@ import { Check, ArrowRight, ShieldCheck, Clock, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { EditableTermsConditions } from '@/components/ui/editable-terms-conditions';
 import { supabase } from '@/lib/supabase';
 import type { Package } from '@/lib/supabase';
 
@@ -230,44 +231,33 @@ export default function PackagesPage() {
           </div>
         </section>
 
-        {/* FAQ Section */}
-        <section className="py-16 bg-gray-50">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-              Frequently Asked Questions
-            </h2>
-            
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">How do I book a driving lesson?</h3>
-                <p className="text-gray-700">
-                  You can book a driving lesson by selecting a package and clicking the &quot;Book This Package&quot; button. You&apos;ll be taken to our booking page where you can select your preferred date and time.
-                </p>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Can I customize a package?</h3>
-                <p className="text-gray-700">
-                  Yes, we understand that everyone&apos;s learning journey is different. Contact us directly to discuss customizing a package that meets your specific needs.
-                </p>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">What if I need to reschedule a lesson?</h3>
-                <p className="text-gray-700">
-                  We offer flexible rescheduling. Please provide at least 24 hours notice to avoid any cancellation fees. You can reschedule through your account or by contacting us directly.
-                </p>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Do you offer gift certificates?</h3>
-                <p className="text-gray-700">
-                  Yes, all of our packages can be purchased as gift certificates. They make a great gift for new drivers! Contact us for more information.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Terms & Conditions Section */}
+        <EditableTermsConditions
+          contentKey="packages_terms_conditions"
+          page="packages"
+          defaultTerms={[
+            {
+              id: '1',
+              title: 'Booking and Payment',
+              content: 'All lessons must be booked in advance. Payment is required at the time of booking. We accept all major credit cards and digital payment methods.'
+            },
+            {
+              id: '2',
+              title: 'Cancellation Policy',
+              content: 'Lessons can be cancelled or rescheduled with at least 24 hours notice. Cancellations with less than 24 hours notice may incur a cancellation fee.'
+            },
+            {
+              id: '3',
+              title: 'Vehicle and Insurance',
+              content: 'All lessons are conducted in fully insured, dual-control vehicles. Students must hold a valid learner\'s permit or provisional license.'
+            },
+            {
+              id: '4',
+              title: 'Instructor Policies',
+              content: 'Our instructors are fully licensed and accredited. Lessons may be terminated early if the student is under the influence of alcohol or drugs, or exhibits unsafe behavior.'
+            }
+          ]}
+        />
       </main>
     </div>
   );

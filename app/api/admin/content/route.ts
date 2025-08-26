@@ -1,8 +1,19 @@
 // app/api/admin/content/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase admin client with service role for bypassing RLS
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 async function isUserAdmin(_userId: string): Promise<boolean> {
     try {
@@ -27,12 +38,11 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const supabase = createServerComponentClient({ cookies });
         const { searchParams } = new URL(request.url);
         const page = searchParams.get('page') || 'home';
         const key = searchParams.get('key');
 
-        let query = supabase
+        let query = supabaseAdmin
             .from('page_content')
             .select('*')
             .eq('page_name', page);
@@ -44,16 +54,15 @@ export async function GET(request: NextRequest) {
         const { data, error } = await query.order('updated_at', { ascending: false });
 
         if (error) {
-            console.error('Supabase error:', error);
-            return NextResponse.json({
-                error: 'Failed to fetch content',
-                details: error.message
-            }, { status: 500 });
+            if (error.message?.includes('relation "page_content" does not exist')) {
+                return NextResponse.json({ data: [] });
+            }
+            
+            return NextResponse.json({ error: 'Failed to fetch content' }, { status: 500 });
         }
 
         return NextResponse.json({ data: data || [] });
     } catch (error) {
-        console.error('API error:', error);
         return NextResponse.json({
             error: 'Internal server error',
             details: error instanceof Error ? error.message : 'Unknown error'
@@ -84,19 +93,14 @@ export async function PUT(request: NextRequest) {
 
         // Handle empty values for deletion
         if (value === '' || value === null || value === undefined) {
-            const supabase = createServerComponentClient({ cookies });
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from('page_content')
                 .delete()
                 .eq('page_name', page)
                 .eq('content_key', key);
 
             if (error) {
-                console.error('Supabase delete error:', error);
-                return NextResponse.json({
-                    error: 'Failed to delete content',
-                    details: error.message
-                }, { status: 500 });
+                return NextResponse.json({ error: 'Failed to delete content' }, { status: 500 });
             }
 
             return NextResponse.json({
@@ -104,8 +108,6 @@ export async function PUT(request: NextRequest) {
                 message: 'Content deleted successfully'
             });
         }
-
-        const supabase = createServerComponentClient({ cookies });
 
         // Prepare content data based on type
         const contentData: any = {
@@ -142,7 +144,7 @@ export async function PUT(request: NextRequest) {
         }
 
         // Use upsert to handle both insert and update
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from('page_content')
             .upsert(contentData, {
                 onConflict: 'page_name,content_key',
@@ -152,12 +154,11 @@ export async function PUT(request: NextRequest) {
             .single();
 
         if (error) {
-            console.error('Supabase upsert error:', error);
-            return NextResponse.json({
-                error: 'Failed to save content',
-                details: error.message,
-                hint: error.hint
-            }, { status: 500 });
+            if (error.message?.includes('relation "page_content" does not exist')) {
+                return NextResponse.json({ error: 'Content table not initialized' }, { status: 503 });
+            }
+            
+            return NextResponse.json({ error: 'Failed to save content' }, { status: 500 });
         }
 
         return NextResponse.json({
@@ -166,11 +167,7 @@ export async function PUT(request: NextRequest) {
             message: 'Content updated successfully'
         });
     } catch (error) {
-        console.error('API error:', error);
-        return NextResponse.json({
-            error: 'Internal server error',
-            details: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 
@@ -190,8 +187,6 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { operation, data } = body;
 
-        const supabase = createServerComponentClient({ cookies });
-
         switch (operation) {
             case 'bulk_upsert':
                 const contentItems = data.map((item: any) => ({
@@ -200,7 +195,7 @@ export async function POST(request: NextRequest) {
                     updated_at: new Date().toISOString()
                 }));
 
-                const { data: upsertData, error: upsertError } = await supabase
+                const { data: upsertData, error: upsertError } = await supabaseAdmin
                     .from('page_content')
                     .upsert(contentItems, {
                         onConflict: 'page_name,content_key',
@@ -209,10 +204,7 @@ export async function POST(request: NextRequest) {
                     .select();
 
                 if (upsertError) {
-                    return NextResponse.json({
-                        error: 'Failed to bulk upsert content',
-                        details: upsertError.message
-                    }, { status: 500 });
+                    return NextResponse.json({ error: 'Failed to bulk upsert content' }, { status: 500 });
                 }
 
                 return NextResponse.json({
@@ -223,17 +215,14 @@ export async function POST(request: NextRequest) {
 
             case 'bulk_delete':
                 const { keys, page } = data;
-                const { error: deleteError } = await supabase
+                const { error: deleteError } = await supabaseAdmin
                     .from('page_content')
                     .delete()
                     .eq('page_name', page)
                     .in('content_key', keys);
 
                 if (deleteError) {
-                    return NextResponse.json({
-                        error: 'Failed to bulk delete content',
-                        details: deleteError.message
-                    }, { status: 500 });
+                    return NextResponse.json({ error: 'Failed to bulk delete content' }, { status: 500 });
                 }
 
                 return NextResponse.json({
@@ -246,11 +235,7 @@ export async function POST(request: NextRequest) {
         }
 
     } catch (error) {
-        console.error('API error:', error);
-        return NextResponse.json({
-            error: 'Internal server error',
-            details: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 
@@ -275,20 +260,14 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Content key is required' }, { status: 400 });
         }
 
-        const supabase = createServerComponentClient({ cookies });
-
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from('page_content')
             .delete()
             .eq('page_name', page)
             .eq('content_key', key);
 
         if (error) {
-            console.error('Supabase delete error:', error);
-            return NextResponse.json({
-                error: 'Failed to delete content',
-                details: error.message
-            }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to delete content' }, { status: 500 });
         }
 
         return NextResponse.json({
@@ -296,10 +275,6 @@ export async function DELETE(request: NextRequest) {
             message: 'Content deleted successfully'
         });
     } catch (error) {
-        console.error('API error:', error);
-        return NextResponse.json({
-            error: 'Internal server error',
-            details: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
