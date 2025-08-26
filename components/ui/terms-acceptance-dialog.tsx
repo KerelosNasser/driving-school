@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Shield, FileText, AlertCircle, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
+import { Shield, FileText, AlertCircle, ChevronDown, ChevronUp, CheckCircle2, X, Eye } from 'lucide-react';
 
 interface Term {
   id: string;
@@ -30,6 +29,7 @@ export function TermsAcceptanceDialog({
   const [accepted, setAccepted] = useState(false);
   const [expandedTerms, setExpandedTerms] = useState<Set<string>>(new Set());
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Load terms from the database
   useEffect(() => {
@@ -101,6 +101,36 @@ export function TermsAcceptanceDialog({
     onAccept();
   };
 
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+    const isScrolledToBottom = scrollPercentage >= 0.95; // 95% threshold
+    setHasScrolledToBottom(isScrolledToBottom);
+  };
+
+  const toggleTerm = (termId: string) => {
+    setExpandedTerms(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(termId)) {
+        newSet.delete(termId);
+      } else {
+        newSet.add(termId);
+      }
+      return newSet;
+    });
+  };
+
+  const expandAllTerms = () => {
+    const allTermIds = new Set(terms.map(term => term.id));
+    setExpandedTerms(allTermIds);
+  };
+
+  const collapseAllTerms = () => {
+    setExpandedTerms(new Set());
+  };
+
   const handleDecline = () => {
     setAccepted(false);
     onDecline();
@@ -109,161 +139,215 @@ export function TermsAcceptanceDialog({
   return (
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent 
-        className="w-[95vw] max-w-4xl h-[95vh] max-h-[800px] p-0 gap-0 overflow-hidden"
+        className="w-[80vw] max-w-3xl h-[90vh] max-h-[900px] p-0 gap-0 overflow-hidden bg-white rounded-2xl shadow-2xl border-0"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        {/* Header */}
-        <DialogHeader className="p-4 sm:p-6 pb-4 border-b bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
-          {/* Background decoration */}
-          <div className="absolute inset-0 bg-[url('/api/placeholder/800/200')] opacity-5"></div>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200 rounded-full -translate-y-16 translate-x-16 opacity-20"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-200 rounded-full translate-y-12 -translate-x-12 opacity-20"></div>
+        {/* Modern Header */}
+        <div className="relative bg-gradient-to-br from-yellow-600 via-yellow-700 to-indigo-800 text-white">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
+          </div>
           
-          <div className="relative z-10">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 sm:p-3 bg-white rounded-xl shadow-sm border border-blue-100">
-                  <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+          <div className="relative z-10 p-2 lg:p-2">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <Shield className="h-8 w-8 text-white" />
                 </div>
-                <div className="flex-1">
-                  <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+                <div>
+                  <DialogTitle className="text-2xl lg:text-3xl font-bold mb-2">
                     Terms & Conditions
                   </DialogTitle>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                    Please read and accept our terms to continue
+                  <p className="text-yellow-100 text-sm lg:text-base">
+                    Please review our terms before proceeding with your booking
                   </p>
                 </div>
               </div>
             </div>
             
-            {/* Progress indicator */}
-            <div className="mt-4 flex items-center gap-2 text-xs sm:text-sm">
-              <div className={`flex items-center gap-1 px-2 py-1 rounded-full transition-all duration-300 ${
-                hasScrolledToBottom 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-gray-100 text-gray-600'
-              }`}>
-                <CheckCircle2 className={`h-3 w-3 transition-colors ${
-                  hasScrolledToBottom ? 'text-green-600' : 'text-gray-400'
-                }`} />
-                <span>{hasScrolledToBottom ? 'Review Complete' : 'Please Review All Terms'}</span>
+            {/* Progress Bar */}
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-yellow-100">Reading Progress</span>
+                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full transition-all duration-300 ${
+                  hasScrolledToBottom 
+                    ? 'bg-green-500/20 text-green-200' 
+                    : 'bg-white/20 text-yellow-100'
+                }`}>
+                  <CheckCircle2 className={`h-4 w-4 transition-colors ${
+                    hasScrolledToBottom ? 'text-green-300' : 'text-yellow-200'
+                  }`} />
+                  <span>{hasScrolledToBottom ? 'Complete' : 'In Progress'}</span>
+                </div>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: hasScrolledToBottom ? '100%' : '20%' }}
+                  transition={{ duration: 0.5 }}
+                />
               </div>
             </div>
           </div>
-        </DialogHeader>
+        </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {loading ? (
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="text-center space-y-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="text-sm text-gray-600">Loading terms...</p>
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center p-12">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-yellow-600 border-t-transparent mx-auto"></div>
+              <p className="text-gray-600 font-medium">Loading terms...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Action Bar */}
+            <div className="border-b bg-gray-50 px-6 py-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm font-medium text-gray-700">
+                    {terms.length} Terms Available
+                  </span>
+                  <div className="h-4 w-px bg-gray-300"></div>
+                  <span className="text-sm text-gray-500">
+                    {expandedTerms.size} Expanded
+                  </span>
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={expandAllTerms}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 px-3 border-gray-300 hover:bg-yellow-50 hover:border-yellow-300"
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Expand All
+                  </Button>
+                  <Button
+                    onClick={collapseAllTerms}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 px-3 border-gray-300 hover:bg-gray-100"
+                  >
+                    <ChevronUp className="h-3 w-3 mr-1" />
+                    Collapse All
+                  </Button>
+                </div>
               </div>
             </div>
-          ) : (
-            <>
-              {/* Terms List */}
-              <ScrollArea 
-                className="flex-1 p-4 sm:p-6" 
-                onScrollCapture={handleScroll}
+
+            {/* Terms Content with Custom Scroll */}
+            <div className="flex-1 overflow-hidden">
+              <div 
+                ref={scrollContainerRef}
+                onScroll={handleScroll}
+                className="h-full overflow-y-auto p-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#CBD5E1 #F1F5F9'
+                }}
               >
-                <div className="space-y-4">
-                  <div className="text-center mb-6">
-                    <p className="text-sm text-gray-600">
-                      Please review all {terms.length} terms below. You can tap each term to expand it.
-                    </p>
-                  </div>
-                  
-                  {terms.map((term, index) => {
-                    const isExpanded = expandedTerms.has(term.id);
-                    return (
-                      <motion.div
-                        key={term.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-200"
+                {terms.map((term, index) => {
+                  const isExpanded = expandedTerms.has(term.id);
+                  return (
+                    <motion.div
+                      key={term.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                    >
+                      {/* Term Header */}
+                      <button
+                        onClick={() => toggleTerm(term.id)}
+                        className="w-full p-5 text-left flex items-center justify-between hover:bg-gray-50 transition-colors duration-200 group"
                       >
-                        {/* Term Header */}
-                        <button
-                          onClick={() => toggleTerm(term.id)}
-                          className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="bg-blue-100 text-blue-700 text-xs sm:text-sm px-2 py-1 rounded-full font-medium flex-shrink-0">
-                              {index + 1}
-                            </div>
-                            <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
+                        <div className="flex items-center space-x-4 flex-1 min-w-0">
+                          <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white text-sm px-3 py-1.5 rounded-full font-semibold flex-shrink-0 shadow-sm">
+                            {String(index + 1).padStart(2, '0')}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 text-base group-hover:text-yellow-700 transition-colors truncate">
                               {term.title}
                             </h3>
-                          </div>
-                          <div className="ml-2 flex-shrink-0">
-                            {isExpanded ? (
-                              <ChevronUp className="h-4 w-4 text-gray-500" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4 text-gray-500" />
+                            {!isExpanded && (
+                              <p className="text-sm text-gray-500 mt-1 line-clamp-1">
+                                {term.content.substring(0, 80)}...
+                              </p>
                             )}
                           </div>
-                        </button>
-                        
-                        {/* Term Content */}
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="p-4 pt-0 border-t border-gray-100">
-                                <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                        </div>
+                        <div className="ml-4 flex-shrink-0">
+                          <div className={`p-1 rounded-full transition-all duration-200 ${
+                            isExpanded 
+                              ? 'bg-yellow-100 text-yellow-600 rotate-180' 
+                              : 'bg-gray-100 text-gray-500 group-hover:bg-yellow-50 group-hover:text-yellow-500'
+                          }`}>
+                            <ChevronDown className="h-4 w-4" />
+                          </div>
+                        </div>
+                      </button>
+                      
+                      {/* Term Content */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-5 pb-5 border-t border-gray-100">
+                              <div className="pt-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 mt-2">
+                                <p className="text-sm text-gray-700 leading-relaxed">
                                   {term.content}
                                 </p>
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-
-              {/* Footer */}
-              <div className="border-t bg-gray-50 p-4 sm:p-6 space-y-4">
-                {/* Important Notice */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-3 sm:p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm text-amber-800 font-medium">
-                        Important Notice
-                      </p>
-                      <p className="text-xs text-amber-700 mt-1">
-                        By accepting these terms, you agree to comply with all policies. 
-                        You must accept to proceed with booking.
-                      </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+                
+                {/* Scroll Indicator */}
+                {!hasScrolledToBottom && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="sticky bottom-0 flex justify-center pb-4"
+                  >
+                    <div className="bg-yellow-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg flex items-center space-x-2">
+                      <ChevronDown className="h-4 w-4 animate-bounce" />
+                      <span>Scroll to continue</span>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                )}
+              </div>
+            </div>
 
-                {/* Acceptance Checkbox */}
-                <div className="flex items-start space-x-3 p-3 sm:p-4 bg-white rounded-lg border border-gray-200">
+            {/* Modern Footer */}
+            <div className="border-t bg-gradient-to-r from-gray-50 to-gray-100 p-1">
+              {/* Acceptance Section */}
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                   <Checkbox
                     id="accept-terms"
                     checked={accepted}
                     onCheckedChange={(checked) => setAccepted(checked === true)}
-                    className="border-2 border-gray-300 mt-0.5 flex-shrink-0"
+                    className="border-2 border-gray-300 mt-0.5 data-[state=checked]:bg-yellow-600 data-[state=checked]:border-yellow-600"
                   />
                   <label 
                     htmlFor="accept-terms" 
-                    className="text-xs sm:text-sm font-medium text-gray-900 cursor-pointer select-none leading-relaxed flex-1"
+                    className="text-sm font-medium text-gray-900 cursor-pointer leading-relaxed flex-1"
                   >
-                    I have carefully read, understood, and agree to be bound by all the Terms & Conditions outlined above
+                    I have carefully read, understood, and agree to be bound by all the Terms & Conditions outlined above. 
+                    I acknowledge this constitutes a legally binding agreement.
                   </label>
                 </div>
 
@@ -272,16 +356,17 @@ export function TermsAcceptanceDialog({
                   <Button
                     onClick={handleDecline}
                     variant="outline"
-                    className="flex-1 h-11 sm:h-12 text-sm sm:text-base border-2 hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all duration-200"
+                    className="flex-1 h-12 text-base border-2 border-gray-300 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-all duration-200 font-medium"
                   >
+                    <X className="h-4 w-4 mr-2" />
                     Decline & Go Back
                   </Button>
                   <Button
                     onClick={handleAccept}
                     disabled={!accepted || !hasScrolledToBottom}
-                    className={`flex-1 h-11 sm:h-12 text-sm sm:text-base font-semibold transition-all duration-300 transform ${
+                    className={`flex-1 h-12 text-base font-semibold transition-all duration-300 ${
                       accepted && hasScrolledToBottom
-                        ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl hover:scale-[1.02] text-white'
+                        ? 'bg-gradient-to-r from-green-600 via-green-700 to-emerald-700 hover:from-green-700 hover:via-green-800 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
                         : 'bg-gray-300 cursor-not-allowed text-gray-500'
                     }`}
                   >
@@ -291,7 +376,10 @@ export function TermsAcceptanceDialog({
                         Review All Terms First
                       </>
                     ) : !accepted ? (
-                      'Please Accept Terms'
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Please Accept Terms
+                      </>
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -301,9 +389,9 @@ export function TermsAcceptanceDialog({
                   </Button>
                 </div>
               </div>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
