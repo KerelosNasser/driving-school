@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     const pageSize = parseInt(searchParams.get('pageSize') || '50');
 
     // Google My Business API configuration
-    const GOOGLE_API_KEY = process.env.GOOGLE_MY_BUSINESS_API_KEY;
+    const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
     const LOCATION_ID = process.env.GOOGLE_LOCATION_ID; // Your Google Business location ID
     
     if (!GOOGLE_API_KEY || !LOCATION_ID) {
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${process.env.GOOGLE_OAUTH_TOKEN}`, // OAuth token needed
+        'Authorization': `Bearer ${process.env.GOOGLE_OAUTH_ACCESS_TOKEN}`, // OAuth access token needed
         'Content-Type': 'application/json',
       },
     });
@@ -107,61 +107,21 @@ export async function GET(request: NextRequest) {
       const errorText = await response.text();
       console.error('Google API Error:', response.status, errorText);
       
-      // Return mock data for demonstration when API is not configured
-      if (response.status === 401 || response.status === 403) {
-        console.log('Using mock Google reviews data for demonstration');
-        const mockReviews = [
-          {
-            external_id: 'google_1',
-            source: 'google',
-            user_name: 'John Smith',
-            rating: 5,
-            comment: 'Excellent driving instructor! Michael was very patient and helped me pass my test on the first try. Highly recommended!',
-            created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            approved: false,
-            profile_photo_url: null,
-            reply: null
-          },
-          {
-            external_id: 'google_2',
-            source: 'google',
-            user_name: 'Maria Garcia',
-            rating: 4,
-            comment: 'Great experience with EG Driving School. Professional service and flexible scheduling. Would recommend to others.',
-            created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-            approved: false,
-            profile_photo_url: null,
-            reply: null
-          },
-          {
-            external_id: 'google_3',
-            source: 'google',
-            user_name: 'David Wilson',
-            rating: 5,
-            comment: 'Outstanding driving lessons! The instructor was knowledgeable about Brisbane roads and test routes. Passed with confidence!',
-            created_at: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
-            approved: false,
-            profile_photo_url: null,
-            reply: null
-          }
-        ];
-
-        return NextResponse.json({
-          success: true,
-          reviews: mockReviews,
-          totalReviewCount: mockReviews.length,
-          source: 'google',
-          isMockData: true,
-          message: 'This is demonstration data. Configure Google My Business API for real reviews.'
-        });
-      }
+      // Return appropriate error based on status
+      const statusMessages = {
+        401: 'Google My Business API authentication failed. Please check your OAuth token.',
+        403: 'Access denied. Please verify your Google My Business API permissions.',
+        404: 'Business location not found. Please check your GOOGLE_LOCATION_ID.',
+        429: 'API quota exceeded. Please try again later.'
+      };
+      
+      const message = statusMessages[response.status as keyof typeof statusMessages] || 
+                     `Google My Business API error: ${response.status}`;
 
       return NextResponse.json({ 
-        error: 'Failed to fetch Google reviews',
-        details: errorText
+        error: message,
+        details: errorText,
+        success: false
       }, { status: response.status });
     }
 

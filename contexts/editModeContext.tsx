@@ -90,7 +90,8 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
         try {
             console.log('Saving content:', { key, value, type, page });
 
-            const response = await fetch('/api/admin/content', {
+            // Try the new persistent API first, fallback to legacy
+            let response = await fetch('/api/content/persistent', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -103,13 +104,36 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
                 }),
             });
 
+            // If persistent API is not available, fallback to legacy API
+            if (response.status === 404) {
+                response = await fetch('/api/admin/content', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        key,
+                        value,
+                        type,
+                        page
+                    }),
+                });
+            }
+
             // Check content type before parsing
             const contentType = response.headers.get('content-type');
             console.log('Response status:', response.status);
             console.log('Response content-type:', contentType);
 
             if (!response.ok) {
-                // Handle non-200 responses
+                // Handle conflict specifically
+                if (response.status === 409) {
+                    const errorData = await response.json();
+                    toast.error(errorData.message || 'Content was modified by another user');
+                    return false;
+                }
+
+                // Handle other non-200 responses
                 let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
                 if (contentType && contentType.includes('application/json')) {
@@ -120,14 +144,13 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
                         console.error('Failed to parse error JSON:', jsonError);
                     }
                 } else {
-                    // If it's HTML or other content, read as text for debugging
                     const errorText = await response.text();
                     console.error('Non-JSON error response:', errorText.substring(0, 200) + '...');
 
                     if (response.status === 404) {
-                        errorMessage = 'API endpoint not found. Please check if /api/admin/content exists.';
+                        errorMessage = 'API endpoint not found.';
                     } else if (response.status === 405) {
-                        errorMessage = 'Method not allowed. The API might not support PUT requests.';
+                        errorMessage = 'Method not allowed.';
                     } else if (response.status === 401 || response.status === 403) {
                         errorMessage = 'Authentication/authorization failed.';
                     }
@@ -140,7 +163,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
                 const responseText = await response.text();
                 console.error('Expected JSON but got:', contentType);
                 console.error('Response body:', responseText.substring(0, 200) + '...');
-                throw new Error('Server returned non-JSON response. Check your API endpoint.');
+                throw new Error('Server returned non-JSON response.');
             }
 
             const responseData = await response.json();

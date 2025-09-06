@@ -1,6 +1,7 @@
 import { createClerkClient } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 import { Toaster } from 'sonner';
+import { formatForDisplay } from '@/lib/phone';
 import { AdminDashboardClient } from './components/AdminDashboardClient';
 import { Review, Package, Booking as LibBooking, } from '@/lib/types';
 
@@ -188,7 +189,7 @@ function transformBookings(serverBookings: ServerBooking[]): LibBooking[] {
       id: booking.users.id,
       email: booking.users.email,
       full_name: booking.users.full_name,
-      phone: booking.users.phone,
+      phone: booking.users.phone ? formatForDisplay(booking.users.phone) : booking.users.phone,
       created_at: booking.users.created_at,
     } : undefined,
     packages: booking.packages ? {

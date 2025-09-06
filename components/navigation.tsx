@@ -6,6 +6,7 @@ import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
 import { Menu, X, Car, Phone, Edit3, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useEditMode } from '@/contexts/editModeContext';
+import { QuotaIndicator } from '@/components/QuotaIndicator';
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -82,6 +83,9 @@ export function Navigation() {
               <Phone className="h-4 w-4 mr-1" />
               <span className="font-medium">04 3151 2095</span>
             </a>
+            
+            {/* Quota Indicator */}
+            <QuotaIndicator />
             
             {isLoaded && (
               <>
@@ -160,6 +164,11 @@ export function Navigation() {
               )}
               
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
+                {/* Mobile Quota Indicator */}
+                <div className="flex justify-center">
+                  <QuotaIndicator />
+                </div>
+                
                 {isLoaded && (
                   <>
                     {user ? (

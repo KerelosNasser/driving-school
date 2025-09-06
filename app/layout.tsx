@@ -3,16 +3,14 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from 'sonner';
 import "./globals.css";
-import { Navigation } from "@/components/navigation";
-import { Footer } from "@/components/footer";
 import { WebVitals } from "@/components/seo/WebVitals";
 import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
+import PostSignupWrapper from "@/components/PostSignupWrapper";
 
 import { Suspense } from 'react';
 import { EditModeProvider } from "@/contexts/editModeContext";
 import { GlobalContentProvider } from "@/contexts/globalContentContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { AdminEditToolbar } from "@/app/admin/adminEditToolbar";
 
 // Optimized font loading
 const geistSans = Geist({
@@ -133,9 +131,11 @@ export default function RootLayout({
           <Suspense fallback={<div>Loading...</div>}>
             <EditModeProvider>
               <GlobalContentProvider>
-                <LayoutWrapper>
-                  {children}
-                </LayoutWrapper>
+                <PostSignupWrapper>
+                  <LayoutWrapper>
+                    {children}
+                  </LayoutWrapper>
+                </PostSignupWrapper>
               </GlobalContentProvider>
             </EditModeProvider>
           </Suspense>

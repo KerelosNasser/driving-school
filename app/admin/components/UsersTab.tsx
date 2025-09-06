@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatForDisplay } from '@/lib/phone';
 
 interface UsersTabProps {
   users: MergedUser[];
@@ -119,7 +120,7 @@ export const UsersTab = ({ users, loading }: UsersTabProps) => {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="font-medium">Phone:</div>
-                <div>{selectedUser.phone || 'Not provided'}</div>
+                <div>{selectedUser.phone ? formatForDisplay(selectedUser.phone) : 'Not provided'}</div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="font-medium">Clerk ID:</div>

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = await createServerComponentClient({ cookies });
 
     const { data, error } = await supabase
       .from('site_settings')
@@ -98,7 +98,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Theme configuration is required' }, { status: 400 });
     }
 
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = await createServerComponentClient({ cookies });
 
     // Use upsert to handle both insert and update
     const { data, error } = await supabase

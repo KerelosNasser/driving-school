@@ -3,18 +3,52 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Check, ArrowRight, ShieldCheck, Clock, Car } from 'lucide-react';
+import { Check, ArrowRight, ShieldCheck, Clock, Car, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { EditableTermsConditions } from '@/components/ui/editable-terms-conditions';
 import { supabase } from '@/lib/supabase';
+import { useUser } from '@clerk/nextjs';
 import type { Package } from '@/lib/supabase';
 
 export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  const { user, isSignedIn } = useUser();
+
+  const handlePurchaseQuota = async (packageId: string) => {
+    if (!isSignedIn) {
+      // Redirect to sign in
+      window.location.href = '/sign-in';
+      return;
+    }
+
+    setPurchasing(true);
+    try {
+      const response = await fetch('/api/create-quota-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ packageId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      alert('Failed to start checkout. Please try again.');
+    } finally {
+      setPurchasing(false);
+    }
+  };
 
   // Fetch packages from Supabase
   useEffect(() => {
@@ -214,13 +248,29 @@ export default function PackagesPage() {
                           </ul>
                         </div>
                         
-                        <div className="pt-4">
-                          <Button size="lg" className="w-full md:w-auto" asChild>
-                            <Link href="/book">
-                              Book This Package
-                              <ArrowRight className="ml-2 h-4 w-4" />
-                            </Link>
+                        <div className="pt-4 space-y-4">
+                          <Button 
+                            size="lg" 
+                            className="w-full md:w-auto bg-yellow-600 hover:bg-yellow-700" 
+                            onClick={() => handlePurchaseQuota(selectedPackageDetails.id)}
+                            disabled={purchasing}
+                          >
+                            {purchasing ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                Purchase Hours - ${selectedPackageDetails.price.toFixed(0)}
+                              </>
+                            )}
                           </Button>
+                          <div className="text-sm text-gray-600">
+                            <p>✓ Hours will be added to your account immediately after payment</p>
+                            <p>✓ Use hours to book lessons anytime through your <Link href="/service-center" className="text-yellow-600 hover:underline">Service Center</Link></p>
+                          </div>
                         </div>
                       </div>
                     </div>

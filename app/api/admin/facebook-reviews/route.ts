@@ -105,77 +105,21 @@ export async function GET(request: NextRequest) {
       const errorText = await response.text();
       console.error('Facebook API Error:', response.status, errorText);
       
-      // Return mock data for demonstration when API is not configured
-      if (response.status === 401 || response.status === 403) {
-        console.log('Using mock Facebook reviews data for demonstration');
-        const mockReviews = [
-          {
-            external_id: 'facebook_1',
-            source: 'facebook',
-            user_name: 'Sarah Johnson',
-            rating: 5,
-            comment: 'Amazing driving school! Michael is such a patient and skilled instructor. I was nervous about driving but he made me feel comfortable and confident. Passed my test first time!',
-            created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-            approved: false,
-            profile_photo_url: null,
-            recommendation_type: 'positive',
-            facebook_user_id: 'fb_user_1'
-          },
-          {
-            external_id: 'facebook_2',
-            source: 'facebook',
-            user_name: 'Mike Thompson',
-            rating: 4,
-            comment: 'Great experience with EG Driving School. Flexible scheduling worked perfect for my busy work schedule. Instructor was professional and knowledgeable about Brisbane traffic.',
-            created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-            approved: false,
-            profile_photo_url: null,
-            recommendation_type: 'positive',
-            facebook_user_id: 'fb_user_2'
-          },
-          {
-            external_id: 'facebook_3',
-            source: 'facebook',
-            user_name: 'Emma Chen',
-            rating: 5,
-            comment: 'Highly recommend! The instructor was very patient with me as a nervous driver. Great teaching methods and helped me build real confidence on the road. Thank you!',
-            created_at: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
-            approved: false,
-            profile_photo_url: null,
-            recommendation_type: 'positive',
-            facebook_user_id: 'fb_user_3'
-          },
-          {
-            external_id: 'facebook_4',
-            source: 'facebook',
-            user_name: 'Alex Rodriguez',
-            rating: 5,
-            comment: 'Best driving school in Brisbane! Professional, punctual, and really knows how to teach. The car is modern and comfortable. Passed my test with flying colors!',
-            created_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-            approved: false,
-            profile_photo_url: null,
-            recommendation_type: 'positive',
-            facebook_user_id: 'fb_user_4'
-          }
-        ];
-
-        return NextResponse.json({
-          success: true,
-          reviews: mockReviews,
-          totalReviewCount: mockReviews.length,
-          source: 'facebook',
-          isMockData: true,
-          message: 'This is demonstration data. Configure Facebook Graph API for real reviews.'
-        });
-      }
+      // Return appropriate error based on status
+      const statusMessages = {
+        401: 'Facebook API authentication failed. Please check your page access token.',
+        403: 'Access denied. Please verify your Facebook API permissions and page access.',
+        400: 'Invalid Facebook page ID or malformed request.',
+        429: 'Facebook API rate limit exceeded. Please try again later.'
+      };
+      
+      const message = statusMessages[response.status as keyof typeof statusMessages] || 
+                     `Facebook API error: ${response.status}`;
 
       return NextResponse.json({ 
-        error: 'Failed to fetch Facebook reviews',
-        details: errorText
+        error: message,
+        details: errorText,
+        success: false
       }, { status: response.status });
     }
 

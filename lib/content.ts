@@ -18,7 +18,7 @@ export interface PageContent {
  * Get all content for a specific page
  */
 export async function getPageContent(pageName: string): Promise<PageContent> {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createServerComponentClient({ cookies });
 
   try {
     const { data } = await supabase
@@ -46,7 +46,7 @@ export async function getPageContent(pageName: string): Promise<PageContent> {
 }
 
 export async function getContentItem(pageName: string, contentKey: string): Promise<ContentItem | null> {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase =  await createServerComponentClient({ cookies });
 
   try {
     const { data, error } = await supabase
