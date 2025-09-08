@@ -1,26 +1,23 @@
-/**
- * Phone Number Utilities - 2025 Standards
- * Comprehensive phone number formatting, validation, and normalization
- * Following modern web development best practices with enhanced security
- * 
- * Security Features:
- * - Input sanitization against injection attacks
- * - Rate limiting for validation requests
- * - Secure storage recommendations
- * - PII (Personally Identifiable Information) protection
- * - GDPR/Privacy compliance helpers
- */
 
-// International phone number patterns for common countries
 const COUNTRY_PATTERNS = {
   AU: {
-    pattern: /^(\+61|0)[2-9]\d{8}$/,
+    pattern: /^(\+61[2-9]\d{8}|\+614\d{8}|0[2-9]\d{8}|04\d{8})$/,
     format: (num: string) => {
       const clean = num.replace(/\D/g, '');
       if (clean.startsWith('61')) {
+        // Handle mobile numbers (+614...)
+        if (clean.startsWith('614')) {
+          return `+61 ${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
+        }
+        // Handle landline numbers (+61[2-9]...)
         return `+61 ${clean.slice(2, 3)} ${clean.slice(3, 7)} ${clean.slice(7)}`;
       }
       if (clean.startsWith('0')) {
+        // Handle mobile numbers (04...)
+        if (clean.startsWith('04')) {
+          return `${clean.slice(0, 4)} ${clean.slice(4, 7)} ${clean.slice(7)}`;
+        }
+        // Handle landline numbers (0[2-9]...)
         return `${clean.slice(0, 2)} ${clean.slice(2, 6)} ${clean.slice(6)}`;
       }
       return num;
@@ -188,6 +185,14 @@ export function validatePhoneNumber(
     return result;
   }
   
+  // Test phone bypass for development/testing
+  if (isTestPhoneBypassEnabled(true) && isBypassPhoneNumber(trimmed, country)) {
+    result.isValid = true;
+    result.formatted = formatPhoneNumber(trimmed, { country });
+    result.normalized = normalizePhoneNumber(trimmed, country);
+    return result;
+  }
+  
   // Enhanced security checks - prevent injection attacks and malicious input
   const config = getSecurityConfig();
   
@@ -307,9 +312,15 @@ export function getPhoneNumberType(phoneNumber: string): 'mobile' | 'landline' |
 export function formatForStorage(
   phoneNumber: string,
   country: keyof typeof COUNTRY_PATTERNS = DEFAULT_COUNTRY
-): string | null {
+): string {
+  if (isTestPhoneBypassEnabled(true) && isBypassPhoneNumber(phoneNumber)) {
+    return normalizePhoneNumber(phoneNumber, country);
+  }
   const validation = validatePhoneNumber(phoneNumber, country);
-  return validation.isValid ? validation.normalized : null;
+  if (!validation.isValid) {
+    throw new Error(validation.error || 'Invalid phone number for storage');
+  }
+  return validation.formatted;
 }
 
 /**
@@ -405,12 +416,6 @@ export function isRateLimited(identifier: string): boolean {
   return false;
 }
 
-/**
- * Create a secure hash of phone number for storage/comparison
- * @param phoneNumber - Phone number to hash
- * @param salt - Optional salt (use environment variable in production)
- * @returns Hashed phone number
- */
 export function hashPhoneNumber(phoneNumber: string, salt?: string): string {
   if (!phoneNumber) return '';
   
@@ -449,6 +454,39 @@ export function maskPhoneNumber(phoneNumber: string, visibleDigits: number = 4):
     const digitIndex = formatted.slice(0, index).replace(/\D/g, '').length;
     return digitIndex < digits.length - visibleDigits ? '*' : digit;
   });
+}
+
+export const TEST_BYPASS_NUMBERS_E164 = ['+61491570006', '+61491570156', '+61491570159'];
+
+/**
+ * Returns true if OTP bypass is enabled for development/test builds.
+ * Client-side uses NEXT_PUBLIC_ENABLE_PHONE_TEST_BYPASS, server can use ENABLE_PHONE_TEST_BYPASS.
+ */
+export function isTestPhoneBypassEnabled(isServer: boolean = typeof window === 'undefined'): boolean {
+  if (process.env.NODE_ENV === 'production') return false;
+  const bypassEnabled = isServer
+    ? process.env.ENABLE_PHONE_TEST_BYPASS === 'true' || process.env.NEXT_PUBLIC_ENABLE_PHONE_TEST_BYPASS === 'true'
+    : process.env.NEXT_PUBLIC_ENABLE_PHONE_TEST_BYPASS === 'true';
+  console.log(`isTestPhoneBypassEnabled (isServer: ${isServer}): ${bypassEnabled}`);
+  return bypassEnabled;
+}
+
+/**
+ * Check if a phone number matches the allowed test numbers (normalized to E.164)
+ */
+export function isBypassPhoneNumber(
+  phoneNumber: string,
+  country: keyof typeof COUNTRY_PATTERNS = DEFAULT_COUNTRY
+): boolean {
+  if (!phoneNumber) return false;
+  try {
+    const normalized = normalizePhoneNumber(phoneNumber, country);
+    console.log(`isBypassPhoneNumber: Normalized phone: ${normalized}, Is bypass number: ${TEST_BYPASS_NUMBERS_E164.includes(normalized)}`);
+    return TEST_BYPASS_NUMBERS_E164.includes(normalized);
+  } catch (e) {
+    console.error(`isBypassPhoneNumber error: ${e}`);
+    return false;
+  }
 }
 
 /**

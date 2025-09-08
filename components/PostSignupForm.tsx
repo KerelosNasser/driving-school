@@ -10,10 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { MapPin, User, CheckCircle, FileText } from 'lucide-react';
+import { MapPin, User, CheckCircle,Gift, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { validatePhoneNumber, formatPhoneInput,formatForStorage } from '@/lib/phone';
+import { validatePhoneNumber, formatPhoneInput,formatForStorage, isTestPhoneBypassEnabled, isBypassPhoneNumber } from '@/lib/phone';
 
 interface PostSignupFormProps {
   onComplete: () => void;
@@ -40,8 +40,6 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
   const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [loadingLocationSuggestions, setLoadingLocationSuggestions] = useState(false);
-  const [invitationCodeValidated, setInvitationCodeValidated] = useState(false);
-  const [isValidatingInvitation, setIsValidatingInvitation] = useState(false);
 
 
   // Check if user is admin - don't show form for admin users
@@ -54,7 +52,7 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
 
   // Form data
   const [formData, setFormData] = useState({
-    fullName: '',
+    fullName: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || '',
     phone: '',
     address: '',
     suburb: '',
@@ -119,6 +117,16 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
       return;
     }
 
+    // Dev/Test bypass: instantly verify if enabled and using reserved test number
+    const bypassActive = isTestPhoneBypassEnabled(false) && isBypassPhoneNumber(formData.phone);
+    if (bypassActive) {
+      setOtpVerified(true);
+      setOtpSent(false);
+      setError('');
+      toast.success('Test bypass active: phone verified');
+      return;
+    }
+
     // Validate phone number using comprehensive validation
     const phoneValidation = validatePhoneNumber(formData.phone);
     if (!phoneValidation.isValid) {
@@ -132,7 +140,7 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
       // Use properly formatted phone number for OTP
       const formattedPhone = formatForStorage(formData.phone);
       const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+        phone: formattedPhone as string,
         options: {
           shouldCreateUser: false // We don't want to create a user, just verify the phone
         }
@@ -193,63 +201,69 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
   };
 
   // Invitation code validation function
-  const validateInvitationCode = async () => {
-    if (!formData.invitationCode.trim()) {
-      setInvitationCodeValidated(false);
-      return;
-    }
-
-    setIsValidatingInvitation(true);
-    try {
-      const response = await fetch('/api/validate-invitation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ invitationCode: formData.invitationCode.trim() }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to validate invitation code');
-      }
-
-      if (data.valid) {
-        setInvitationCodeValidated(true);
-        toast.success('Valid invitation code! Discount will be applied to the referrer.');
-      } else {
-        setInvitationCodeValidated(false);
-        toast.error('Invalid invitation code. Please check and try again.');
-      }
-    } catch (err: any) {
-      setInvitationCodeValidated(false);
-      const errorMessage = err.message || 'Failed to validate invitation code';
-      toast.error(errorMessage);
-    } finally {
-      setIsValidatingInvitation(false);
-    }
-  };
 
   const validateStep = (currentStep: number): boolean => {
+    setError(''); // Clear previous errors
+    
     switch (currentStep) {
       case 1:
-        if (!formData.phone || !formData.address || !formData.suburb) {
-          setError('Please fill in all required fields');
-          toast.error('Please fill in all required fields');
+        // Step 1: Contact Information
+        const missingFields = [];
+        
+        if (!formData.fullName?.trim()) missingFields.push('Full name');
+        if (!formData.phone?.trim()) missingFields.push('Phone number');
+        if (!formData.address?.trim()) missingFields.push('Street address');
+        if (!formData.suburb?.trim()) missingFields.push('Suburb');
+        
+        if (missingFields.length > 0) {
+          const errorMsg = `Please fill in: ${missingFields.join(', ')}`;
+          setError(errorMsg);
+          toast.error(errorMsg);
           return false;
         }
-        if (!otpVerified) {
+        
+        // Check phone verification
+        const bypassActive = isTestPhoneBypassEnabled(false) && isBypassPhoneNumber(formData.phone);
+        if (!otpVerified && !bypassActive) {
           setError('Please verify your phone number with OTP');
           toast.error('Please verify your phone number with OTP');
           return false;
         }
         break;
+        
       case 2:
-        if (!formData.experienceLevel || !formData.goals || !formData.emergencyContact || !formData.emergencyPhone) {
-          setError('Please fill in all required fields');
-          toast.error('Please fill in all required fields');
+        // Step 2: Experience and Emergency Contact
+        const missingStep2Fields = [];
+        
+        if (!formData.experienceLevel) missingStep2Fields.push('Experience level');
+        if (!formData.goals?.trim()) missingStep2Fields.push('Learning goals');
+        if (!formData.emergencyContact?.trim()) missingStep2Fields.push('Emergency contact name');
+        if (!formData.emergencyPhone?.trim()) missingStep2Fields.push('Emergency contact phone');
+        
+        if (missingStep2Fields.length > 0) {
+          const errorMsg = `Please fill in: ${missingStep2Fields.join(', ')}`;
+          setError(errorMsg);
+          toast.error(errorMsg);
           return false;
+        }
+        
+        // Validate emergency phone
+        const emergencyPhoneValidation = validatePhoneNumber(formData.emergencyPhone);
+        if (!emergencyPhoneValidation.isValid) {
+          const errorMsg = 'Please enter a valid emergency contact phone number';
+          setError(errorMsg);
+          toast.error(errorMsg);
+          return false;
+        }
+        
+        // Validate invitation code if provided
+        if (formData.invitationCode && formData.invitationCode.trim()) {
+          if (!/^[A-Z0-9]{8}$/.test(formData.invitationCode.trim())) {
+            const errorMsg = 'Invitation code must be exactly 8 characters (letters and numbers only)';
+            setError(errorMsg);
+            toast.error(errorMsg);
+            return false;
+          }
         }
         break;
     }
@@ -288,29 +302,48 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          fullName: formData.fullName,
+          fullName: formData.fullName || user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || '',
           phone: formData.phone,
-          location: formData.location,
+          location: formData.suburb || formData.address, // Use suburb as location since that's what we collect
           invitationCode: formData.invitationCode || undefined,
           deviceFingerprint,
           userAgent: navigator.userAgent
         }),
       });
 
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to complete profile');
+        throw new Error(responseData.message || 'Failed to complete profile');
       }
+      
+      console.log('Profile completion response:', responseData);
 
       // Mark profile as completed
-      await user.update({
-        publicMetadata: {
-          ...user.publicMetadata,
-          profileCompleted: true,
-        },
-      });
+      if (user && !responseData.debug) {
+        try {
+          await user.update({
+            publicMetadata: {
+              ...user.publicMetadata,
+              profileCompleted: true,
+            },
+          });
+        } catch (updateError) {
+          console.error('Error updating user metadata:', updateError);
+          // Don't fail the whole flow for this
+        }
+      }
 
-      toast.success('Profile completed successfully! Welcome aboard!');
+      // Show success message with invitation code if provided
+      if (responseData.invitationCode) {
+        toast.success(`Profile completed successfully! Your invitation code: ${responseData.invitationCode}`, {
+          duration: 5000
+        });
+      } else {
+        toast.success('Profile completed successfully! Welcome aboard!');
+      }
+      
+      // Complete the onboarding flow
       onComplete();
     } catch (err: any) {
       console.error('Error completing profile:', err);
@@ -340,6 +373,18 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
             </div>
 
             <div className="space-y-4">
+              <div>
+                <Label htmlFor="fullName">Full Name *</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={formData.fullName}
+                  onChange={(e) => handleInputChange('fullName', e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              
               <div>
                 <Label htmlFor="phone">Phone Number *</Label>
                 <div className="flex gap-2 mt-1">
@@ -481,8 +526,8 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
           >
             <div className="text-center mb-6">
               <User className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900">Driving Experience</h2>
-              <p className="text-gray-600">Tell us about your driving background and goals</p>
+              <h2 className="text-2xl font-bold text-gray-900">Complete Your Profile</h2>
+              <p className="text-gray-600">Tell us about your driving background, goals, and emergency contact</p>
             </div>
 
             <div className="space-y-4">
@@ -524,80 +569,84 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
                   className="mt-1"
                 />
               </div>
-            </div>
-          </motion.div>
-        );
-
-      case 3:
-        return (
-          <motion.div
-            key="step3"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
-            <div className="text-center mb-6">
-              <FileText className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900">Additional Information</h2>
-              <p className="text-gray-600">Final details to ensure your safety and comfort</p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="emergencyContact">Emergency Contact Name *</Label>
+              
+              {/* Invitation Code Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-yellow-500" />
+                  <Label htmlFor="invitationCode">Invitation Code (Optional)</Label>
+                </div>
                 <Input
-                  id="emergencyContact"
-                  placeholder="Full name of emergency contact"
-                  value={formData.emergencyContact}
-                  onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="emergencyPhone">Emergency Contact Phone *</Label>
-                <Input
-                  id="emergencyPhone"
-                  type="tel"
-                  placeholder="+61 4XX XXX XXX or 04XX XXX XXX"
-                  value={formData.emergencyPhone}
+                  id="invitationCode"
+                  type="text"
+                  placeholder="Enter 8-character code (e.g., ABC12345)"
+                  value={formData.invitationCode}
                   onChange={(e) => {
-                    const formatted = formatPhoneInput(e.target.value);
-                    handleInputChange('emergencyPhone', formatted);
+                    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+                    handleInputChange('invitationCode', value);
                   }}
                   className="mt-1"
+                  maxLength={8}
                 />
+                <div className="flex items-start gap-2 p-3 bg-yellow-500 border border-yellow-200 rounded-lg">
+                  <Info className="h-4 w-4 text-yellow-950 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium mb-1">Get exclusive perks by entering an invitation code!</p>
+                    <ul className="text-xs space-y-1">
+                      <li>• Give your referrer a 30% discount after 1 successful signup</li>
+                      <li>• Help them earn 2 free driving hours after 3 successful signups</li>
+                      <li>• Join our referral network and earn your own rewards</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
+              
+              {/* Emergency Contact Section */}
+              <div className="space-y-4 pt-4 border-t border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">Emergency Contact Information</h3>
+                
+                <div>
+                  <Label htmlFor="emergencyContact">Emergency Contact Name *</Label>
+                  <Input
+                    id="emergencyContact"
+                    placeholder="Full name of emergency contact"
+                    value={formData.emergencyContact}
+                    onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="medicalConditions">Medical Conditions (Optional)</Label>
-                <Textarea
-                  id="medicalConditions"
-                  placeholder="Any medical conditions we should be aware of for your safety"
-                  value={formData.medicalConditions}
-                  onChange={(e) => handleInputChange('medicalConditions', e.target.value)}
-                  className="mt-1"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="preferredContactMethod">Preferred Contact Method</Label>
-                <Select value={formData.preferredContactMethod} onValueChange={(value) => handleInputChange('preferredContactMethod', value)}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="phone">Phone</SelectItem>
-                    <SelectItem value="sms">SMS</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div>
+                  <Label htmlFor="emergencyPhone">Emergency Contact Phone *</Label>
+                  <Input
+                    id="emergencyPhone"
+                    type="tel"
+                    placeholder="+61 4XX XXX XXX or 04XX XXX XXX"
+                    value={formData.emergencyPhone}
+                    onChange={(e) => {
+                      const formatted = formatPhoneInput(e.target.value);
+                      handleInputChange('emergencyPhone', formatted);
+                    }}
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="medicalConditions">Medical Conditions (Optional)</Label>
+                  <Textarea
+                    id="medicalConditions"
+                    placeholder="Any medical conditions we should be aware of for your safety"
+                    value={formData.medicalConditions}
+                    onChange={(e) => handleInputChange('medicalConditions', e.target.value)}
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
               </div>
             </div>
           </motion.div>
         );
+
 
       default:
         return null;
