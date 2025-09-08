@@ -258,8 +258,24 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
         
         // Validate invitation code if provided
         if (formData.invitationCode && formData.invitationCode.trim()) {
-          if (!/^[A-Z0-9]{8}$/.test(formData.invitationCode.trim())) {
-            const errorMsg = 'Invitation code must be exactly 8 characters (letters and numbers only)';
+          const trimmedCode = formData.invitationCode.trim();
+          let isValidFormat = false;
+          
+          // Check for encrypted invitation codes (longer format)
+          if (trimmedCode.length > 20 && /^[A-Za-z0-9_-]+$/.test(trimmedCode)) {
+            isValidFormat = true;
+          }
+          // Check for simple invitation codes (DRV prefix)
+          else if (trimmedCode.startsWith('DRV') && trimmedCode.length >= 6 && /^[A-Z0-9]+$/.test(trimmedCode)) {
+            isValidFormat = true;
+          }
+          // Legacy 8-character codes
+          else if (trimmedCode.length === 8 && /^[A-Z0-9]{8}$/.test(trimmedCode)) {
+            isValidFormat = true;
+          }
+          
+          if (!isValidFormat) {
+            const errorMsg = 'Invalid invitation code format';
             setError(errorMsg);
             toast.error(errorMsg);
             return false;

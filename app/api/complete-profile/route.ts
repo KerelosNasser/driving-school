@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit } from '@/lib/rate-limit';
-import { validatePhoneNumber, isTestPhoneBypassEnabled, isBypassPhoneNumber } from '@/lib/phone';
+import { validatePhoneNumber, isTestPhoneBypassEnabled, isBypassPhoneNumber, formatForStorage } from '@/lib/phone';
+import { generateEncryptedInvitationCode, generateSimpleInvitationCode } from '@/lib/invitation-crypto';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -11,10 +12,6 @@ const supabase = createClient(
 );
 
 // Rate limiting configuration
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 500, // Allow 500 unique tokens per interval
-});
 
 interface CompleteProfileRequest {
   fullName: string;
@@ -66,10 +63,25 @@ function validateLocation(location: string): string | undefined {
 
 function validateInvitationCode(code: string): string | undefined {
   if (!code) return undefined; // Optional field
-  if (!/^[A-Z0-9]{8}$/.test(code.toUpperCase())) {
-    return 'Invitation code must be 8 characters (letters and numbers only)';
+  
+  const trimmedCode = code.trim();
+  
+  // Check for encrypted invitation codes (longer format)
+  if (trimmedCode.length > 20 && /^[A-Za-z0-9_-]+$/.test(trimmedCode)) {
+    return undefined;
   }
-  return undefined;
+  
+  // Check for simple invitation codes (DRV prefix)
+  if (trimmedCode.startsWith('DRV') && trimmedCode.length >= 6 && /^[A-Z0-9]+$/.test(trimmedCode.toUpperCase())) {
+    return undefined;
+  }
+  
+  // Legacy 8-character codes
+  if (trimmedCode.length === 8 && /^[A-Z0-9]{8}$/.test(trimmedCode.toUpperCase())) {
+    return undefined;
+  }
+  
+  return 'Invalid invitation code format';
 }
 
 // Get client IP address
@@ -313,18 +325,35 @@ async function processProfileCompletion(request: NextRequest, clerkUserId: strin
   console.log('Generating invitation code for user...');
   let userInvitationCode: string;
   try {
-    userInvitationCode = await generateUserInvitationCode(userId);
-    console.log('Invitation code generated:', userInvitationCode);
+    // Try encrypted invitation code first
+    userInvitationCode = generateEncryptedInvitationCode(userId);
+    console.log('Encrypted invitation code generated:', userInvitationCode);
   } catch (error) {
-    console.error('Error generating invitation code, using fallback:', error);
-    // Fallback: generate a simple code if the database function doesn't exist
+    console.warn('Encryption failed, using simple code:', error);
+    // Fallback to simple invitation code
     try {
-      userInvitationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-      console.log('Using fallback invitation code:', userInvitationCode);
+      userInvitationCode = generateSimpleInvitationCode();
+      console.log('Simple invitation code generated:', userInvitationCode);
     } catch (fallbackError) {
-      console.error('Even fallback invitation code generation failed:', fallbackError);
-      userInvitationCode = '';
+      console.error('All invitation code generation failed:', fallbackError);
+      userInvitationCode = 'DRV' + Math.random().toString(36).substring(2, 9).toUpperCase();
     }
+  }
+
+  // Create invitation code record in invitation_codes table
+  try {
+    await supabase
+      .from('invitation_codes')
+      .insert({
+        user_id: userId,
+        code: userInvitationCode,
+        is_active: true,
+        current_uses: 0,
+        max_uses: null
+      });
+    console.log('Invitation code record created successfully');
+  } catch (inviteError) {
+    console.warn('Could not create invitation code record (non-critical):', inviteError);
   }
   
   // Initialize user quota (optional - don't fail if quota table doesn't exist)
@@ -363,21 +392,6 @@ export async function POST(request: NextRequest) {
     // Rate limiting
     const identifier = getClientIP(request);
     console.log('Client IP:', identifier);
-    
-    try {
-      const { success } = await limiter.check(request, 5, identifier); // 5 requests per minute per IP
-      if (!success) {
-        console.log('Rate limit exceeded for IP:', identifier);
-        return NextResponse.json(
-          { message: 'Too many requests. Please try again later.' },
-          { status: 429 }
-        );
-      }
-    } catch (rateLimitError) {
-      console.error('Rate limiting error (continuing anyway):', rateLimitError);
-      // Continue anyway if rate limiting fails
-    }
-    
     // Check authentication with detailed debugging
     console.log('Checking authentication...');
     console.log('Request headers:', Object.fromEntries(request.headers.entries()));

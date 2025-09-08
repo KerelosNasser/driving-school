@@ -24,7 +24,12 @@ export function generateEncryptedInvitationCode(userId: string): string {
     
     const plaintext = JSON.stringify(data);
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(ALGORITHM, INVITATION_SECRET);
+    
+    // Create key from secret (must be 32 bytes for aes-256-gcm)
+    const key = crypto.scryptSync(INVITATION_SECRET, 'salt', 32);
+    
+    // Use createCipheriv instead of deprecated createCipher
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
     cipher.setAAD(Buffer.from('invitation-code'));
     
     let encrypted = cipher.update(plaintext, 'utf8', 'hex');
@@ -79,7 +84,11 @@ export function decryptInvitationCode(code: string): { userId: string; isValid: 
       const authTag = Buffer.from(authTagHex, 'hex');
       const iv = Buffer.from(ivHex, 'hex');
       
-      const decipher = crypto.createDecipher(ALGORITHM, INVITATION_SECRET);
+      // Create key from secret (must be 32 bytes for aes-256-gcm)
+      const key = crypto.scryptSync(INVITATION_SECRET, 'salt', 32);
+      
+      // Use createDecipheriv instead of deprecated createDecipher
+      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
       decipher.setAuthTag(authTag);
       decipher.setAAD(Buffer.from('invitation-code'));
       
@@ -99,7 +108,7 @@ export function decryptInvitationCode(code: string): { userId: string; isValid: 
       return { userId: data.userId, isValid: true };
       
     } catch (decryptError) {
-      // If decryption fails, treat as simple code for backward compatibility
+      console.log(decryptError)
       return { userId: '', isValid: false, error: 'Decryption failed' };
     }
     
