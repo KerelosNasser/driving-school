@@ -17,6 +17,7 @@ import { validatePhoneNumber, formatPhoneInput,formatForStorage, isTestPhoneBypa
 
 interface PostSignupFormProps {
   onComplete: () => void;
+  isModal?: boolean;
 }
 
 
@@ -27,7 +28,7 @@ const experienceLevels = [
   { value: 'refresher', label: 'Refresher Course' }
 ];
 
-export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
+export default function PostSignupForm({ onComplete, isModal = false }: PostSignupFormProps) {
   const { user } = useUser();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -342,6 +343,7 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
             publicMetadata: {
               ...user.publicMetadata,
               profileCompleted: true,
+              completed_onboarding: true,
             },
           });
         } catch (updateError) {
@@ -670,7 +672,7 @@ export default function PostSignupForm({ onComplete }: PostSignupFormProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className={isModal ? "p-6" : "min-h-screen bg-gray-50 flex items-center justify-center p-4"}>
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold text-gray-900">

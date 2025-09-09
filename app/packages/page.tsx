@@ -3,25 +3,31 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Check, ArrowRight, ShieldCheck, Clock, Car, CreditCard } from 'lucide-react';
+import { Check, ShieldCheck, Clock, Car, CreditCard, Calendar, Star, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EditableTermsConditions } from '@/components/ui/editable-terms-conditions';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@clerk/nextjs';
 import type { Package } from '@/lib/supabase';
+import GoogleCalendarIntegration from '@/app/service-center/components/GoogleCalendarIntegration';
+import {QuotaIndicator} from '@/components/QuotaIndicator';
 
 export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
+  const [quota, setQuota] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('packages');
+  const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
   const { user, isSignedIn } = useUser();
 
   const handlePurchaseQuota = async (packageId: string) => {
     if (!isSignedIn) {
-      // Redirect to sign in
       window.location.href = '/sign-in';
       return;
     }
@@ -50,9 +56,30 @@ export default function PackagesPage() {
     }
   };
 
-  // Fetch packages from Supabase
+  const fetchQuota = async () => {
+    if (!isSignedIn) return;
+    
+    try {
+      const response = await fetch('/api/quota');
+      const data = await response.json();
+      
+      if (response.ok) {
+        setQuota(data.quota);
+      }
+    } catch (error) {
+      console.error('Error fetching quota:', error);
+    }
+  };
+
+  const handleBookingComplete = (booking: any) => {
+    setBookingSuccess(`Lesson booked successfully for ${booking.date}!`);
+    fetchQuota(); // Refresh quota after booking
+    setTimeout(() => setBookingSuccess(null), 5000);
+  };
+
+  // Fetch packages and quota from Supabase
   useEffect(() => {
-    const fetchPackages = async () => {
+    const fetchData = async () => {
       try {
         const { data, error } = await supabase
           .from('packages')
@@ -61,21 +88,50 @@ export default function PackagesPage() {
         
         if (error) {
           console.error('Error fetching packages:', error);
-          // Fallback to static data if there's an error
         } else if (data && data.length > 0) {
           setPackages(data as Package[]);
-          // Set the first package as selected by default
           setSelectedPackage(data[0].id);
         }
+        
+        // Fetch quota if user is signed in
+        if (isSignedIn) {
+          await fetchQuota();
+        }
       } catch (error) {
-        console.error('Error in packages fetch:', error);
-
+        console.error('Error in data fetch:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPackages();
+    fetchData();
+  }, [isSignedIn]);
+
+  // Listen for synchronization events from service center
+  useEffect(() => {
+    const handleQuotaUpdate = (event: CustomEvent) => {
+      console.log('Quota updated from service center:', event.detail);
+      fetchQuota(); // Refresh quota when service center makes changes
+      if (event.detail?.type === 'booking') {
+        setBookingSuccess(`Lesson booked successfully from Service Center!`);
+        setTimeout(() => setBookingSuccess(null), 5000);
+      }
+    };
+
+    const handleCalendarRefresh = () => {
+      console.log('Calendar refresh requested from service center');
+      fetchQuota(); // Refresh quota data
+    };
+
+    // Add event listeners
+    window.addEventListener('quotaUpdated', handleQuotaUpdate as EventListener);
+    window.addEventListener('refreshCalendar', handleCalendarRefresh);
+
+    // Cleanup event listeners
+    return () => {
+      window.removeEventListener('quotaUpdated', handleQuotaUpdate as EventListener);
+      window.removeEventListener('refreshCalendar', handleCalendarRefresh);
+    };
   }, []);
 
 
@@ -105,96 +161,148 @@ export default function PackagesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50">
       <main>
         {/* Hero Section */}
-        <section className="bg-yellow-600 text-white py-8 md:py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <section className="bg-gradient-to-r from-yellow-600 via-yellow-700 to-orange-600 text-white py-12 md:py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
+              className="text-center mb-8"
             >
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                Driving Lesson Packages
+              <h1 className="text-4xl md:text-6xl font-bold mb-6">
+                Driving Packages & Booking
               </h1>
-              <p className="text-xl text-yellow-100 max-w-3xl mx-auto">
-                Choose the package that best suits your needs and start your journey to becoming a
-                confident driver.
+              <p className="text-xl text-yellow-100 max-w-4xl mx-auto mb-8">
+                Purchase lesson packages and book directly through Google Calendar for seamless scheduling
               </p>
+              
+              {/* Quota Indicator */}
+              {isSignedIn && quota && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="inline-block"
+                >
+                  <QuotaIndicator quota={quota} className="bg-white/10 backdrop-blur-sm" />
+                </motion.div>
+              )}
             </motion.div>
+            
+            {/* Success Alert */}
+            {bookingSuccess && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-2xl mx-auto mb-6"
+              >
+                <Alert className="bg-green-500/20 border-green-400 text-white">
+                  <Check className="h-4 w-4" />
+                  <AlertDescription>{bookingSuccess}</AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
           </div>
         </section>
 
-        {/* Packages Section */}
-        <section className="py-16 md:py-24 bg-white">
+        {/* Main Content with Tabs */}
+        <section className="py-12 md:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {loading ? (
-              // Loading skeleton
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="bg-gray-100 rounded-xl p-8 h-96 animate-pulse"></div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-16">
-                {/* Package Cards */}
-                <motion.div 
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
-                  {packages.map((pkg) => (
-                    <motion.div key={pkg.id} variants={itemVariants}>
-                      <Card 
-                        className={`h-full flex flex-col cursor-pointer transition-all ${
-                          selectedPackage === pkg.id 
-                            ? 'ring-2 ring-yellow-500 shadow-lg transform scale-[1.02]' 
-                            : 'hover:shadow-md'
-                        } ${pkg.popular ? 'border-yellow-500' : ''}`}
-                        onClick={() => setSelectedPackage(pkg.id)}
-                      >
-                        <CardHeader className="pb-4">
-                          {pkg.popular && (
-                            <Badge className="self-start mb-2 bg-yellow-500">Most Popular</Badge>
-                          )}
-                          <CardTitle className="text-2xl">{pkg.name}</CardTitle>
-                          <CardDescription>{pkg.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-grow">
-                          <div className="mb-6">
-                            <span className="text-4xl font-bold">${pkg.price.toFixed(0)}</span>
-                            <span className="text-gray-500 ml-1">/ package</span>
-                          </div>
-                          <div className="text-gray-700 mb-2 font-medium">
-                            {pkg.hours} hours of driving lessons
-                          </div>
-                          <ul className="space-y-2 mt-4">
-                            {pkg.features.map((feature, index) => (
-                              <li key={index} className="flex items-start">
-                                <Check className="h-5 w-5 text-green-500 mr-2 shrink-0 mt-0.5" />
-                                <span>{feature}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                        <CardFooter>
-                          <Button 
-                            className={`w-full ${
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-8 bg-white/80 backdrop-blur-sm">
+                <TabsTrigger value="packages" className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Purchase Packages
+                </TabsTrigger>
+                <TabsTrigger value="booking" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Book Lessons
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="packages" className="space-y-8">
+                {loading ? (
+                  // Loading skeleton
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="bg-white/60 rounded-xl p-8 h-96 animate-pulse"></div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-12">
+                    {/* Package Cards */}
+                    <motion.div 
+                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      {packages.map((pkg) => (
+                        <motion.div key={pkg.id} variants={itemVariants}>
+                          <Card 
+                            className={`h-full flex flex-col cursor-pointer transition-all backdrop-blur-sm ${
                               selectedPackage === pkg.id 
-                                ? 'bg-yellow-600 hover:bg-yellow-700' 
-                                : pkg.popular ? 'bg-yellow-600 hover:bg-yellow-700' : ''
-                            }`}
+                                ? 'ring-2 ring-yellow-500 shadow-xl transform scale-[1.02] bg-white/90' 
+                                : 'hover:shadow-lg bg-white/70 hover:bg-white/80'
+                            } ${pkg.popular ? 'border-yellow-500 border-2' : 'border-white/20'}`}
                             onClick={() => setSelectedPackage(pkg.id)}
                           >
-                            {selectedPackage === pkg.id ? 'Selected' : 'Select Package'}
-                          </Button>
-                        </CardFooter>
-                      </Card>
+                            <CardHeader className="pb-4">
+                              {pkg.popular && (
+                                <Badge className="self-start mb-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                                  <Star className="h-3 w-3 mr-1" />
+                                  Most Popular
+                                </Badge>
+                              )}
+                              <CardTitle className="text-2xl text-gray-900">{pkg.name}</CardTitle>
+                              <CardDescription className="text-gray-600">{pkg.description}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                              <div className="mb-6">
+                                <span className="text-4xl font-bold text-gray-900">${pkg.price.toFixed(0)}</span>
+                                <span className="text-gray-500 ml-1">/ package</span>
+                              </div>
+                              <div className="flex items-center text-yellow-700 mb-4 font-medium bg-yellow-50 p-2 rounded-lg">
+                                <Clock className="h-4 w-4 mr-2" />
+                                {pkg.hours} hours of driving lessons
+                              </div>
+                              <ul className="space-y-3 mt-4">
+                                {pkg.features.map((feature, index) => (
+                                  <li key={index} className="flex items-start">
+                                    <Check className="h-5 w-5 text-green-500 mr-3 shrink-0 mt-0.5" />
+                                    <span className="text-gray-700">{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </CardContent>
+                            <CardFooter>
+                              <Button 
+                                className={`w-full transition-all ${
+                                  selectedPackage === pkg.id 
+                                    ? 'bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700' 
+                                    : pkg.popular 
+                                      ? 'bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700' 
+                                      : 'bg-gray-600 hover:bg-gray-700'
+                                }`}
+                                onClick={() => setSelectedPackage(pkg.id)}
+                              >
+                                {selectedPackage === pkg.id ? (
+                                  <>
+                                    <Check className="h-4 w-4 mr-2" />
+                                    Selected
+                                  </>
+                                ) : (
+                                  'Select Package'
+                                )}
+                              </Button>
+                            </CardFooter>
+                          </Card>
+                        </motion.div>
+                      ))}
                     </motion.div>
-                  ))}
-                </motion.div>
 
                 {/* Selected Package Details */}
                 {selectedPackageDetails && (
@@ -278,6 +386,61 @@ export default function PackagesPage() {
                 )}
               </div>
             )}
+              </TabsContent>
+              
+              <TabsContent value="booking" className="space-y-8">
+                {/* Book Lessons Tab Content */}
+                <div className="space-y-8">
+                  <div className="text-center">
+                    <Calendar className="h-16 w-16 mx-auto mb-4 text-yellow-600" />
+                    <h3 className="text-3xl font-bold mb-4 text-gray-900">Book Your Lessons</h3>
+                    <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
+                      Schedule your driving lessons using our integrated Google Calendar system. 
+                      Select available time slots that work best for your schedule.
+                    </p>
+                  </div>
+                  
+                  {/* Quota Check */}
+                  {isSignedIn && quota && (
+                    <div className="max-w-4xl mx-auto">
+                      <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <Clock className="h-6 w-6 text-blue-600" />
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Available Lesson Hours</h4>
+                                <p className="text-sm text-gray-600">You have {quota.remaining_hours} hours remaining</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-2xl font-bold text-blue-600">{quota.remaining_hours}</div>
+                              <div className="text-sm text-gray-500">hours left</div>
+                            </div>
+                          </div>
+                          {quota.remaining_hours === 0 && (
+                            <Alert className="mt-4 border-orange-200 bg-orange-50">
+                              <AlertTriangle className="h-4 w-4 text-orange-600" />
+                              <AlertDescription className="text-orange-800">
+                                You have no remaining lesson hours. Please purchase a package to continue booking lessons.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                  
+                  {/* Google Calendar Integration */}
+                  <div className="max-w-6xl mx-auto">
+                    <GoogleCalendarIntegration 
+                      onBookingComplete={handleBookingComplete}
+                      userQuota={quota}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </section>
 

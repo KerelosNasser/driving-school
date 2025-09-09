@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
-import { rateLimit } from '@/lib/rate-limit';
 import { validatePhoneNumber, isTestPhoneBypassEnabled, isBypassPhoneNumber, formatForStorage } from '@/lib/phone';
 import { generateEncryptedInvitationCode, generateSimpleInvitationCode } from '@/lib/invitation-crypto';
 
@@ -190,11 +189,11 @@ async function processProfileCompletion(request: NextRequest, clerkUserId: strin
   }
   
   // Check device fingerprint for duplicate accounts (if we have fingerprint)
-  if (deviceFingerprint) {
+  if (body.deviceFingerprint) {
     console.log('Checking device fingerprint for duplicates...');
     try {
       const hasDuplicateDevice = await checkDeviceFingerprint(
-        deviceFingerprint,
+        body.deviceFingerprint,
         existingUser?.id || ''
       );
       
@@ -265,7 +264,7 @@ async function processProfileCompletion(request: NextRequest, clerkUserId: strin
   }
   
   // Store device fingerprint (if available)
-  if (deviceFingerprint) {
+  if (body.deviceFingerprint) {
     console.log('Storing device fingerprint...');
     try {
       await storeDeviceFingerprint(userId, deviceFingerprint, clientIP, userAgent);
@@ -375,6 +374,22 @@ async function processProfileCompletion(request: NextRequest, clerkUserId: strin
   } catch (error) {
     console.error('Error initializing quota (non-critical):', error);
     // This is non-critical, so we continue
+  }
+
+  // Update Clerk user metadata to mark profile as completed
+  console.log('Updating Clerk user metadata...');
+  try {
+    const { clerkClient } = await import('@clerk/nextjs/server');
+    const client = await clerkClient();
+    await client.users.updateUserMetadata(clerkUserId, {
+      publicMetadata: {
+        profileCompleted: true
+      }
+    });
+    console.log('Clerk user metadata updated successfully');
+  } catch (clerkError) {
+    console.error('Error updating Clerk metadata (non-critical):', clerkError);
+    // Don't fail the entire request for this
   }
   
   console.log('Profile completion successful!');

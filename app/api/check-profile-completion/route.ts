@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
@@ -8,7 +8,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Check authentication
     const { userId: clerkUserId } = auth();
@@ -33,9 +33,12 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(clerkUserId);
+    const profileCompletedInClerk = clerkUser.publicMetadata?.profileCompleted === true;
     
-    // If user doesn't exist or hasn't completed onboarding
-    if (!user || !user.completed_onboarding) {
+    // If user doesn't exist or hasn't completed onboarding in either system
+    if (!user || !user.completed_onboarding || !profileCompletedInClerk) {
       return NextResponse.json({
         completed: false,
         authenticated: true,

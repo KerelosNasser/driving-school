@@ -90,44 +90,69 @@ export async function GET(request: NextRequest) {
               event.status === 'tentative' ? 'tentative' : 'cancelled'
     }));
 
-    // Generate available time slots
+    // Generate available time slots with enhanced real-time capabilities
     const workingHours = {
       start: 8,  // 8 AM
-      end: 18,   // 6 PM
-      interval: 60 // 1 hour slots
+      end: 20,   // 8 PM (extended hours)
+      interval: 60, // 1 hour slots
+      breakStart: 12, // 12 PM lunch break
+      breakEnd: 13,   // 1 PM
+      minAdvanceHours: 2 // Minimum 2 hours advance booking
     };
 
     const slots: TimeSlot[] = [];
+    const now = new Date();
+    const minBookingTime = new Date(now.getTime() + workingHours.minAdvanceHours * 60 * 60 * 1000);
     
+    // Generate slots with 30-minute intervals for better availability
     for (let hour = workingHours.start; hour < workingHours.end; hour++) {
-      const slotStart = new Date(targetDate);
-      slotStart.setHours(hour, 0, 0, 0);
-      
-      const slotEnd = new Date(slotStart);
-      slotEnd.setMinutes(slotStart.getMinutes() + workingHours.interval);
+      for (let minute = 0; minute < 60; minute += 30) {
+        // Skip lunch break
+        if (hour >= workingHours.breakStart && hour < workingHours.breakEnd) {
+          continue;
+        }
 
-      // Check if slot conflicts with existing events (including buffer time)
-      const hasConflict = events.some(event => {
-        const eventStart = new Date(event.start);
-        const eventEnd = new Date(event.end);
+        const slotStart = new Date(targetDate);
+        slotStart.setHours(hour, minute, 0, 0);
         
-        // Add buffer time to event boundaries
-        const bufferedStart = new Date(eventStart.getTime() - bufferMinutes * 60000);
-        const bufferedEnd = new Date(eventEnd.getTime() + bufferMinutes * 60000);
+        const slotEnd = new Date(slotStart);
+        slotEnd.setMinutes(slotStart.getMinutes() + workingHours.interval);
+
+        // Enhanced conflict detection with buffer time
+        const hasConflict = events.some(event => {
+          if (event.status === 'cancelled') return false;
+          
+          const eventStart = new Date(event.start);
+          const eventEnd = new Date(event.end);
+          
+          // Add buffer time to event boundaries
+          const bufferedStart = new Date(eventStart.getTime() - bufferMinutes * 60000);
+          const bufferedEnd = new Date(eventEnd.getTime() + bufferMinutes * 60000);
+          
+          return (slotStart < bufferedEnd && slotEnd > bufferedStart);
+        });
+
+        // Check if it's too soon to book or in the past
+        const isTooSoon = slotStart <= minBookingTime;
+        const isPast = slotEnd <= now;
+        const isWeekend = targetDate.getDay() === 0 || targetDate.getDay() === 6;
+
+        // Determine availability and reason
+        const available = !hasConflict && !isPast && !isTooSoon && !isWeekend;
+        let reason: string | undefined;
         
-        return (slotStart < bufferedEnd && slotEnd > bufferedStart);
-      });
+        if (isPast) reason = 'Past time';
+        else if (isTooSoon) reason = `Requires ${workingHours.minAdvanceHours}h advance booking`;
+        else if (hasConflict) reason = 'Conflicting appointment';
+        else if (isWeekend) reason = 'Weekend - No lessons available';
 
-      // Check if it's in the past
-      const now = new Date();
-      const isPast = slotEnd <= now;
-
-      slots.push({
-        start: slotStart.toTimeString().slice(0, 5), // HH:MM format
-        end: slotEnd.toTimeString().slice(0, 5),
-        available: !hasConflict && !isPast,
-        reason: isPast ? 'Past time' : hasConflict ? 'Conflicting appointment' : undefined
-      });
+        slots.push({
+          start: slotStart.toTimeString().slice(0, 5), // HH:MM format
+          end: slotEnd.toTimeString().slice(0, 5),
+          available,
+          reason
+        });
+      }
     }
 
     return NextResponse.json({

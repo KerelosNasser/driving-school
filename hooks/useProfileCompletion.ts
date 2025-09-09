@@ -36,7 +36,20 @@ export function useProfileCompletion() {
         return;
       }
 
+      // First check client-side metadata for immediate response
+      const profileCompletedInClerk = user.publicMetadata?.profileCompleted === true;
+      
+      if (profileCompletedInClerk) {
+        setStatus({
+          completed: true,
+          authenticated: true,
+          loading: false
+        });
+        return;
+      }
+
       try {
+        // If not completed in client metadata, verify with server
         const response = await fetch('/api/check-profile-completion');
         const data = await response.json();
         

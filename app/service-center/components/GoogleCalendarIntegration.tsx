@@ -228,19 +228,59 @@ export default function GoogleCalendarIntegration({
     }
   };
 
-  // Generate next 7 days for date selection
-  const getNextSevenDays = () => {
+  // Auto-refresh availability every 2 minutes for real-time updates
+  useEffect(() => {
+    if (!calendarConnected || !selectedDate) return;
+    
+    const interval = setInterval(() => {
+      fetchAvailableSlots();
+    }, 120000); // 2 minutes
+    
+    return () => clearInterval(interval);
+  }, [calendarConnected, selectedDate, fetchAvailableSlots]);
+
+  // Listen for external refresh requests from packages page or other components
+  useEffect(() => {
+    const handleRefreshCalendar = () => {
+      if (calendarConnected && selectedDate) {
+        fetchAvailableSlots();
+      }
+      checkCalendarConnection();
+    };
+
+    window.addEventListener('refreshCalendar', handleRefreshCalendar);
+    
+    return () => {
+      window.removeEventListener('refreshCalendar', handleRefreshCalendar);
+    };
+  }, [calendarConnected, selectedDate, fetchAvailableSlots, checkCalendarConnection]);
+
+  // Generate next 14 days for date selection (extended range)
+  const getNextFourteenDays = () => {
     const days = [];
     const today = new Date();
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 14; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      days.push({
-        value: format(date, 'yyyy-MM-dd'),
-        label: format(date, 'EEEE, MMM dd')
-      });
+      // Skip weekends
+      if (date.getDay() !== 0 && date.getDay() !== 6) {
+        days.push({
+          value: format(date, 'yyyy-MM-dd'),
+          label: format(date, 'EEEE, MMM dd')
+        });
+      }
     }
     return days;
+  };
+
+  // Filter available slots for better display
+  const getAvailableSlots = () => {
+    return availableSlots.filter(slot => slot.available);
+  };
+
+  // Get unavailable slots with reasons
+  const getUnavailableSlots = () => {
+    return availableSlots.filter(slot => !slot.available && slot.reason);
   };
 
   const formatTimeSlot = (slot: TimeSlot) => {
@@ -327,13 +367,13 @@ export default function GoogleCalendarIntegration({
 
               {/* Date Selection */}
               <div>
-                <Label htmlFor="date-select">Select Date</Label>
+                <Label htmlFor="date-select">Select Date (Weekdays Only)</Label>
                 <Select value={selectedDate} onValueChange={handleDateChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a date for your lesson" />
                   </SelectTrigger>
                   <SelectContent>
-                    {getNextSevenDays().map((day) => (
+                    {getNextFourteenDays().map((day) => (
                       <SelectItem key={day.value} value={day.value}>
                         {day.label}
                       </SelectItem>
@@ -342,46 +382,79 @@ export default function GoogleCalendarIntegration({
                 </Select>
               </div>
 
-              {/* Available Time Slots */}
+              {/* Real-time Availability Display */}
               {selectedDate && (
-                <div>
-                  <Label>Available Time Slots</Label>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Available Time Slots</Label>
+                    <div className="text-xs text-gray-500">
+                      Auto-refreshes every 2 minutes
+                    </div>
+                  </div>
+                  
                   {loading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                      <span>Loading availability...</span>
-                    </div>
-                  ) : availableSlots.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                      <p>No available slots for this date</p>
+                      <span>Loading real-time availability...</span>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                      {availableSlots.map((slot, index) => (
-                        <motion.button
-                          key={index}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.2, delay: index * 0.05 }}
-                          onClick={() => slot.available && setSelectedSlot(slot)}
-                          disabled={!slot.available}
-                          className={`p-3 rounded-lg border text-sm font-medium transition-all ${
-                            selectedSlot === slot
-                              ? 'bg-blue-100 border-blue-300 text-blue-800'
-                              : slot.available
-                              ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'
-                              : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          {formatTimeSlot(slot)}
-                          {!slot.available && slot.reason && (
-                            <div className="text-xs mt-1 text-gray-500">
-                              {slot.reason}
+                    <div className="space-y-4">
+                      {/* Available Slots */}
+                      {getAvailableSlots().length > 0 ? (
+                        <div>
+                          <div className="text-sm font-medium text-green-700 mb-2">
+                            ✓ Available Slots ({getAvailableSlots().length})
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {getAvailableSlots().map((slot, index) => (
+                              <motion.button
+                                key={`${slot.start}-${slot.end}`}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2, delay: index * 0.05 }}
+                                onClick={() => setSelectedSlot(slot)}
+                                className={`p-3 rounded-lg border text-sm font-medium transition-all ${
+                                  selectedSlot === slot
+                                    ? 'bg-green-100 border-green-300 text-green-800 ring-2 ring-green-200'
+                                    : 'bg-white border-green-200 hover:bg-green-50 text-green-700 hover:border-green-300'
+                                }`}
+                              >
+                                {formatTimeSlot(slot)}
+                              </motion.button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 text-gray-500">
+                          <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                          <p>No available slots for this date</p>
+                        </div>
+                      )}
+                      
+                      {/* Unavailable Slots with Reasons */}
+                      {getUnavailableSlots().length > 0 && (
+                        <div>
+                          <div className="text-sm font-medium text-gray-600 mb-2">
+                            ⚠️ Unavailable Slots ({getUnavailableSlots().length})
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {getUnavailableSlots().slice(0, 8).map((slot, index) => (
+                              <div
+                                key={`unavailable-${slot.start}-${slot.end}`}
+                                className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-500"
+                              >
+                                <div className="font-medium">{formatTimeSlot(slot)}</div>
+                                <div className="text-xs mt-1">{slot.reason}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {getUnavailableSlots().length > 8 && (
+                            <div className="text-xs text-gray-500 mt-2">
+                              +{getUnavailableSlots().length - 8} more unavailable slots
                             </div>
                           )}
-                        </motion.button>
-                      ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

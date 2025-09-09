@@ -100,7 +100,7 @@ export function Navigation() {
             )}
             
             <Button asChild>
-              <Link href="/book">Book Now</Link>
+              <Link href="/service-center">Service Center</Link>
             </Button>
           </div>
 
@@ -181,7 +181,7 @@ export function Navigation() {
                   </>
                 )}
                 <Button asChild className="w-full">
-                  <Link href="/book">Book Now</Link>
+                  <Link href="/service-center">Service Center</Link>
                 </Button>
               </div>
             </div>
