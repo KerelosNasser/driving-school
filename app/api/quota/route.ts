@@ -1,89 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { auth, clerkClient } from '@clerk/nextjs/server';
 import { withCentralizedStateManagement } from '@/lib/api-middleware';
 import { supabaseAdmin } from '@/lib/api/utils';
 
 // Centralized state management replaces individual rate limiting
 
-async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
-  // 1) Try to find by clerk_id first
-  const { data: existingByClerk } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('clerk_id', clerkUserId)
-    .maybeSingle();
-
-  if (existingByClerk?.id) return existingByClerk.id as string;
-
-  // 2) Fetch Clerk user details
-  const client = await clerkClient();
-  const clerkUser = await client.users.getUser(clerkUserId);
-  const email = clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.emailAddresses?.[0]?.emailAddress || '';
-  const full_name = [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || clerkUser?.username || 'Unknown User';
-
-  // 3) If a user with the same email already exists, link it to this Clerk account
-  if (email) {
-    const { data: existingByEmail } = await supabaseAdmin
-      .from('users')
-      .select('id, clerk_id')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (existingByEmail?.id) {
-      const { data: updated, error: updateError } = await supabaseAdmin
-        .from('users')
-        .update({ clerk_id: clerkUserId, full_name })
-        .eq('id', existingByEmail.id)
-        .select('id')
-        .single();
-
-      if (updateError || !updated?.id) {
-        throw new Error(`Failed to link existing user to Clerk: ${updateError?.message || 'unknown error'}`);
-      }
-      return updated.id as string;
-    }
-  }
-
-  // 4) Otherwise insert a new user. Handle race conditions on unique email.
-  const { data: inserted, error: insertError } = await supabaseAdmin
-    .from('users')
-    .insert({ clerk_id: clerkUserId, email, full_name })
-    .select('id')
-    .single();
-
-  if (insertError || !inserted?.id) {
-    // If email unique constraint hit due to race, fetch by email and link
-    const message = (insertError as any)?.message || '';
-    const code = (insertError as any)?.code || '';
-    if (code === '23505' && message.includes('users_email_key') && email) {
-      const { data: byEmailAfter } = await supabaseAdmin
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle();
-      if (byEmailAfter?.id) {
-        const { data: updated, error: updateError2 } = await supabaseAdmin
-          .from('users')
-          .update({ clerk_id: clerkUserId, full_name })
-          .eq('id', byEmailAfter.id)
-          .select('id')
-          .single();
-        if (updateError2 || !updated?.id) {
-          throw new Error(`Failed to finalize user provisioning after conflict: ${updateError2?.message || 'unknown error'}`);
-        }
-        return updated.id as string;
-      }
-    }
-
-    throw new Error(`Failed to provision user in Supabase: ${insertError?.message || 'unknown error'}`);
-  }
-
-  return inserted.id as string;
-}
 
 // GET - Fetch user's current quota
-async function handleQuotaGetRequest(request: NextRequest) {
+async function handleQuotaGetRequest(_request: NextRequest) {
   try {
     // Get authenticated user (Clerk) - TEMPORARILY DISABLED FOR TESTING
     // const { userId: clerkUserId } = await auth();
@@ -166,7 +90,7 @@ async function handleQuotaPostRequest(request: NextRequest) {
     }
 
     // Use the update_user_quota function to add hours
-    const { data, error } = await supabaseAdmin.rpc('update_user_quota', {
+    const { error } = await supabaseAdmin.rpc('update_user_quota', {
       p_user_id: supabaseUserId,
       p_hours_change: hours,
       p_transaction_type: finalTransactionType,

@@ -63,8 +63,8 @@ export default function UserDataDisplay({ className = '' }: UserDataDisplayProps
   // Enhanced error handling
   const handleError = useCallback((errorMessage: string) => {
     const isInternal = errorMessage.toLowerCase().includes('internal server error') || 
-                       errorMessage.toLowerCase().includes('500') ||
-                       errorMessage.includes('Failed to fetch');
+                      errorMessage.toLowerCase().includes('500') ||
+                      errorMessage.includes('Failed to fetch');
     
     const now = Date.now();
     
@@ -155,21 +155,21 @@ export default function UserDataDisplay({ className = '' }: UserDataDisplayProps
   return (
     <div className={`space-y-6 ${className}`}>
       {/* User Profile Card */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <Card className="bg-yellow-50 border-yellow-950 shadow-sm hover:shadow-md transition-shadow duration-200">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center space-x-2">
-            <div className="p-2 bg-blue-100 rounded-full">
-              <User className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-yellow-100 rounded-full">
+              <User className="h-5 w-5 text-yellow-600" />
             </div>
-            <span className="text-blue-900 text-xl font-semibold">User Profile</span>
+            <span className="text-yellow-900 text-xl font-semibold">User Profile</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex items-start space-x-6">
             <div className="relative">
-              <Avatar className="h-20 w-20 border-3 border-blue-200 shadow-md">
+              <Avatar className="h-20 w-20 border-3 border-yellow-200 shadow-md">
                 <AvatarImage src={user.imageUrl} alt={user.fullName || 'User'} className="object-cover" />
-                <AvatarFallback className="bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 text-xl font-semibold">
+                <AvatarFallback className="bg-gradient-to-br from-yellow-100 to-yellow-200 text-yellow-700 text-xl font-semibold">
                   {getInitials(user.fullName || user.firstName || 'U')}
                 </AvatarFallback>
               </Avatar>
@@ -184,7 +184,7 @@ export default function UserDataDisplay({ className = '' }: UserDataDisplayProps
                   {user.fullName || `${user.firstName} ${user.lastName}`}
                 </h3>
                 <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                  <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
                     Active Student
                   </Badge>
                   <Badge variant="outline" className="text-xs">
@@ -195,25 +195,25 @@ export default function UserDataDisplay({ className = '' }: UserDataDisplayProps
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {user.primaryEmailAddress && (
-                  <div className="flex items-center space-x-3 text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3 text-sm text-gray-600 p-2 bg-gray-50 rounded-lg border-2 border-amber-700">
                     <div className="p-1 bg-gray-200 rounded">
                       <Mail className="h-4 w-4" />
                     </div>
-                    <span className="font-medium">{user.primaryEmailAddress.emailAddress}</span>
+                    <span className="font-medium text-yellow-700">{user.primaryEmailAddress.emailAddress}</span>
                   </div>
                 )}
                 
                 {user.primaryPhoneNumber && (
-                  <div className="flex items-center space-x-3 text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3 text-sm text-gray-600 p-2 bg-gray-50 rounded-lg border-2 border-amber-700">
                     <div className="p-1 bg-gray-200 rounded">
                       <Phone className="h-4 w-4" />
                     </div>
-                    <span className="font-medium">{formatForDisplay(user.primaryPhoneNumber.phoneNumber)}</span>
+                    <span className="font-medium text-yellow-700">{formatForDisplay(user.primaryPhoneNumber.phoneNumber)}</span>
                   </div>
                 )}
                 
                 {statistics?.recentActivity.preferredLocation && (
-                  <div className="flex items-center space-x-3 text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3 text-sm text-yellow-700 p-2 bg-gray-50 rounded-lg border-2 border-amber-700">
                     <div className="p-1 bg-gray-200 rounded">
                       <MapPin className="h-4 w-4" />
                     </div>
@@ -222,7 +222,7 @@ export default function UserDataDisplay({ className = '' }: UserDataDisplayProps
                 )}
                 
                 {statistics?.memberSince && (
-                  <div className="flex items-center space-x-3 text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3 text-sm text-yellow-700 p-2 bg-gray-50 rounded-lg border-2 border-amber-700">
                     <div className="p-1 bg-gray-200 rounded">
                       <Calendar className="h-4 w-4" />
                     </div>
@@ -274,8 +274,8 @@ export default function UserDataDisplay({ className = '' }: UserDataDisplayProps
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-              <CardContent className="p-6 relative">
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-900 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+              <CardContent className="p-2 relative">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-green-100 rounded-full -mr-10 -mt-10 opacity-50"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -313,27 +313,27 @@ export default function UserDataDisplay({ className = '' }: UserDataDisplayProps
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
-            <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-              <CardContent className="p-6 relative">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-blue-100 rounded-full -mr-10 -mt-10 opacity-50"></div>
+            <Card className="bg-yellow-100 border-yellow-900 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+              <CardContent className="p-2 relative">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-100 rounded-full -mr-10 -mt-10 opacity-50"></div>
                 <div className="relative z-10">
                   <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Clock className="h-5 w-5 text-blue-600" />
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <Clock className="h-5 w-5 text-yellow-600" />
                     </div>
-                    <span className="font-semibold text-blue-900">Hours Utilized</span>
+                    <span className="font-semibold text-yellow-900">Hours Utilized</span>
                   </div>
                   <div className="space-y-2">
-                    <div className="text-3xl font-bold text-blue-700">
+                    <div className="text-3xl font-bold text-yellow-700">
                       {statistics.hoursUsage.used}
-                      <span className="text-lg font-normal text-blue-600">h</span>
+                      <span className="text-lg font-normal text-yellow-600">h</span>
                     </div>
-                    <div className="text-sm text-blue-600 font-medium">
+                    <div className="text-sm text-yellow-600 font-medium">
                       of {statistics.hoursUsage.totalPurchased} total hours
                     </div>
-                    <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div className="w-full bg-yellow-200 rounded-full h-2">
                       <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        className="bg-yellow-500 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${Math.min((statistics.hoursUsage.used / statistics.hoursUsage.totalPurchased) * 100, 100)}%` }}
                       ></div>
                     </div>
@@ -349,7 +349,7 @@ export default function UserDataDisplay({ className = '' }: UserDataDisplayProps
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
           >
-            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-900 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
               <CardContent className="p-6 relative">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-purple-100 rounded-full -mr-10 -mt-10 opacity-50"></div>
                 <div className="relative z-10">
@@ -425,23 +425,23 @@ export default function UserDataDisplay({ className = '' }: UserDataDisplayProps
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: 0.1 }}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200"
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl border border-yellow-200"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-200 rounded-lg">
-                      <Calendar className="h-5 w-5 text-blue-600" />
+                    <div className="p-2 bg-yellow-200 rounded-lg">
+                      <Calendar className="h-5 w-5 text-yellow-600" />
                     </div>
                     <div>
-                      <span className="text-sm font-semibold text-blue-900">Next Lesson</span>
-                      <div className="text-xs text-blue-600">Upcoming session</div>
+                      <span className="text-sm font-semibold text-yellow-900">Next Lesson</span>
+                      <div className="text-xs text-yellow-600">Upcoming session</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-medium text-blue-700">
+                    <span className="text-sm font-medium text-yellow-700">
                       {formatDate(statistics.recentActivity.nextLessonDate)}
                     </span>
                     {statistics.recentActivity.nextLessonTime && (
-                      <div className="text-xs text-blue-600">
+                      <div className="text-xs text-yellow-600">
                         at {statistics.recentActivity.nextLessonTime}
                       </div>
                     )}

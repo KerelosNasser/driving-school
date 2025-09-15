@@ -43,29 +43,49 @@ const fallbackPackages: Package[] = [
 ];
 
 export function PackagesPreview() {
-  const [packages, setPackages] = useState<Package[]>(fallbackPackages);
+  const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
     const fetchPackages = async () => {
       try {
         const response = await fetch('/api/packages');
+        
         if (response.ok) {
           const data = await response.json();
-          if (data && data.length > 0) {
-            // Ensure features is always an array and limit to 3 packages
-            const processedPackages = data.slice(0, 3).map((pkg: any) => ({
+          
+          // Check if we have packages from the database
+          if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
+            // Process and use database packages
+            const processedPackages = data.packages.slice(0, 3).map((pkg: any) => ({
               ...pkg,
               features: Array.isArray(pkg.features) 
                 ? pkg.features 
-                : (typeof pkg.features === 'string' ? JSON.parse(pkg.features) : []) 
+                : (typeof pkg.features === 'string' 
+                  ? JSON.parse(pkg.features) 
+                  : []) 
             })) as Package[];
+            
             setPackages(processedPackages);
+            setUsingFallback(false);
+          } else {
+            // No packages in database or empty array, use fallback
+            console.log('No packages found in database, using fallback packages');
+            setPackages(fallbackPackages);
+            setUsingFallback(true);
           }
+        } else {
+          // API call failed, use fallback
+          console.warn('Failed to fetch packages from API, using fallback packages');
+          setPackages(fallbackPackages);
+          setUsingFallback(true);
         }
       } catch (error) {
         console.error('Error fetching packages:', error);
-        // Keep fallback packages on error
+        // On error, use fallback packages
+        setPackages(fallbackPackages);
+        setUsingFallback(true);
       } finally {
         setLoading(false);
       }
@@ -85,6 +105,12 @@ export function PackagesPreview() {
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
               Choose the package that best suits your needs and budget
             </p>
+            {/* Optional: Show a subtle indicator if using fallback data in development */}
+            {process.env.NODE_ENV === 'development' && usingFallback && !loading && (
+              <p className="mt-2 text-sm text-gray-500">
+                (Using sample packages - database packages not available)
+              </p>
+            )}
           </div>
         </div>
 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { auth } from '@clerk/nextjs/server';
 import { withCentralizedStateManagement } from '@/lib/api-middleware';
 import { supabaseAdmin } from '@/lib/api/utils';
 

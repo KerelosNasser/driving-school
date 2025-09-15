@@ -73,6 +73,7 @@ const SITE_PAGES = [
 ];
 
 export function SEOTools() {
+  // Initialize pages with empty array to prevent undefined errors
   const [pages, setPages] = useState<SEOPage[]>([]);
   const [selectedPage, setSelectedPage] = useState<SEOPage | null>(null);
   const [globalSettings, setGlobalSettings] = useState<GlobalSEOSettings | null>(null);
@@ -81,24 +82,45 @@ export function SEOTools() {
   const [activeTab, setActiveTab] = useState('pages');
   const [editingPage, setEditingPage] = useState<SEOPage | null>(null);
   const [isAddingPage, setIsAddingPage] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load SEO data
+  // Load SEO data with better error handling
   const loadPages = useCallback(async () => {
     setLoading(prev => ({ ...prev, pages: true }));
+    setError(null);
+    
     try {
       const response = await fetch('/api/admin/seo?type=pages');
-      if (response.ok) {
-        const { data } = await response.json();
-        setPages(data || []);
-        if (data && data.length > 0 && !selectedPage) {
-          setSelectedPage(data[0]);
-        }
-      } else {
-        toast.error('Failed to load page SEO settings');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
+      const result = await response.json();
+      console.log('API Response:', result); // Debug logging
+      
+      // Ensure we always have an array
+      const pagesData = Array.isArray(result?.data) ? result.data : 
+                       Array.isArray(result) ? result : [];
+      
+      setPages(pagesData);
+      
+      // Set selected page only if we have pages and no current selection
+      if (pagesData.length > 0 && !selectedPage) {
+        setSelectedPage(pagesData[0]);
+      }
+      
+      if (pagesData.length === 0) {
+        console.warn('No SEO pages returned from API');
+      }
+      
     } catch (error) {
       console.error('Error loading pages:', error);
-      toast.error('Error loading SEO pages');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setError(`Failed to load SEO pages: ${errorMessage}`);
+      toast.error('Failed to load page SEO settings');
+      // Ensure pages remains an empty array on error
+      setPages([]);
     } finally {
       setLoading(prev => ({ ...prev, pages: false }));
     }
@@ -108,12 +130,14 @@ export function SEOTools() {
     setLoading(prev => ({ ...prev, global: true }));
     try {
       const response = await fetch('/api/admin/seo?type=global');
-      if (response.ok) {
-        const { data } = await response.json();
-        setGlobalSettings(data);
-      } else {
-        toast.error('Failed to load global SEO settings');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
+      const result = await response.json();
+      setGlobalSettings(result?.data || null);
+      
     } catch (error) {
       console.error('Error loading global settings:', error);
       toast.error('Error loading global SEO settings');
@@ -148,18 +172,20 @@ export function SEOTools() {
         body: JSON.stringify({ type: 'page', data: pageData }),
       });
 
-      if (response.ok) {
-        toast.success('Page SEO settings saved successfully');
-        loadPages();
-        setEditingPage(null);
-        setIsAddingPage(false);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save SEO settings');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
+
+      toast.success('Page SEO settings saved successfully');
+      await loadPages(); // Wait for reload
+      setEditingPage(null);
+      setIsAddingPage(false);
+      
     } catch (error) {
       console.error('Error saving page SEO:', error);
-      toast.error('Failed to save page SEO settings');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to save page SEO settings: ${errorMessage}`);
     } finally {
       setLoading(prev => ({ ...prev, save: false }));
     }
@@ -175,16 +201,18 @@ export function SEOTools() {
         body: JSON.stringify({ type: 'global', data: settings }),
       });
 
-      if (response.ok) {
-        toast.success('Global SEO settings saved successfully');
-        setGlobalSettings(settings);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save global SEO settings');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
+
+      toast.success('Global SEO settings saved successfully');
+      setGlobalSettings(settings);
+      
     } catch (error) {
       console.error('Error saving global SEO:', error);
-      toast.error('Failed to save global SEO settings');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to save global SEO settings: ${errorMessage}`);
     } finally {
       setLoading(prev => ({ ...prev, save: false }));
     }
@@ -305,9 +333,31 @@ ${includedEntries.map(entry => `  <url>
         </CardHeader>
         
         <CardContent>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <XCircle className="h-5 w-5 text-red-600 mr-2" />
+                <span className="text-red-800 font-medium">Error</span>
+              </div>
+              <p className="text-red-600 text-sm mt-1">{error}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => {
+                  setError(null);
+                  loadPages();
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          )}
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="pages">Pages</TabsTrigger>
+              <TabsTrigger value="pages">Pages ({pages.length})</TabsTrigger>
               <TabsTrigger value="global">Global Settings</TabsTrigger>
               <TabsTrigger value="analysis">Analysis</TabsTrigger>
               <TabsTrigger value="sitemap">Sitemap</TabsTrigger>
@@ -327,15 +377,28 @@ ${includedEntries.map(entry => `  <url>
                 <div className="flex justify-center py-8">
                   <RefreshCw className="h-8 w-8 animate-spin" />
                 </div>
+              ) : pages.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No SEO pages found</p>
+                  <Button 
+                    onClick={() => setIsAddingPage(true)} 
+                    variant="outline" 
+                    className="mt-4"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Page
+                  </Button>
+                </div>
               ) : (
                 <div className="grid gap-4">
-                  {pages.map((page) => {
+                  {pages.map((page, index) => {
                     const score = calculateSEOScore(page);
                     const status = getScoreStatus(score);
                     
                     return (
                       <Card 
-                        key={page.page_url} 
+                        key={page.id || page.page_url || `page-${index}`}
                         className={`cursor-pointer transition-all ${
                           selectedPage?.page_url === page.page_url ? 'ring-2 ring-primary' : 'hover:shadow-md'
                         }`}
@@ -640,7 +703,7 @@ ${includedEntries.map(entry => `  <url>
                 <CardContent>
                   <div className="space-y-3">
                     {sitemap.map((entry, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
+                      <div key={`sitemap-${index}`} className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
                         <div className="flex items-center space-x-3">
                           <Globe className="h-4 w-4 text-gray-400" />
                           <div>

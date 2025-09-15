@@ -1,281 +1,195 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase'; // client for public reads (anon)
-import { supabaseAdmin } from '@/lib/api/utils'; // service_role client (server-only)
+import { supabaseAdmin } from '@/lib/api/utils';
 import { auth } from '@clerk/nextjs/server';
 import { withCentralizedStateManagement } from '@/lib/api-middleware';
 
-// Cache configuration
-const CACHE_TTL = 300; // seconds
-let packagesCache: { data: any[]; timestamp: number } | null = null;
-let packagesFetchInFlight: Promise<void> | null = null;
-
-// Utility: probe packages table existence with a minimal select
-async function probePackagesTable(): Promise<{ exists: boolean; error?: any }> {
+async function handleInvitationStatsRequest(_request: NextRequest) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('packages')
-      .select('id')
-      .limit(1);
-
-    if (error) {
-      // PostgREST returns PGRST205 when relation not found.
-      return { exists: false, error };
-    }
-    // If query succeeded (even with empty array), table exists
-    return { exists: true };
-  } catch (err) {
-    return { exists: false, error: err };
-  }
-}
-
-// Utility: fetch packages from DB (ordered)
-async function fetchPackagesFromDb(): Promise<{ data?: any[]; error?: any }> {
-  const { data, error } = await supabase
-    .from('packages')
-    .select('*')
-    .order('created_at', { ascending: false });
-  return { data, error };
-}
-
-// GET - Fetch all packages with caching + inflight dedupe
-async function handlePackagesGetRequest(_request: NextRequest) {
-  try {
-    const now = Date.now();
-
-    // Serve from in-memory cache if fresh
-    if (packagesCache && now - packagesCache.timestamp < CACHE_TTL * 1000) {
-      return NextResponse.json(
-        { packages: packagesCache.data },
-        {
-          headers: {
-            'Cache-Control': `public, s-maxage=${CACHE_TTL}, stale-while-revalidate=600`,
-            'X-Cache': 'HIT',
-          },
-        }
-      );
-    }
-
-    // Prevent stampede: if a fetch is already in flight, await it
-    if (packagesFetchInFlight) {
-      await packagesFetchInFlight;
-      if (packagesCache) {
-        return NextResponse.json(
-          { packages: packagesCache.data },
-          {
-            headers: {
-              'Cache-Control': `public, s-maxage=${CACHE_TTL}, stale-while-revalidate=600`,
-              'X-Cache': 'HIT_AFTER_WAIT',
-            },
-          }
-        );
-      }
-      // If still no cache, fall through to fetch below
-    }
-
-    // Start fetch and store promise to dedupe
-    packagesFetchInFlight = (async () => {
-      try {
-        // Probe table existence using admin client (avoids information_schema)
-        const probe = await probePackagesTable();
-        if (!probe.exists) {
-          // Keep packagesCache null in this case
-          console.warn('Packages table missing or inaccessible', probe.error);
-          return;
-        }
-
-        const { data, error } = await fetchPackagesFromDb();
-        if (!error && Array.isArray(data)) {
-          packagesCache = { data, timestamp: Date.now() };
-        } else if (error) {
-          console.error('Error fetching packages:', error);
-        }
-      } finally {
-        // clear inflight marker
-        packagesFetchInFlight = null;
-      }
-    })();
-
-    // Wait for the fetch to complete
-    await packagesFetchInFlight;
-
-    if (packagesCache) {
-      return NextResponse.json(
-        { packages: packagesCache.data },
-        {
-          headers: {
-            'Cache-Control': `public, s-maxage=${CACHE_TTL}, stale-while-revalidate=600`,
-            'X-Cache': 'MISS',
-          },
-        }
-      );
-    }
-
-    // If packagesCache still null, it likely means table missing or error
-    // Probe once more to determine if table missing or error
-    const probeFinal = await probePackagesTable();
-    if (!probeFinal.exists) {
-      // Graceful fallback for public API: return empty list with warning
-      return NextResponse.json(
-        { packages: [], warning: 'Packages table not found. Please run database migrations.' },
-        {
-          status: 200,
-          headers: {
-            'Cache-Control': 'no-store',
-            'X-DB-Warning': 'packages table missing',
-          },
-        }
-      );
-    }
-
-    // Unexpected: table exists but fetch failed
-    return NextResponse.json(
-      { error: 'Failed to fetch packages' },
-      { status: 500 }
-    );
-  } catch (err: any) {
-    console.error('Error in GET /api/packages:', err);
-    if (err?.message === 'Rate limit exceeded') {
-      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-    }
-    return NextResponse.json({ error: 'Failed to fetch packages' }, { status: 500 });
-  }
-}
-
-// POST - Create a package (server-side, requires auth)
-async function handlePackagesPostRequest(request: NextRequest) {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
+    // Get Clerk session user id (string)
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // TODO: Enforce admin/role check using Clerk (or your role system).
-    // Example: fetch Clerk user metadata / roles and ensure admin access.
-    // For now we assume authenticated users can create; change this to require admin.
-
-    // Probe table existence
-    const probe = await probePackagesTable();
-    if (!probe.exists) {
-      console.error('Error checking packages table existence (POST):', probe.error);
-      return NextResponse.json(
-        { error: 'Packages table not found. Please run database migrations.' },
-        { status: 503 }
-      );
-    }
-
-    // Parse body safely
-    let body: any;
-    try {
-      body = await request.json();
-    } catch (err: any) {
-      return NextResponse.json(
-        { error: 'Invalid or empty request body', details: err?.message },
-        { status: 400 }
-      );
-    }
-
-    const { name, description, price, hours, features, popular } = body ?? {};
-
-    // Validation rules
-    const errors: string[] = [];
-
-    if (!name || typeof name !== 'string' || !name.trim()) errors.push('name is required');
-    if (!description || typeof description !== 'string' || !description.trim()) errors.push('description is required');
-
-    const parsedPrice = Number(price);
-    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) errors.push('price must be a non-negative number');
-
-    const parsedHours = Number(hours);
-    if (!Number.isInteger(parsedHours) || parsedHours < 1) errors.push('hours must be an integer >= 1');
-
-    // Parse features: accept array or JSON string representing array
-    let parsedFeatures: any[] = [];
-    if (Array.isArray(features)) {
-      parsedFeatures = features;
-    } else if (typeof features === 'string' && features.trim()) {
-      try {
-        const tmp = JSON.parse(features);
-        if (!Array.isArray(tmp)) errors.push('features must be an array');
-        else parsedFeatures = tmp;
-      } catch (e: any) {
-        errors.push('features must be a valid JSON array string');
-      }
-    } else {
-      errors.push('features is required and must be an array or JSON string');
-    }
-
-    if (errors.length > 0) {
-      return NextResponse.json({ errors }, { status: 422 });
-    }
-
-    // Optional: sanitize/normalize features content (require items to be objects or strings)
-    parsedFeatures = parsedFeatures.map((f) => {
-      if (f == null) return f;
-      if (typeof f === 'string') return f.trim();
-      if (typeof f === 'object') return f;
-      return String(f);
-    });
-
-    // Use service role client for server-side writes
-    const { data: newPackage, error: insertError } = await supabaseAdmin
-      .from('packages')
-      .insert({
-        name: name.trim(),
-        description: description.trim(),
-        price: parsedPrice,
-        hours: parsedHours,
-        features: parsedFeatures,
-        popular: Boolean(popular),
-        created_at: new Date().toISOString(),
-      })
-      .select()
+    // Map Clerk id -> internal users.id (uuid)
+    const { data: userRow, error: userLookupError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('clerk_id', clerkId)
+      .limit(1)
       .single();
 
-    if (insertError) {
-      console.error('Error inserting package:', insertError);
-      // If it's relation-not-found, surface a 503 for migrations needed
-      if (insertError.code === 'PGRST205') {
-        return NextResponse.json(
-          { error: 'Packages table not found. Please run database migrations.' },
-          { status: 503 }
-        );
-      }
-      return NextResponse.json({ error: 'Failed to create package', details: insertError.message }, { status: 500 });
+    if (userLookupError || !userRow) {
+      console.error('Local user lookup failed for clerk id:', clerkId, userLookupError);
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+    const internalUserId = userRow.id as string;
 
-    // Clear and optionally pre-warm the cache
-    packagesCache = null;
-    // Optionally: pre-warm cache
-    (async () => {
+    // Check invitation_codes table exists and fetch active code
+    try {
+      const { data: invitationCode, error: codeError } = await supabaseAdmin
+        .from('invitation_codes')
+        .select('*')
+        .eq('user_id', internalUserId)
+        .eq('is_active', true)
+        .single();
+
+      if (codeError && codeError.code === 'PGRST116') {
+        // Table missing — fallback response
+        return NextResponse.json({
+          message: 'Invitation system coming soon',
+          invitationCode: null,
+          statistics: {
+            totalReferrals: 0,
+            completedReferrals: 0,
+            pendingReferrals: 0,
+            totalRewards: 0,
+            unusedRewards: 0
+          },
+          referrals: [],
+          rewards: []
+        });
+      }
+
+      if (!invitationCode) {
+        return NextResponse.json({
+          message: 'No invitation code found',
+          invitationCode: null,
+          statistics: {
+            totalReferrals: 0,
+            completedReferrals: 0,
+            pendingReferrals: 0,
+            totalRewards: 0,
+            unusedRewards: 0
+          },
+          referrals: [],
+          rewards: []
+        });
+      }
+
+      // Get referrals (if table present)
+      let referrals: any[] = [];
+      const referralStats = {
+        totalReferrals: 0,
+        completedReferrals: 0,
+        pendingReferrals: 0
+      };
+
       try {
-        const { data } = await fetchPackagesFromDb();
-        if (Array.isArray(data)) {
-          packagesCache = { data, timestamp: Date.now() };
-        }
-      } catch (e) {
-        // do not block response
-        console.warn('Failed to pre-warm packages cache', e);
-      }
-    })();
+        const { data: referralsData, error: referralsError } = await supabaseAdmin
+          .from('referrals')
+          .select(`
+            id,
+            status,
+            created_at,
+            completed_at,
+            users!referrals_referred_user_id_fkey (
+              id,
+              full_name,
+              email
+            )
+          `)
+          .eq('referrer_user_id', internalUserId);
 
-    return NextResponse.json({ package: newPackage }, { status: 201 });
-  } catch (err: any) {
-    console.error('Error in POST /api/packages:', err);
-    if (err?.message === 'Rate limit exceeded') {
-      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+        if (!referralsError && referralsData) {
+          referrals = referralsData.map((referral: any) => ({
+            id: referral.id,
+            referredUser: {
+              name: referral.users?.full_name || 'Unknown User',
+              email: referral.users?.email || 'unknown@example.com'
+            },
+            completedAt: referral.completed_at || referral.created_at,
+            createdAt: referral.created_at,
+            status: referral.status
+          }));
+
+          referralStats.totalReferrals = referralsData.length;
+          referralStats.completedReferrals = referralsData.filter((r: any) => r.status === 'completed').length;
+          referralStats.pendingReferrals = referralsData.filter((r: any) => r.status === 'pending').length;
+        }
+      } catch (err) {
+        console.warn('Referrals table not available or query failed:', err);
+      }
+
+      // Get rewards (if table present)
+      let rewards: any[] = [];
+      let rewardStats = {
+        totalRewards: 0,
+        unusedRewards: 0
+      };
+
+      try {
+        const { data: rewardsData, error: rewardsError } = await supabaseAdmin
+          .from('referral_rewards')
+          .select('*')
+          .eq('user_id', internalUserId);
+
+        if (!rewardsError && rewardsData) {
+          rewards = rewardsData.map((reward: any) => ({
+            id: reward.id,
+            type: reward.reward_type || 'discount',
+            value: reward.reward_value || 0,
+            expiresAt: reward.expires_at,
+            createdAt: reward.created_at,
+            isUsed: !!reward.is_used,
+            usedAt: reward.used_at || null
+          }));
+
+          rewardStats.totalRewards = rewardsData.length;
+          rewardStats.unusedRewards = rewardsData.filter((r: any) => !r.is_used && (!r.expires_at || new Date(r.expires_at) > new Date())).length;
+        }
+      } catch (err) {
+        console.warn('Referral rewards table not available or query failed:', err);
+      }
+
+      // Return consolidated response
+      return NextResponse.json({
+        invitationCode: {
+          code: invitationCode.code,
+          currentUses: invitationCode.current_uses || 0,
+          maxUses: invitationCode.max_uses,
+          isActive: invitationCode.is_active,
+          createdAt: invitationCode.created_at,
+          expiresAt: invitationCode.expires_at || null
+        },
+        statistics: {
+          totalReferrals: referralStats.totalReferrals,
+          completedReferrals: referralStats.completedReferrals,
+          pendingReferrals: referralStats.pendingReferrals,
+          totalRewards: rewardStats.totalRewards,
+          unusedRewards: rewardStats.unusedRewards
+        },
+        referrals,
+        rewards
+      });
+    } catch (err: any) {
+      // Generic fallback if invitation_codes table doesn't exist (safety)
+      if (err?.code === 'PGRST116' || err?.message?.includes('relation') || err?.message?.includes('does not exist')) {
+        return NextResponse.json({
+          message: 'Invitation system coming soon',
+          invitationCode: null,
+          statistics: {
+            totalReferrals: 0,
+            completedReferrals: 0,
+            pendingReferrals: 0,
+            totalRewards: 0,
+            unusedRewards: 0
+          },
+          referrals: [],
+          rewards: []
+        });
+      }
+      console.error('Unhandled error fetching invitation stats:', err);
+      return NextResponse.json({ error: 'Failed to fetch invitation statistics' }, { status: 500 });
     }
-    return NextResponse.json({ error: 'Failed to create package' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error in GET /api/invitation/stats:', error);
+    return NextResponse.json({ error: 'Failed to fetch invitation statistics' }, { status: 500 });
   }
 }
 
-export const GET = withCentralizedStateManagement(handlePackagesGetRequest, '/api/packages', {
+export const GET = withCentralizedStateManagement(handleInvitationStatsRequest, '/api/invitation/stats', {
   priority: 'medium',
   maxRetries: 2,
-  requireAuth: false,
-});
-
-export const POST = withCentralizedStateManagement(handlePackagesPostRequest, '/api/packages', {
-  priority: 'medium',
-  maxRetries: 1,
-  requireAuth: true,
+  requireAuth: true
 });

@@ -100,14 +100,6 @@ export default async function Home() {
         getContentValue(content, 'instructor_feature_4', 'Keys2drive accredited'),
     ];
 
-    // CTA content
-    const ctaTitle = getContentValue(content, 'cta_title', 'Ready to Start Your Driving Journey?');
-    const ctaSubtitle = getContentValue(content, 'cta_subtitle', "Book your first lesson today and take the first step towards getting your license with Brisbane's most trusted driving instructor.");
-    const ctaPhoneText = getContentValue(content, 'cta_phone_text', 'Call us at');
-    const ctaPhoneNumber = getContentValue(content, 'cta_phone_number', '0400 000 000');
-    const ctaEmailText = getContentValue(content, 'cta_email_text', 'Email us at');
-    const ctaEmailAddress = getContentValue(content, 'cta_email_address', 'info@brisbanedrivingschool.com');
-
     return (
         <>
             <OrganizationSchema />

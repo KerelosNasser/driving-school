@@ -65,10 +65,9 @@ export default function ServiceCenterPage() {
       message: errorMessage,
       isInternal,
       firstOccurrence: error?.isInternal && isInternal ? error.firstOccurrence : now,
-      suppressUntil: isInternal ? now + 300000 : undefined // Suppress for 5 minutes
+      suppressUntil: isInternal ? (now + 300000) as number : null // Explicitly type as number when suppressing
     });
   }, [error]);
-
   // Fetch user's quota information with improved error handling
   const fetchQuota = useCallback(async (isRetry: boolean = false) => {
     if (!user) return;
@@ -140,7 +139,7 @@ export default function ServiceCenterPage() {
   // Show loading state while user data is loading
   if (!isUserLoaded) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-yellow-900 flex items-center justify-center">
+      <div className="min-h-screen bg-yellow-50 flex items-center justify-center">
         <div className="flex items-center space-x-2">
           <Loader2 className="h-6 w-6 animate-spin" />
           <span>Loading...</span>
@@ -152,7 +151,7 @@ export default function ServiceCenterPage() {
   // Show sign-in prompt if user is not authenticated
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-yellow-900-100 flex items-center justify-center">
+      <div className="min-h-screen bg-yellow-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">Service Center</CardTitle>
@@ -174,7 +173,7 @@ export default function ServiceCenterPage() {
 
   return (
     <Providers>
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-yellow-900">
+      <div className="min-h-screen bg-yellow-50">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <motion.div
@@ -198,7 +197,7 @@ export default function ServiceCenterPage() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mb-8"
         >
-          <Card className="bg-gradient-to-r from-yellow-600 to-yellow-900 text-white m-12">
+          <Card className="bg-yellow-800 text-white m-12">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Clock className="h-6 w-6" />
