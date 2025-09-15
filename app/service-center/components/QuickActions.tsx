@@ -1,16 +1,15 @@
 'use client';
 
-import { Calendar, Plus } from 'lucide-react';
+import { Plus, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 interface QuickActionsProps {
-  onToggleBookingForm: () => void;
-  showBookingForm: boolean;
+  onScrollToBooking?: () => void;
 }
 
-export default function QuickActions({ onToggleBookingForm, showBookingForm }: QuickActionsProps) {
+export default function QuickActions({ onScrollToBooking }: QuickActionsProps) {
   const router = useRouter();
   
   return (
@@ -18,7 +17,7 @@ export default function QuickActions({ onToggleBookingForm, showBookingForm }: Q
       <CardHeader>
         <CardTitle>Quick Actions</CardTitle>
         <CardDescription>
-          Book a lesson or purchase more hours
+          Access booking and package management
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -26,12 +25,22 @@ export default function QuickActions({ onToggleBookingForm, showBookingForm }: Q
           <Button 
             variant="outline" 
             className="h-auto py-4 flex flex-col items-center justify-center gap-2"
-            onClick={onToggleBookingForm}
+            onClick={() => {
+              if (onScrollToBooking) {
+                onScrollToBooking();
+              } else {
+                // Scroll to booking section
+                const bookingSection = document.querySelector('[data-booking-section]');
+                if (bookingSection) {
+                  bookingSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }
+            }}
           >
             <Calendar className="h-6 w-6" />
             <div className="text-center">
-              <div className="font-medium">Book a Lesson</div>
-              <div className="text-xs text-gray-500">Schedule your next driving lesson</div>
+              <div className="font-medium">Book via Calendar</div>
+              <div className="text-xs text-gray-500">Use Google Calendar integration</div>
             </div>
           </Button>
           

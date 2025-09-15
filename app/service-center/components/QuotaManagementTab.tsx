@@ -1,9 +1,59 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Calendar, CheckCircle, ArrowRight } from 'lucide-react';
+import GoogleCalendarIntegration from './GoogleCalendarIntegration';
+import QuickActions from './QuickActions';
+import { format } from 'date-fns';
+
+// Error Alert Component
+const ErrorAlert = ({ message }: { message: string | null }) => {
+  if (!message) return null;
+  return (
+    <Alert variant="destructive">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
+  );
+};
+
+// Success Alert Component
+const SuccessAlert = ({ message }: { message: string | null }) => {
+  if (!message) return null;
+  return (
+    <Alert className="border-green-200 bg-green-50">
+      <AlertDescription className="text-green-800">{message}</AlertDescription>
+    </Alert>
+  );
+};
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 interface QuotaManagementTabProps {
   userId: string;
   onQuotaUpdate: () => void;
@@ -25,7 +75,6 @@ export default function QuotaManagementTab({ userId, onQuotaUpdate }: QuotaManag
   const [existingBookings, setExistingBookings] = useState<ExistingBooking[]>([]);
   
   // Booking form state
-  const [showBookingForm, setShowBookingForm] = useState<boolean>(false);
   
   // Fetch user quota
   const { data: quota } = useQuery({
@@ -80,7 +129,7 @@ export default function QuotaManagementTab({ userId, onQuotaUpdate }: QuotaManag
   });
 
   // Use React Query for user data fetching
-  const { data: userData } = useQuery({
+  useQuery({
     queryKey: ['userData'],
     queryFn: async () => {
       try {
@@ -111,51 +160,14 @@ export default function QuotaManagementTab({ userId, onQuotaUpdate }: QuotaManag
     onQuotaUpdate();
   };
   
-  // Handle booking success
-  const handleBookingSuccess = (message: string) => {
-    setSuccess(message);
-    
-    // Refresh quota
-    refreshQuotaData();
-    onQuotaUpdate();
-  };
-  
-  // Handle errors from child components
-  const handleError = (message: string) => {
-    setError(message);
-  };
-  
-  // Handle success messages from child components
-  const handleSuccess = (message: string) => {
-    setSuccess(message);
-  };
-  
-  // Reset all form states
-  const resetState = () => {
-    setError(null);
-    setSuccess(null);
-  };
-
-  // Handle package purchase success
-  const handlePackagePurchaseSuccess = (message: string) => {
-    setSuccess(message);
-    refreshQuotaData();
-    onQuotaUpdate();
-  };
-  
   /**
    * Helper functions
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleApiError = (error: any): string => {
     console.error('API Error:', error);
     if (typeof error === 'string') return error;
     return error?.message || 'An unexpected error occurred';
-  };
-
-  const handleCalendarSync = () => {
-    refreshQuotaData();
-    onQuotaUpdate();
-    window.dispatchEvent(new CustomEvent('refreshCalendar'));
   };
 
   /**
@@ -170,45 +182,110 @@ export default function QuotaManagementTab({ userId, onQuotaUpdate }: QuotaManag
       <SuccessAlert message={success} />
 
       {/* Quick Actions */}
-      <QuickActions 
-        onBookLesson={() => setShowBookingForm(!showBookingForm)} 
-        onPurchaseHours={() => router.push('/packages')} 
-      />
+      <QuickActions onScrollToBooking={() => {
+        const bookingSection = document.querySelector('[data-booking-section]');
+        if (bookingSection) {
+          bookingSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }} />
 
-      {/* Booking Form */}
-      {showBookingForm && (
-        <BookingForm
-          quota={quota}
-          onQuotaUpdate={handleQuotaUpdate}
-          onSuccess={(message) => {
-            setSuccess(message);
-            setShowBookingForm(false);
-          }}
-          onError={(message) => setError(message)}
-          existingBookings={existingBookings}
-          userId={userId}
-        />
-      )}
+      {/* Google Calendar Booking */}
+      <Card data-booking-section>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Calendar className="h-5 w-5" />
+            <span>Book Your Lesson</span>
+          </CardTitle>
+          <CardDescription>
+            Use Google Calendar integration to schedule your driving lessons
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+              <span className="text-sm font-medium">Available Hours:</span>
+              <Badge variant="secondary" className="text-lg font-bold">
+                {quota?.remaining_hours || 0}
+              </Badge>
+            </div>
+            
+            {/* Sync Status */}
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">
+                    Synchronized with Packages Page
+                  </span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    handleQuotaUpdate();
+                    window.dispatchEvent(new CustomEvent('refreshCalendar'));
+                  }}
+                >
+                  <ArrowRight className="h-3 w-3 mr-1" />
+                  Sync Now
+                </Button>
+              </div>
+              <p className="text-xs text-blue-600 mt-1">
+                Bookings made here will automatically update your quota and sync with the packages page
+              </p>
+            </div>
 
-      {/* Calendar Integration */}
-      <CalendarIntegrationCard 
-        onSuccess={handleCalendarSync} 
-        onError={handleApiError} 
-      />
+            <GoogleCalendarIntegration 
+              onBookingComplete={(bookingData) => {
+                setSuccess(`Lesson booked successfully via Google Calendar for ${format(new Date(bookingData.start), 'MMM dd, yyyy at HH:mm')}`);
+                handleQuotaUpdate();
+                window.dispatchEvent(new CustomEvent('quotaUpdated', { 
+                  detail: { type: 'booking', bookingData } 
+                }));
+              }}
+              onError={(error) => setError(error)}
+              userQuota={quota}
+              existingBookings={existingBookings}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Package Display */}
-      <PackageDisplay 
-        userId={userId} 
-        quota={quota} 
-        onQuotaUpdate={handleQuotaUpdate} 
-        onSuccess={(message) => {
-          setSuccess(message);
-          setTimeout(() => setSuccess(null), 3000);
-          queryClient.invalidateQueries({ queryKey: ['bookings'] });
-        }}
-        onError={(message) => setError(message)}
-        onViewAllPackages={() => router.push('/packages')}
-      />
+      {/* Quota Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Quota</CardTitle>
+          <CardDescription>
+            Current lesson hours and package information
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {quota?.remaining_hours || 0}
+              </div>
+              <div className="text-sm text-green-700">Hours Remaining</div>
+            </div>
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">
+                {quota?.total_hours || 0}
+              </div>
+              <div className="text-sm text-blue-700">Total Hours</div>
+            </div>
+          </div>
+          
+          <div className="mt-4 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/packages')}
+              className="w-full"
+            >
+              View All Packages
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       </div>
     </ErrorBoundary>
   );

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
-import { rateLimit } from '@/lib/rate-limit';
+import { withCentralizedStateManagement } from '@/lib/api-middleware';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -9,11 +9,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Rate limiting configuration
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 500,
-});
+// Centralized state management replaces individual rate limiting
 
 interface ApplyRewardRequest {
   rewardId: string;
@@ -23,32 +19,12 @@ interface ApplyRewardRequest {
 }
 
 // Get client IP address
-function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
-  const cfConnectingIP = request.headers.get('cf-connecting-ip');
-  
-  if (cfConnectingIP) return cfConnectingIP;
-  if (realIP) return realIP;
-  if (forwarded) return forwarded.split(',')[0].trim();
-  
-  return '127.0.0.1';
-}
 
-export async function POST(request: NextRequest) {
+async function handleRewardsApplyPostRequest(request: NextRequest) {
   try {
-    // Rate limiting
-    const identifier = getClientIP(request);
-    const { success } = await limiter.check(request, 10, identifier); // 10 requests per minute per IP
-    if (!success) {
-      return NextResponse.json(
-        { message: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-    }
 
     // Check authentication
-    const { userId: clerkUserId } = auth();
+    const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
       return NextResponse.json(
         { message: 'Unauthorized' },
@@ -218,10 +194,10 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to validate reward before application
-export async function GET(request: NextRequest) {
+async function handleRewardsApplyGetRequest(request: NextRequest) {
   try {
     // Check authentication
-    const { userId: clerkUserId } = auth();
+    const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
       return NextResponse.json(
         { message: 'Unauthorized' },
@@ -328,3 +304,15 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const POST = withCentralizedStateManagement(handleRewardsApplyPostRequest, '/api/rewards/apply', {
+  priority: 'high',
+  maxRetries: 2,
+  requireAuth: true
+});
+
+export const GET = withCentralizedStateManagement(handleRewardsApplyGetRequest, '/api/rewards/apply', {
+  priority: 'medium',
+  maxRetries: 2,
+  requireAuth: true
+});

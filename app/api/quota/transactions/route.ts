@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { rateLimit } from '@/lib/rate-limit';
+import { withCentralizedStateManagement } from '@/lib/api-middleware';
 import { supabaseAdmin } from '@/lib/api/utils';
 
-// Rate limiting
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 500,
-});
+// Centralized state management replaces individual rate limiting
 
 async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
   const { data: existingByClerk } = await supabaseAdmin
@@ -84,11 +80,8 @@ async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
 }
 
 // GET - Fetch user's quota transaction history
-export async function GET(request: NextRequest) {
+async function handleQuotaTransactionsRequest(request: NextRequest) {
   try {
-    // Apply rate limiting
-    await limiter.check(request, 10, 'CACHE_TOKEN');
-
     // Get authenticated user
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
@@ -168,3 +161,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withCentralizedStateManagement(handleQuotaTransactionsRequest, '/api/quota/transactions', {
+  priority: 'medium',
+  maxRetries: 2,
+  requireAuth: true
+});

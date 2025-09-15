@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { supabaseAdmin } from '@/lib/api/utils';
-import { rateLimit } from '@/lib/rate-limit';
+import { withCentralizedStateManagement } from '@/lib/api-middleware';
 
 // Rate limiting
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 500,
-});
 
 async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
   // Try to find by clerk_id
-  const { data: existing, error: findError } = await supabaseAdmin
+  const { data: existing } = await supabaseAdmin
     .from('users')
     .select('id')
     .eq('clerk_id', clerkUserId)
@@ -39,11 +35,8 @@ async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
 }
 
 // GET - Fetch user profile and statistics
-export async function GET(request: NextRequest) {
+async function handleUserRequest(_request: NextRequest) {
   try {
-    // Apply rate limiting
-    await limiter.check(request, 10, 'CACHE_TOKEN');
-
     // Get authenticated user (Clerk)
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
@@ -66,21 +59,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's quota information
-    const { data: quota, error: quotaError } = await supabaseAdmin
+    const { data: quota } = await supabaseAdmin
       .from('user_quotas')
       .select('*')
       .eq('user_id', supabaseUserId)
       .single();
 
     // Get user's bookings statistics
-    const { data: bookings, error: bookingsError } = await supabaseAdmin
+    const { data: bookings } = await supabaseAdmin
       .from('bookings')
       .select('id, date, time, status, hours, instructor_name, pickup_location')
       .eq('user_id', supabaseUserId)
       .order('date', { ascending: false });
 
     // Get user's packages
-    const { data: packages, error: packagesError } = await supabaseAdmin
+    const { data: packages } = await supabaseAdmin
       .from('quota_transactions')
       .select(`
         id,
@@ -175,3 +168,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withCentralizedStateManagement(handleUserRequest, '/api/user', {
+  priority: 'high',
+  maxRetries: 2,
+  requireAuth: true
+});

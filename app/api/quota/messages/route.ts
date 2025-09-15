@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { rateLimit } from '@/lib/rate-limit';
+import { withCentralizedStateManagement } from '@/lib/api-middleware';
 import { Resend } from 'resend';
 import { supabaseAdmin } from '@/lib/api/utils';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Rate limiting
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 500,
-});
+// Centralized state management replaces individual rate limiting
 
 async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
   const { data: existingByClerk } = await supabaseAdmin
@@ -91,10 +87,8 @@ async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
 }
 
 // GET - Fetch user's messages with instructors
-export async function GET(request: NextRequest) {
+async function handleQuotaMessagesGetRequest(request: NextRequest) {
   try {
-    // Apply rate limiting
-    await limiter.check(request, 10, 'CACHE_TOKEN');
 
     // Get authenticated user
     const { userId: clerkUserId } = await auth();
@@ -154,10 +148,8 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Send message to instructor
-export async function POST(request: NextRequest) {
+async function handleQuotaMessagesPostRequest(request: NextRequest) {
   try {
-    // Apply rate limiting (stricter for sending messages)
-    await limiter.check(request, 3, 'CACHE_TOKEN');
 
     // Get authenticated user
     const { userId: clerkUserId } = await auth();
@@ -167,7 +159,15 @@ export async function POST(request: NextRequest) {
 
     const supabaseUserId = await getOrCreateSupabaseUserId(clerkUserId);
 
-    const { subject, message, instructor_email } = await request.json();
+    // Check if request body is empty before parsing
+    let requestBody;
+    try {
+      requestBody = await request.json();
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid or empty request body' }, { status: 400 });
+    }
+    
+    const { subject, message, instructor_email } = requestBody;
 
     if (!subject || !message) {
       return NextResponse.json({ error: 'Subject and message are required' }, { status: 400 });
@@ -266,3 +266,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withCentralizedStateManagement(handleQuotaMessagesGetRequest, '/api/quota/messages', {
+  priority: 'medium',
+  maxRetries: 2,
+  requireAuth: true
+});
+
+export const POST = withCentralizedStateManagement(handleQuotaMessagesPostRequest, '/api/quota/messages', {
+  priority: 'high',
+  maxRetries: 1,
+  requireAuth: true
+});

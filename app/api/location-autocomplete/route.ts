@@ -1,37 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rateLimit } from '@/lib/rate-limit';
+import { withCentralizedStateManagement } from '@/lib/api-middleware';
 
-// Rate limiting configuration for location autocomplete
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 500, // Allow 500 unique tokens per interval
-});
+// Centralized state management replaces individual rate limiting
 
 // Get client IP address
-function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
-  const cfConnectingIP = request.headers.get('cf-connecting-ip');
-  
-  if (cfConnectingIP) return cfConnectingIP;
-  if (realIP) return realIP;
-  if (forwarded) return forwarded.split(',')[0].trim();
-  
-  return '127.0.0.1'; // Fallback
-}
 
-export async function GET(request: NextRequest) {
+async function handleLocationAutocompleteRequest(request: NextRequest) {
   try {
-    // Rate limiting - 30 requests per minute per IP
-    const identifier = getClientIP(request);
-    try {
-      await limiter.check(request, 30, identifier,);
-    } catch {
-      return NextResponse.json(
-        { message: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-    }
     // Get query parameter
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query');
@@ -145,7 +120,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Handle OPTIONS request for CORS
-export async function OPTIONS(request: NextRequest) {
+async function handleLocationAutocompleteOptionsRequest(_request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: {
@@ -155,3 +130,15 @@ export async function OPTIONS(request: NextRequest) {
     },
   });
 }
+
+export const GET = withCentralizedStateManagement(handleLocationAutocompleteRequest, '/api/location-autocomplete', {
+  priority: 'high',
+  maxRetries: 1,
+  requireAuth: false
+});
+
+export const OPTIONS = withCentralizedStateManagement(handleLocationAutocompleteOptionsRequest, '/api/location-autocomplete', {
+  priority: 'low',
+  maxRetries: 0,
+  requireAuth: false
+});

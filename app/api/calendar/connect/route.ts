@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { withCentralizedStateManagement } from '@/lib/api-middleware';
 
-export async function POST(request: NextRequest) {
+async function handleCalendarConnectRequest(_request: NextRequest) {
   try {
     // Check authentication
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -47,3 +48,9 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withCentralizedStateManagement(handleCalendarConnectRequest, '/api/calendar/connect', {
+  priority: 'high',
+  maxRetries: 1,
+  requireAuth: true
+});

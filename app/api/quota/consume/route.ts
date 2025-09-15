@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { rateLimit } from '@/lib/rate-limit';
+import { withCentralizedStateManagement } from '@/lib/api-middleware';
 import { supabaseAdmin } from '@/lib/api/utils';
 
-// Rate limiting
-const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minute
-  uniqueTokenPerInterval: 500,
-});
+// Centralized state management replaces individual rate limiting
 
 async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
   const { data: existingByClerk } = await supabaseAdmin
@@ -84,10 +80,8 @@ async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
 }
 
 // POST - Consume hours from user's quota (for booking lessons)
-export async function POST(request: NextRequest) {
+async function handleQuotaConsumeRequest(request: NextRequest) {
   try {
-    // Apply rate limiting
-    await limiter.check(request, 5, 'CACHE_TOKEN');
 
     // Get authenticated user
     const { userId: clerkUserId } = await auth();
@@ -98,7 +92,15 @@ export async function POST(request: NextRequest) {
     // Get or create Supabase user ID
     const supabaseUserId = await getOrCreateSupabaseUserId(clerkUserId);
 
-    const { hours, booking_id, description } = await request.json();
+    // Check if request body is empty before parsing
+    let requestBody;
+    try {
+      requestBody = await request.json();
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid or empty request body' }, { status: 400 });
+    }
+    
+    const { hours, booking_id, description } = requestBody;
 
     if (!hours || hours <= 0) {
       return NextResponse.json({ error: 'Invalid hours amount' }, { status: 400 });
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use the update_user_quota function to consume hours
-    const { data, error } = await supabase.rpc('update_user_quota', {
+    const { error } = await supabase.rpc('update_user_quota', {
       p_user_id: supabaseUserId,
       p_hours_change: -hours, // Negative to consume hours
       p_transaction_type: 'booking',
@@ -177,3 +179,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withCentralizedStateManagement(handleQuotaConsumeRequest, '/api/quota/consume', {
+  priority: 'high',
+  maxRetries: 1,
+  requireAuth: true
+});

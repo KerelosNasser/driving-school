@@ -15,6 +15,7 @@ import NegotiationTab from './components/NegotiationTab';
 import TransactionHistoryTab from './components/TransactionHistoryTab';
 import UserDataDisplay from './components/UserDataDisplay';
 import InvitationDashboard from '@/components/InvitationDashboard';
+import Providers from './providers';
 
 interface UserQuota {
   user_id: string;
@@ -172,22 +173,23 @@ export default function ServiceCenterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-yellow-900-100">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-8"
-        >
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Service Center
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Manage your driving lesson quota, communicate with instructors, and track your learning progress.
-          </p>
-        </motion.div>
+    <Providers>
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-yellow-900">
+        <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-8"
+          >
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Service Center
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Manage your driving lesson quota, communicate with instructors, and track your learning progress.
+            </p>
+          </motion.div>
 
         {/* Quota Overview Card */}
         <motion.div
@@ -349,7 +351,8 @@ export default function ServiceCenterPage() {
             </TabsContent>
           </Tabs>
         </motion.div>
+        </div>
       </div>
-    </div>
+    </Providers>
   );
 }

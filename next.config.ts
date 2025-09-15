@@ -2,12 +2,25 @@ import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Remove these in production - they hide important errors
+  // Enable proper error checking for production builds
   typescript: {
-    ignoreBuildErrors: true, // Changed from true
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true, // Changed from true
+    ignoreDuringBuilds: false,
+  },
+  
+  // Enable experimental features for better performance
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
   },
   
   // Enhanced image optimization

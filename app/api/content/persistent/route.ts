@@ -2,46 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { PersistentContentLoader } from '@/lib/contentLoader';
+import { withCentralizedStateManagement } from '@/lib/api-middleware';
 
 const contentLoader = PersistentContentLoader.getInstance();
 
-// Rate limiting for API calls
-const rateLimitMap = new Map<string, { count: number; timestamp: number }>();
-const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const RATE_LIMIT_MAX = 30; // 30 requests per minute
+// Centralized state management replaces individual rate limiting
 
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const userLimit = rateLimitMap.get(userId);
-
-  if (!userLimit || now - userLimit.timestamp > RATE_LIMIT_WINDOW) {
-    rateLimitMap.set(userId, { count: 1, timestamp: now });
-    return true;
-  }
-
-  if (userLimit.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
-
-  userLimit.count++;
-  return true;
-}
-
-async function isUserAdmin(userId: string): Promise<boolean> {
+async function isUserAdmin(_userId: string): Promise<boolean> {
   // Simplified admin check - in production, check against proper user roles
   return process.env.NODE_ENV === 'development';
 }
 
 // GET - Load page content with caching
-export async function GET(request: NextRequest) {
+async function handlePersistentContentGetRequest(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!checkRateLimit(userId)) {
-      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -74,15 +51,11 @@ export async function GET(request: NextRequest) {
 }
 
 // PUT - Save content with conflict resolution
-export async function PUT(request: NextRequest) {
+async function handlePersistentContentPutRequest(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!checkRateLimit(userId)) {
-      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
     const isAdmin = await isUserAdmin(userId);
@@ -129,3 +102,16 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+// Export handlers with centralized state management
+export const GET = withCentralizedStateManagement(handlePersistentContentGetRequest, '/api/content/persistent', {
+  priority: 'medium',
+  maxRetries: 2,
+  requireAuth: true
+});
+
+export const PUT = withCentralizedStateManagement(handlePersistentContentPutRequest, '/api/content/persistent', {
+  priority: 'high',
+  maxRetries: 1,
+  requireAuth: true
+});

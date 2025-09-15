@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { withCentralizedStateManagement } from '@/lib/api-middleware';
 
-export async function GET(request: NextRequest) {
+async function handleCalendarStatusRequest(request: NextRequest) {
   try {
     // Check authentication
     const { userId } = auth();
@@ -26,3 +27,9 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withCentralizedStateManagement(handleCalendarStatusRequest, '/api/calendar/status', {
+  priority: 'medium',
+  maxRetries: 2,
+  requireAuth: true
+});
