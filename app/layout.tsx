@@ -6,7 +6,6 @@ import "./globals.css";
 import { WebVitals } from "@/components/seo/WebVitals";
 import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
 import PostSignupWrapper from "@/components/PostSignupWrapper";
-
 import { Suspense } from 'react';
 import { EditModeProvider } from "@/contexts/editModeContext";
 import { GlobalContentProvider } from "@/contexts/globalContentContext";
@@ -96,41 +95,47 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({
-                                     children,
-                                   }: Readonly<{
+                             children,
+                           }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  
+  if (!publishableKey) {
+    throw new Error('Missing Clerk Publishable Key');
+  }
+  
   return (
-      <ClerkProvider 
-        publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-        signInUrl="/sign-in"
-        signUpUrl="/sign-up"
-        afterSignInUrl="/"
-        afterSignUpUrl="/"
+      <ClerkProvider
+          publishableKey={publishableKey}
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+          afterSignInUrl="/"
+          afterSignUpUrl="/"
       >
         <html lang="en" suppressHydrationWarning>
         <head>
           {/* Critical resource hints */}
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link rel="preconnect" href="https://images.unsplash.com" />
-          <link rel="preconnect" href="https://api.stripe.com" />
+          <link rel="preconnect" href="https://fonts.googleapis.com"/>
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous"/>
+          <link rel="preconnect" href="https://images.unsplash.com"/>
+          <link rel="preconnect" href="https://api.stripe.com"/>
 
           {/* DNS prefetch for external resources */}
-          <link rel="dns-prefetch" href="https://widget.chatbot.com" />
-          <link rel="dns-prefetch" href="https://clerk.accounts.dev" />
+          <link rel="dns-prefetch" href="https://widget.chatbot.com"/>
+          <link rel="dns-prefetch" href="https://clerk.accounts.dev"/>
 
           {/* Favicon and app icons */}
-          <link rel="icon" href="/favicon.ico" sizes="any" />
-          <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-          <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+          <link rel="icon" href="/favicon.ico" sizes="any"/>
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+          <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 
           {/* Theme color for mobile browsers */}
-          <meta name="theme-color" content="#EDE513FF" />
-          <meta name="msapplication-TileColor" content="#EDE513FF" />
+          <meta name="theme-color" content="#EDE513FF"/>
+          <meta name="msapplication-TileColor" content="#EDE513FF"/>
 
           {/* Viewport optimization */}
-          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
         </head>
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider>
@@ -149,10 +154,10 @@ export default function RootLayout({
 
         {/* Performance monitoring */}
         <Suspense fallback={null}>
-          <WebVitals />
+          <WebVitals/>
         </Suspense>
 
-        <Toaster richColors position="top-right" />
+        <Toaster richColors position="top-right"/>
 
         {/* Optimized chatbot loading */}
         {process.env.NEXT_PUBLIC_CHATBOT_WIDGET_ID && (

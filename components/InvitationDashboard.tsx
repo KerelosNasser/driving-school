@@ -14,8 +14,9 @@ import {
   Percent, 
   Share2, 
   TrendingUp,
-  ExternalLink,
-  RefreshCw 
+  Loader2,
+  AlertCircle,
+  Target
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -52,6 +53,7 @@ interface InvitationStats {
     expiresAt: string;
     createdAt: string;
   }>;
+  isBasicMode?: boolean;
 }
 
 export default function InvitationDashboard() {
@@ -59,17 +61,16 @@ export default function InvitationDashboard() {
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Fetch invitation stats with fallback
   useEffect(() => {
     async function fetchStats() {
       try {
-        // Try to get user's invitation code first
         const codeResponse = await fetch('/api/invitation/generate');
         const codeData = await codeResponse.json();
         
         if (codeResponse.ok && codeData.invitationCode) {
-          // Create basic stats structure with the encrypted code
           const basicStats = {
             invitationCode: {
               code: codeData.invitationCode,
@@ -90,7 +91,6 @@ export default function InvitationDashboard() {
             isBasicMode: true
           };
           
-          // Try to get full stats from the invitation system
           try {
             const response = await fetch('/api/invitation/stats');
             if (response.ok) {
@@ -102,10 +102,8 @@ export default function InvitationDashboard() {
             console.info('Full invitation stats not available, using basic mode');
           }
           
-          // Use basic stats
           setStats(basicStats);
         } else {
-          // No invitation code available
           setStats(null);
         }
       } catch (err) {
@@ -151,7 +149,6 @@ export default function InvitationDashboard() {
         // User cancelled sharing
       }
     } else {
-      // Fallback: copy to clipboard
       try {
         await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
         toast.success('Invitation link copied to clipboard!');
@@ -189,16 +186,10 @@ export default function InvitationDashboard() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded"></div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="flex items-center justify-center py-6">
+        <div className="flex items-center space-x-3">
+          <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+          <span className="text-sm text-gray-600">Loading referral data...</span>
         </div>
       </div>
     );
@@ -206,257 +197,201 @@ export default function InvitationDashboard() {
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <div className="text-red-600 mb-2">
-            <Gift className="h-8 w-8 mx-auto mb-2" />
-            <p>Failed to load invitation dashboard</p>
-            <p className="text-sm text-gray-600 mt-1">{error}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-6">
+        <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Referrals</h3>
+        <p className="text-sm text-gray-600 mb-4">{error}</p>
+        <Button onClick={() => window.location.reload()} size="sm">
+          Try Again
+        </Button>
+      </div>
     );
   }
 
   if (!stats) {
     return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <Gift className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Referral Program</h3>
-          <p className="text-gray-600 mb-4">Getting your invitation code ready...</p>
-          <Button 
-            onClick={() => window.location.reload()}
-            variant="outline"
-            className="mt-2"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <div className="space-y-2 mt-4">
-            <p className="text-sm text-gray-500">Coming soon:</p>
-            <div className="text-sm text-gray-600 space-y-1">
-              <div className="flex items-center justify-center space-x-2">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                <span>Encrypted invitation codes</span>
-              </div>
-              <div className="flex items-center justify-center space-x-2">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                <span>Earn 30% discount after 1 referral</span>
-              </div>
-              <div className="flex items-center justify-center space-x-2">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                <span>Get 2 free hours after 3 referrals</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-6">
+        <Gift className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Setting Up Referrals</h3>
+        <p className="text-sm text-gray-600">Getting your referral code ready...</p>
+      </div>
     );
   }
 
+  const progressPercentage = stats.statistics.completedReferrals >= 3 ? 100 :
+                            stats.statistics.completedReferrals >= 1 ? 66 :
+                            stats.statistics.completedReferrals > 0 ? 33 : 0;
+
   return (
-    <div className="space-y-6">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Referrals</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.statistics.completedReferrals}</p>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-full">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-4"
+    >
+      {/* Compact Stats Row */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-700 text-white p-3 rounded-lg text-center">
+          <div className="text-xl font-bold">{stats.statistics.completedReferrals}</div>
+          <div className="text-xs text-blue-100 flex items-center justify-center mt-1">
+            <Users className="h-3 w-3 mr-1" />
+            <span className="hidden sm:inline">Referrals</span>
+            <span className="sm:hidden">Refs</span>
+          </div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Rewards</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.statistics.unusedRewards}</p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-full">
-                  <Gift className="h-6 w-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <div className="bg-gradient-to-br from-emerald-500 to-green-700 text-white p-3 rounded-lg text-center">
+          <div className="text-xl font-bold">{stats.statistics.unusedRewards}</div>
+          <div className="text-xs text-emerald-100 flex items-center justify-center mt-1">
+            <Gift className="h-3 w-3 mr-1" />
+            <span className="hidden sm:inline">Rewards</span>
+            <span className="sm:hidden">Rews</span>
+          </div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Next Milestone</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.statistics.completedReferrals >= 3 ? '✓' : 
-                     stats.statistics.completedReferrals >= 1 ? '2 Hours' : '30% Off'}
-                  </p>
-                </div>
-                <div className="p-3 bg-purple-50 rounded-full">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <div className="bg-gradient-to-br from-purple-500 to-violet-700 text-white p-3 rounded-lg text-center">
+          <div className="text-lg font-bold">
+            {stats.statistics.completedReferrals >= 3 ? 'Done' : 
+             stats.statistics.completedReferrals >= 1 ? '2h' : '30%'}
+          </div>
+          <div className="text-xs text-purple-100 flex items-center justify-center mt-1">
+            <Target className="h-3 w-3 mr-1" />
+            <span className="hidden sm:inline">Next</span>
+            <span className="sm:hidden">Goal</span>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-500 to-red-600 text-white p-3 rounded-lg text-center">
+          <div className="text-xl font-bold">{progressPercentage}%</div>
+          <div className="text-xs text-orange-100 flex items-center justify-center mt-1">
+            <TrendingUp className="h-3 w-3 mr-1" />
+            <span className="hidden sm:inline">Progress</span>
+            <span className="sm:hidden">Prog</span>
+          </div>
+        </div>
       </div>
 
-      {/* Invitation Code Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+      {/* Compact Invitation Code Card */}
+      <Card className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white overflow-hidden">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center justify-between text-lg">
+            <div className="flex items-center gap-2">
               <Share2 className="h-5 w-5" />
-              Your Encrypted Invitation Code
+              <span>Your Code</span>
               {stats.isBasicMode && (
-                <Badge variant="secondary" className="text-xs ml-2">
-                  Basic Mode
+                <Badge variant="secondary" className="text-xs bg-white/20 text-white border-white/30">
+                  Basic
                 </Badge>
               )}
-            </CardTitle>
-            <CardDescription>
-              {stats.invitationCode.code.startsWith('DRV') ? (
-                'Share this secure, encrypted code with friends to earn rewards! Get a 30% discount after 1 referral, and 2 free hours after 3 referrals.'
-              ) : (
-                'Share this code with friends to earn rewards! Get a 30% discount after 1 referral, and 2 free hours after 3 referrals.'
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <code className="flex-1 px-4 py-3 bg-gray-50 border rounded-lg font-mono text-lg tracking-wider font-bold">
-                {stats.invitationCode.code}
-              </code>
-              <Button
-                variant="outline"
-                onClick={copyInvitationCode}
-                className="flex items-center gap-2"
-              >
-                {copiedCode ? (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4" />
-                    Copy
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={shareInvitationCode}
-                className="flex items-center gap-2"
-              >
-                <Share2 className="h-4 w-4" />
-                Share
-              </Button>
             </div>
+          </CardTitle>
+          <CardDescription className="text-indigo-200 text-sm">
+            Share to earn: 30% off (1 ref) • 2 free hours (3 refs)
+          </CardDescription>
+        </CardHeader>
 
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>Uses: {stats.invitationCode.currentUses} / {stats.invitationCode.maxUses || '∞'}</span>
-              <span>Created {formatDistanceToNow(new Date(stats.invitationCode.createdAt), { addSuffix: true })}</span>
+        <CardContent className="pt-0 space-y-3">
+          {/* Code Display */}
+          <div className="flex items-center gap-2">
+            <code className="flex-1 px-3 py-2 bg-white/20 backdrop-blur-sm rounded-lg font-mono text-sm font-bold text-center">
+              {stats.invitationCode.code}
+            </code>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyInvitationCode}
+              className="bg-white/10 border-white/30 text-white hover:bg-white/20 px-2"
+            >
+              {copiedCode ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            </Button>
+            <Button
+              size="sm"
+              onClick={shareInvitationCode}
+              className="bg-white/20 hover:bg-white/30 text-white px-2"
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span>Progress to next reward</span>
+              <span>
+                {stats.statistics.completedReferrals >= 3 ? 'Complete!' :
+                 stats.statistics.completedReferrals >= 1 ? `${stats.statistics.completedReferrals}/3` :
+                 `${stats.statistics.completedReferrals}/1`}
+              </span>
             </div>
-
-            {/* Progress towards next reward */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Progress to next reward</span>
-                <span>
-                  {stats.statistics.completedReferrals >= 3 ? 'All rewards unlocked!' :
-                   stats.statistics.completedReferrals >= 1 ? `${stats.statistics.completedReferrals}/3 for 2 free hours` :
-                   `${stats.statistics.completedReferrals}/1 for 30% discount`}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{
-                    width: stats.statistics.completedReferrals >= 3 ? '100%' :
-                           stats.statistics.completedReferrals >= 1 ? '66%' :
-                           `${(stats.statistics.completedReferrals / 1) * 33}%`
-                  }}
-                />
-              </div>
+            <div className="w-full bg-white/20 rounded-full h-2">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercentage}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="bg-gradient-to-r from-yellow-400 to-orange-500 h-2 rounded-full"
+              />
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+          </div>
 
-      {/* Detailed Tabs */}
-      <Tabs defaultValue="referrals" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="referrals">Referrals</TabsTrigger>
-          <TabsTrigger value="rewards">Rewards</TabsTrigger>
+          {/* Usage Stats */}
+          <div className="flex justify-between text-xs text-indigo-200">
+            <span>Uses: {stats.invitationCode.currentUses} / {stats.invitationCode.maxUses || '∞'}</span>
+            <span className="hidden sm:inline">
+              Created {formatDistanceToNow(new Date(stats.invitationCode.createdAt), { addSuffix: true })}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Compact Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
+        <TabsList className="grid w-full grid-cols-2 h-10">
+          <TabsTrigger value="overview" className="text-sm">
+            Referrals ({stats.referrals.length})
+          </TabsTrigger>
+          <TabsTrigger value="rewards" className="text-sm">
+            Rewards ({stats.rewards.length})
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="referrals">
+        <TabsContent value="overview">
           <Card>
-            <CardHeader>
-              <CardTitle>Your Referrals</CardTitle>
-              <CardDescription>
-                People who have signed up using your invitation code
-              </CardDescription>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600" />
+                Your Referrals
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {stats.referrals.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No referrals yet</p>
-                  <p className="text-sm mt-1">Share your invitation code to start earning rewards!</p>
+                <div className="text-center py-4 text-gray-500">
+                  <Users className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No referrals yet</p>
+                  <p className="text-xs mt-1">Share your code to start earning!</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {stats.referrals.map((referral, index) => (
-                    <motion.div
+                <div className="space-y-2">
+                  {stats.referrals.map((referral) => (
+                    <div
                       key={referral.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-50 rounded-full">
-                          <Users className="h-4 w-4 text-blue-600" />
+                        <div className="p-1 bg-blue-500 rounded-full">
+                          <Users className="h-3 w-3 text-white" />
                         </div>
                         <div>
-                          <p className="font-medium">{referral.referredUser.name}</p>
-                          <p className="text-sm text-gray-600">{referral.referredUser.email}</p>
+                          <p className="text-sm font-medium">{referral.referredUser.name}</p>
+                          <p className="text-xs text-gray-600 hidden sm:block">{referral.referredUser.email}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <Badge variant="secondary">Completed</Badge>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {format(new Date(referral.completedAt), 'MMM d, yyyy')}
+                        <Badge variant="secondary" className="text-xs mb-1">Complete</Badge>
+                        <p className="text-xs text-gray-500">
+                          {format(new Date(referral.completedAt), 'MMM d')}
                         </p>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -466,47 +401,44 @@ export default function InvitationDashboard() {
 
         <TabsContent value="rewards">
           <Card>
-            <CardHeader>
-              <CardTitle>Your Rewards</CardTitle>
-              <CardDescription>
-                Rewards you've earned from successful referrals
-              </CardDescription>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Gift className="h-4 w-4 text-emerald-600" />
+                Your Rewards
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {stats.rewards.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Gift className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No rewards yet</p>
-                  <p className="text-sm mt-1">Get your first reward after 1 successful referral!</p>
+                <div className="text-center py-4 text-gray-500">
+                  <Gift className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No rewards yet</p>
+                  <p className="text-xs mt-1">Get 30% off after 1 referral!</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {stats.rewards.map((reward, index) => {
+                <div className="space-y-2">
+                  {stats.rewards.map((reward) => {
                     const rewardDisplay = getRewardDisplay(reward);
                     return (
-                      <motion.div
+                      <div
                         key={reward.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className={`flex items-center justify-between p-4 rounded-lg border ${rewardDisplay.color}`}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${rewardDisplay.color}`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-full">
+                          <div className="p-1 rounded-full">
                             {rewardDisplay.icon}
                           </div>
                           <div>
-                            <p className="font-medium">{rewardDisplay.title}</p>
-                            <p className="text-sm opacity-80">{rewardDisplay.description}</p>
+                            <p className="text-sm font-medium">{rewardDisplay.title}</p>
+                            <p className="text-xs opacity-80">{rewardDisplay.description}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <Badge variant="outline" className="mb-1">Available</Badge>
+                          <Badge variant="outline" className="text-xs mb-1">Available</Badge>
                           <p className="text-xs opacity-70">
-                            Expires {format(new Date(reward.expiresAt), 'MMM d, yyyy')}
+                            Exp {format(new Date(reward.expiresAt), 'MMM d')}
                           </p>
                         </div>
-                      </motion.div>
+                      </div>
                     );
                   })}
                 </div>
@@ -515,6 +447,6 @@ export default function InvitationDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </motion.div>
   );
 }
