@@ -53,51 +53,46 @@ const FeatureItem = ({
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
       >
-        <Card className="h-full p-4 sm:p-6 shadow-md hover:shadow-lg transition-all duration-200 relative">
+        <Card className="h-full p-4 sm:hidden shadow-sm hover:shadow-md transition-all duration-200 relative border-l-4 border-l-blue-500">
           {/* Edit Mode Controls */}
-          <AnimatePresence>
-            {isEditMode && isHovered && (
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="absolute -top-2 -right-2 flex gap-1 z-10"
-                >
-                  <Button
-                      size="sm"
-                      variant="destructive"
-                      className="h-6 w-6 p-0 rounded-full"
-                      onClick={() => onDelete(index)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </motion.div>
-            )}
-          </AnimatePresence>
+          {isEditMode && isHovered && (
+            <Button
+                size="sm"
+                variant="destructive"
+                className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full z-10"
+                onClick={() => onDelete(index)}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
 
-          <div className="rounded-full bg-yellow-100 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center mb-3 sm:mb-4">
-            <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600" />
+          <div className="flex items-start space-x-3">
+            <div className="rounded-lg bg-blue-100 w-10 h-10 flex items-center justify-center flex-shrink-0">
+              <Icon className="h-5 w-5 text-blue-600" />
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <EditableText
+                  contentKey={`features_item_${index + 1}_title`}
+                  tagName="h3"
+                  className="text-base font-semibold text-gray-900 mb-2"
+                  placeholder="Enter feature title..."
+              >
+                {feature.title}
+              </EditableText>
+
+              <EditableText
+                  contentKey={`features_item_${index + 1}_description`}
+                  tagName="p"
+                  className="text-sm text-gray-600 leading-relaxed"
+                  placeholder="Enter feature description..."
+                  multiline={true}
+                  maxLength={150}
+              >
+                {feature.description}
+              </EditableText>
+            </div>
           </div>
-
-          <EditableText
-              contentKey={`features_item_${index + 1}_title`}
-              tagName="h3"
-              className="text-base sm:text-lg font-semibold text-gray-900 mb-2"
-              placeholder="Enter feature title..."
-          >
-            {feature.title}
-          </EditableText>
-
-          <EditableText
-              contentKey={`features_item_${index + 1}_description`}
-              tagName="p"
-              className="text-sm sm:text-base text-gray-600"
-              placeholder="Enter feature description..."
-              multiline={true}
-              maxLength={200}
-          >
-            {feature.description}
-          </EditableText>
         </Card>
       </motion.div>
   );

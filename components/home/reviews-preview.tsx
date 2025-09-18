@@ -51,6 +51,32 @@ export function ReviewsPreview() {
   const [reviews, setReviews] = useState<Review[]>(fallbackReviews);
   const [loading, setLoading] = useState(true);
 
+  // CSS for auto-scroll animation
+  const scrollStyle = `
+    @keyframes scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .animate-scroll {
+      animation: scroll 30s linear infinite;
+      will-change: transform;
+    }
+    .animate-scroll:hover {
+      animation-play-state: paused;
+    }
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+    .reviews-container {
+      overflow: hidden;
+      position: relative;
+    }
+  `;
+
   useEffect(() => {
     const fetchReviews = async () => {
       try {
@@ -82,23 +108,22 @@ export function ReviewsPreview() {
   }, []);
 
   return (
-    <section className="py-20 bg-gray-50">
+    <section className="py-12 sm:py-16 lg:py-20 bg-gray-50">
+      <style jsx>{scrollStyle}</style>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-              What Our Students Say
-            </h2>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Don&apos;t just take our word for it - hear from our satisfied students
-            </p>
-          </div>
+        <div className="text-center mb-12">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            Student Success Stories
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Real feedback from students who achieved their driving goals with us
+          </p>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl p-6 shadow-md animate-pulse">
+          <div className="flex space-x-6 overflow-x-auto pb-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex-shrink-0 w-80 bg-white rounded-lg p-6 shadow-sm animate-pulse">
                 <div className="flex items-center mb-4">
                   <div className="h-10 w-10 rounded-full bg-gray-200"></div>
                   <div className="ml-3 flex-1">
@@ -113,51 +138,74 @@ export function ReviewsPreview() {
                 <div className="space-y-2">
                   <div className="h-4 bg-gray-200 rounded"></div>
                   <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                  <div className="h-4 bg-gray-200 rounded w-4/6"></div>
                 </div>
-                <div className="h-3 bg-gray-200 rounded w-1/3 mt-4"></div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {reviews.map((review) => (
-              <div
-                key={review.id}
-                className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow relative"
-              >
-                <Quote className="absolute top-6 right-6 h-8 w-8 text-yellow-100" />
+          <div className="relative overflow-hidden reviews-container">
+            {/* Auto-scrolling reviews container */}
+            <div className="flex space-x-6 pb-4 scrollbar-hide animate-scroll">
+              {/* Duplicate reviews for seamless loop */}
+              {[...reviews, ...reviews].map((review, index) => (
+                <div
+                  key={`${review.id}-${index}`}
+                  className="flex-shrink-0 w-80 bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-yellow-500"
+                >
+                  <Quote className="h-6 w-6 text-yellow-500 mb-4" />
 
-                <div className="flex items-center mb-4">
-                  <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 font-bold">
-                    {review.user_name.charAt(0)}
-                  </div>
-                  <div className="ml-3">
-                    <div className="font-medium text-gray-900">{review.user_name}</div>
-                    <div className="flex mt-1">
-                      {renderStars(review.rating)}
+                  <div className="flex items-center mb-4">
+                    <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 font-bold text-sm">
+                      {review.user_name.charAt(0)}
+                    </div>
+                    <div className="ml-3">
+                      <div className="font-medium text-gray-900 text-sm">{review.user_name}</div>
+                      <div className="flex mt-1">
+                        {renderStars(review.rating)}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <p className="text-gray-700 line-clamp-4">
-                  {review.comment}
-                </p>
+                  <p className="text-gray-700 text-sm leading-relaxed line-clamp-4">
+                    {review.comment}
+                  </p>
 
-                <div className="text-sm text-gray-500 mt-4">
-                  {new Date(review.created_at).toLocaleDateString('en-AU', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
+                  <div className="text-xs text-gray-500 mt-4">
+                    {new Date(review.created_at).toLocaleDateString('en-AU', {
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            
+            {/* Gradient overlays for smooth edges */}
+            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-gray-50 via-gray-50/80 to-transparent pointer-events-none z-10"></div>
+            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-gray-50 via-gray-50/80 to-transparent pointer-events-none z-10"></div>
           </div>
         )}
 
-        <div className="text-center mt-12">
-          <Button variant="outline" size="lg" asChild>
+        {/* Trust Stats */}
+        <div className="mt-12 bg-white rounded-lg p-6 shadow-sm">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-yellow-600">4.9★</div>
+              <div className="text-sm text-gray-600">Average Rating</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-yellow-600">95%</div>
+              <div className="text-sm text-gray-600">Pass Rate</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-yellow-600">500+</div>
+              <div className="text-sm text-gray-600">Happy Students</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center mt-8">
+          <Button variant="outline" size="lg" asChild className="border-yellow-500 text-yellow-600 hover:bg-yellow-50">
             <Link href="/reviews">
               Read All Reviews
               <ArrowRight className="ml-2 h-4 w-4" />

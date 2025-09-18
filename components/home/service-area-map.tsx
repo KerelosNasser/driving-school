@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Plus, Edit, Trash2, Search } from 'lucide-react';
@@ -174,59 +175,33 @@ export function ServiceAreaMap() {
   return (
     <section className="py-12 sm:py-16 lg:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
+        <div className="text-center mb-8">
+          <EditableText
+            contentKey="service_areas_title"
+            tagName="h2"
+            className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4"
+            placeholder="Service Areas"
           >
-            <EditableText
-              contentKey="service_areas_title"
-              tagName="h2"
-              className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900"
-              placeholder="Service Areas"
-            >
-              Service Areas
-            </EditableText>
-            <EditableText
-              contentKey="service_areas_subtitle"
-              tagName="p"
-              className="mt-4 text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto px-4"
-              placeholder="Enter description..."
-              multiline={true}
-            >
-              We provide driving lessons throughout our service areas and surrounding suburbs
-            </EditableText>
-            {isEditMode && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4"
-              >
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
-                  <p className="text-sm text-blue-700">
-                    💡 <strong>Admin:</strong> Click on map or "Add Location" to manage service areas.
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </motion.div>
+            Where We Teach
+          </EditableText>
+          <EditableText
+            contentKey="service_areas_subtitle"
+            tagName="p"
+            className="text-lg text-gray-600 max-w-2xl mx-auto"
+            placeholder="Enter description..."
+            multiline={true}
+          >
+            We provide driving lessons throughout Brisbane and surrounding areas
+          </EditableText>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Service areas list */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="bg-gray-50 p-4 sm:p-6 rounded-xl shadow-md order-2 lg:order-1"
-          >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Service areas list - Mobile Optimized */}
+          <div className="bg-gray-50 p-4 rounded-lg shadow-sm order-2 lg:order-1">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                 <MapPin className="h-5 w-5 text-yellow-600 mr-2" />
-                Covered Areas
+                Coverage Areas
               </h3>
               {isEditMode && (
                 <Button
@@ -234,108 +209,93 @@ export function ServiceAreaMap() {
                   size="sm"
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
+                  <Plus className="h-4 w-4" />
                 </Button>
               )}
             </div>
             
-            {/* Search */}
-            {filteredAreas.length > 5 && (
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search locations..."
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            )}
-            
-            <div className="space-y-3 max-h-[300px] sm:max-h-[400px] overflow-y-auto pr-2">
+            <div className="space-y-2 max-h-[250px] overflow-y-auto">
               {isLoading ? (
-                <div className="space-y-3">
-                  {[...Array(6)].map((_, i) => (
+                <div className="space-y-2">
+                  {[...Array(4)].map((_, i) => (
                     <div key={i} className="p-3 bg-gray-200 animate-pulse rounded-lg">
                       <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                      <div className="h-3 bg-gray-300 rounded w-1/2 mt-2"></div>
                     </div>
                   ))}
                 </div>
               ) : (
-                filteredAreas.map((area) => (
-                  <LocationItem
+                filteredAreas.slice(0, 8).map((area) => (
+                  <div
                     key={area.id}
-                    area={area}
-                    selectedAreaId={selectedArea}
-                    onAreaSelect={setSelectedArea}
-                    onEdit={handleEditLocation}
-                    onDelete={handleDeleteLocation}
-                    isEditMode={isEditMode}
-                  />
+                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                      selectedArea === area.id
+                        ? 'bg-yellow-500 text-white'
+                        : 'bg-white hover:bg-yellow-50'
+                    }`}
+                    onClick={() => setSelectedArea(area.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{area.name}</span>
+                      {area.popular && (
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          selectedArea === area.id
+                            ? 'bg-yellow-200 text-yellow-800'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          Popular
+                        </span>
+                      )}
+                    </div>
+                    {isEditMode && (
+                      <div className="flex gap-1 mt-2">
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditLocation(area);
+                          }}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteLocation(area.id);
+                          }}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 ))
               )}
             </div>
             
-            <div className="mt-6 text-xs sm:text-sm text-gray-600">
-              <p>Don&apos;t see your suburb? We likely cover it too! Contact us to confirm.</p>
+            <div className="mt-4 text-xs text-gray-600 text-center">
+              <p>Don't see your area? <Link href="/contact" className="text-yellow-600 hover:underline">Contact us</Link> - we likely cover it!</p>
             </div>
-            
-            {/* Admin Panel */}
-            <AnimatePresence>
-              {isEditMode && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  className="mt-4"
-                >
-                  <Card className="p-4 bg-green-50 border-green-200">
-                    <h4 className="font-semibold text-green-900 mb-2">Location Management</h4>
-                    <p className="text-sm text-green-700 mb-3">
-                      Add locations with intelligent geocoding and Brisbane-focused search.
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <Button
-                        onClick={handleAddLocation}
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Location
-                      </Button>
-                      <span className="text-xs text-green-600">
-                        {serviceAreas.length} location{serviceAreas.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </Card>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          </div>
 
-          {/* Leaflet Map */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="lg:col-span-2 rounded-xl overflow-hidden shadow-lg h-[300px] sm:h-[400px] lg:h-[500px] order-1 lg:order-2"
-          >
+          {/* Map - Mobile Optimized */}
+          <div className="lg:col-span-2 rounded-lg overflow-hidden shadow-sm h-[300px] sm:h-[400px] order-1 lg:order-2">
             {error ? (
               <div className="w-full h-full bg-red-50 flex items-center justify-center rounded-lg">
-                <div className="text-center">
-                  <div className="text-4xl mb-2">🗺️</div>
-                  <h3 className="font-semibold text-red-900">Map Error</h3>
-                  <p className="text-red-700 text-sm">{error}</p>
-                  <button
+                <div className="text-center p-4">
+                  <div className="text-3xl mb-2">🗺️</div>
+                  <h3 className="font-semibold text-red-900 mb-2">Map Unavailable</h3>
+                  <p className="text-red-700 text-sm mb-3">{error}</p>
+                  <Button
                     onClick={() => window.location.reload()}
-                    className="mt-2 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                    size="sm"
+                    className="bg-red-600 hover:bg-red-700 text-white"
                   >
                     Retry
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -347,7 +307,7 @@ export function ServiceAreaMap() {
                 isEditMode={isEditMode}
               />
             )}
-          </motion.div>
+          </div>
         </div>
         
         {/* Location Modal */}

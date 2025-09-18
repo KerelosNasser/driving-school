@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, Upload, X, Link, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, Upload, X, Link as LinkIcon, Check } from 'lucide-react';
 import { useEditMode } from '@/contexts/editModeContext';
 import { EditableText } from '@/components/ui/editable-text';
 import { Button } from '@/components/ui/button';
@@ -125,13 +125,14 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
 
           <div className="space-y-6">
             {/* Image Preview */}
-            <div className="relative h-48 w-full rounded-lg overflow-hidden bg-gray-100">
+            <div className="relative h-48 w-full rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
               {editedImage.src ? (
                   <Image
                       src={editedImage.src}
                       alt={editedImage.alt}
-                      fill
-                      className="object-cover"
+                      width={400}
+                      height={192}
+                      className="max-w-full max-h-full w-auto h-auto object-contain"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       onError={(e) => {
                         console.error('Image failed to load:', editedImage.src);
@@ -153,7 +154,7 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
                   onClick={() => setUploadMode('url')}
                   className="flex-1"
               >
-                <Link className="h-4 w-4 mr-2" />
+                <LinkIcon className="h-4 w-4 mr-2" />
                 URL
               </Button>
               <Button
@@ -415,116 +416,147 @@ export function Gallery({
   return (
       <section className="py-12 sm:py-16 lg:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 sm:mb-16">
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
+          <div className="text-center mb-8">
+            <EditableText
+                contentKey="gallery_title"
+                tagName="h2"
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4"
+                placeholder="Enter gallery title..."
             >
-              <EditableText
-                  contentKey="gallery_title"
-                  tagName="h2"
-                  className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900"
-                  placeholder="Enter gallery title..."
-              >
-                {title}
-              </EditableText>
-              <EditableText
-                  contentKey="gallery_subtitle"
-                  tagName="p"
-                  className="mt-4 text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto px-4"
-                  placeholder="Enter gallery subtitle..."
-                  multiline={true}
-              >
-                {subtitle}
-              </EditableText>
-            </motion.div>
+              {title}
+            </EditableText>
+            <EditableText
+                contentKey="gallery_subtitle"
+                tagName="p"
+                className="text-lg text-gray-600 max-w-2xl mx-auto"
+                placeholder="Enter gallery subtitle..."
+                multiline={true}
+            >
+              {subtitle}
+            </EditableText>
           </div>
 
-          {/* Main Gallery Display */}
+          {/* Main Gallery Display - Professional Layout */}
           {galleryImages.length > 0 && (
-              <div className="relative w-full max-w-4xl mx-auto">
-                <div className="relative w-full h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg overflow-hidden shadow-lg bg-gray-100">
+              <div className="relative w-full max-w-6xl mx-auto">
+                <div className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-white border border-gray-200">
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.div
                         key={currentIndex}
-                        initial={{ opacity: 0, x: 100 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -100 }}
-                        transition={{ duration: 0.5, ease: 'easeInOut' }}
-                        className="absolute inset-0 group"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="relative group"
                     >
-                      <Image
-                          src={galleryImages[currentIndex].src}
-                          alt={galleryImages[currentIndex].alt}
-                          fill
-                          className="object-cover transition-transform duration-500 hover:scale-105"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1000px"
-                          priority={currentIndex === 0}
-                          onError={(e) => {
-                            console.error('Gallery image failed to load:', galleryImages[currentIndex].src);
-                          }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                      {/* Professional image container with consistent aspect ratio */}
+                      <div className="relative w-full aspect-[16/10] bg-gray-50 flex items-center justify-center overflow-hidden">
+                        <Image
+                            src={galleryImages[currentIndex].src}
+                            alt={galleryImages[currentIndex].alt}
+                            width={1200}
+                            height={750}
+                            className="w-full h-full object-cover"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                            priority={currentIndex === 0}
+                            onError={(e) => {
+                              console.error('Gallery image failed to load:', galleryImages[currentIndex].src);
+                            }}
+                        />
+                        
+                        {/* Overlay gradient for better text readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
 
-                      {/* Edit overlay for current image */}
-                      {isEditMode && (
-                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                            <Button
-                                onClick={() => handleEditImage(galleryImages[currentIndex])}
-                                className="bg-white/90 text-black hover:bg-white"
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit Image
-                            </Button>
-                          </div>
-                      )}
+                        {/* Edit overlay for current image */}
+                        {isEditMode && (
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                              <Button
+                                  onClick={() => handleEditImage(galleryImages[currentIndex])}
+                                  className="bg-white/90 text-black hover:bg-white"
+                                  size="sm"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </Button>
+                            </div>
+                        )}
 
-                      <div className="absolute bottom-0 left-0 p-4 sm:p-6">
-                        <h3 className="text-white text-lg sm:text-xl font-bold">
-                          {galleryImages[currentIndex].title}
-                        </h3>
+                        {/* Navigation buttons - Professional styling */}
+                        {galleryImages.length > 1 && (
+                            <>
+                              <button
+                                  onClick={goToPrevious}
+                                  className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-white/95 hover:bg-white text-gray-700 hover:text-gray-900 rounded-full p-2.5 shadow-lg hover:shadow-xl transition-all duration-200 z-20 backdrop-blur-sm"
+                                  aria-label="Previous image"
+                              >
+                                <ChevronLeft className="h-5 w-5" />
+                              </button>
+                              <button
+                                  onClick={goToNext}
+                                  className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-white/95 hover:bg-white text-gray-700 hover:text-gray-900 rounded-full p-2.5 shadow-lg hover:shadow-xl transition-all duration-200 z-20 backdrop-blur-sm"
+                                  aria-label="Next image"
+                              >
+                                <ChevronRight className="h-5 w-5" />
+                              </button>
+                            </>
+                        )}
+
+                        {/* Image title overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/80 to-transparent">
+                          <h3 className="text-white text-lg sm:text-xl font-semibold">
+                            {galleryImages[currentIndex].title}
+                          </h3>
+                        </div>
                       </div>
                     </motion.div>
                   </AnimatePresence>
-
-                  {/* Navigation buttons */}
-                  {galleryImages.length > 1 && (
-                      <>
-                        <button
-                            onClick={goToPrevious}
-                            className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 sm:p-3 shadow-md transition-all z-10"
-                            aria-label="Previous image"
-                        >
-                          <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
-                        </button>
-                        <button
-                            onClick={goToNext}
-                            className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 sm:p-3 shadow-md transition-all z-10"
-                            aria-label="Next image"
-                        >
-                          <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
-                        </button>
-                      </>
-                  )}
                 </div>
               </div>
           )}
 
-          {/* Dots indicator */}
+          {/* Thumbnail strip for better navigation */}
           {galleryImages.length > 1 && (
-              <div className="flex justify-center mt-6 space-x-2">
-                {galleryImages.map((_, index) => (
-                    <button
-                        key={index}
-                        onClick={() => goToSlide(index)}
-                        className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                            currentIndex === index ? 'bg-yellow-500' : 'bg-gray-300 hover:bg-gray-400'
-                        }`}
-                        aria-label={`Go to slide ${index + 1}`}
-                    />
-                ))}
+              <div className="mt-6">
+                <div className="flex justify-center space-x-2 overflow-x-auto pb-2">
+                  {galleryImages.map((image, index) => (
+                      <button
+                          key={index}
+                          onClick={() => goToSlide(index)}
+                          className={`flex-shrink-0 relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden transition-all duration-200 ${
+                              currentIndex === index 
+                                ? 'ring-2 ring-blue-500 ring-offset-2 scale-105' 
+                                : 'opacity-70 hover:opacity-100'
+                          }`}
+                          aria-label={`Go to ${image.title}`}
+                      >
+                        <Image
+                            src={image.src}
+                            alt={image.alt}
+                            width={80}
+                            height={80}
+                            className="w-full h-full object-cover"
+                            sizes="80px"
+                        />
+                        {currentIndex === index && (
+                            <div className="absolute inset-0 bg-blue-500/20"></div>
+                        )}
+                      </button>
+                  ))}
+                </div>
+                
+                {/* Dots indicator as fallback for mobile */}
+                <div className="flex justify-center mt-4 space-x-2 sm:hidden">
+                  {galleryImages.map((_, index) => (
+                      <button
+                          key={index}
+                          onClick={() => goToSlide(index)}
+                          className={`w-2 h-2 rounded-full transition-colors ${
+                              currentIndex === index ? 'bg-blue-500' : 'bg-gray-300'
+                          }`}
+                          aria-label={`Go to slide ${index + 1}`}
+                      />
+                  ))}
+                </div>
               </div>
           )}
 

@@ -95,97 +95,106 @@ export function PackagesPreview() {
   }, []);
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-12 sm:py-16 lg:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-              Driving Lesson Packages
-            </h2>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Choose the package that best suits your needs and budget
-            </p>
-            {/* Optional: Show a subtle indicator if using fallback data in development */}
-            {process.env.NODE_ENV === 'development' && usingFallback && !loading && (
-              <p className="mt-2 text-sm text-gray-500">
-                (Using sample packages - database packages not available)
-              </p>
-            )}
-          </div>
+        <div className="text-center mb-12">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            Choose Your Package
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Flexible packages designed to fit your learning style and budget
+          </p>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="h-full flex flex-col animate-pulse">
-                <CardHeader className="pb-4">
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
                   <div className="h-6 bg-gray-200 rounded mb-2"></div>
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                 </CardHeader>
-                <CardContent className="flex-grow">
+                <CardContent>
                   <div className="h-8 bg-gray-200 rounded w-1/2 mb-4"></div>
                   <div className="space-y-2">
                     <div className="h-4 bg-gray-200 rounded"></div>
                     <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                    <div className="h-4 bg-gray-200 rounded w-4/6"></div>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <div className="h-10 bg-gray-200 rounded w-full"></div>
-                </CardFooter>
               </Card>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {packages.map((pkg) => (
-              <div key={pkg.id}>
-                <Card className={`h-full flex flex-col ${pkg.popular ? 'border-yellow-500 shadow-lg' : ''}`}>
-                  <CardHeader className="pb-4">
-                    {pkg.popular && (
-                      <Badge className="self-start mb-2 bg-yellow-500">Most Popular</Badge>
-                    )}
-                    <CardTitle className="text-2xl">{pkg.name}</CardTitle>
-                    <CardDescription>{pkg.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow">
-                    <div className="mb-6">
-                      <span className="text-4xl font-bold">${pkg.price.toFixed(0)}</span>
-                      <span className="text-gray-500 ml-1">/ package</span>
+              <Card 
+                key={pkg.id} 
+                className={`relative h-full flex flex-col transition-all duration-200 hover:shadow-lg ${
+                  pkg.popular 
+                    ? 'border-2 border-yellow-500 shadow-lg transform scale-105' 
+                    : 'border border-gray-200 hover:border-yellow-300'
+                }`}
+              >
+                {pkg.popular && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-yellow-500 text-white px-4 py-1 text-sm font-semibold">
+                      Most Popular
+                    </Badge>
+                  </div>
+                )}
+                
+                <CardHeader className="text-center pb-4">
+                  <CardTitle className="text-xl font-bold text-gray-900">{pkg.name}</CardTitle>
+                  <CardDescription className="text-sm text-gray-600">{pkg.description}</CardDescription>
+                </CardHeader>
+                
+                <CardContent className="flex-grow text-center">
+                  {/* Price Display */}
+                  <div className="mb-6">
+                    <div className="flex items-baseline justify-center">
+                      <span className="text-3xl font-bold text-gray-900">${pkg.price.toFixed(0)}</span>
+                      <span className="text-gray-500 ml-1 text-sm">total</span>
                     </div>
-                    <div className="text-gray-700 mb-2 font-medium">
-                      {pkg.hours} hours of driving lessons
+                    <div className="text-yellow-600 font-medium mt-1">
+                      {pkg.hours} driving hours included
                     </div>
-                    <ul className="space-y-2 mt-4">
-                      {pkg.features.map((feature, index) => (
-                        <li key={index} className="flex items-start">
-                          <Check className="h-5 w-5 text-green-500 mr-2 shrink-0 mt-0.5" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      className={`w-full ${pkg.popular ? 'bg-yellow-600 hover:bg-yellow-700' : ''}`}
-                      asChild
-                    >
-                      <Link href="/packages">
-                        Select Package
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </div>
+                  </div>
+
+                  {/* Features List */}
+                  <ul className="space-y-2 text-left">
+                    {pkg.features.slice(0, 4).map((feature, index) => (
+                      <li key={index} className="flex items-start text-sm">
+                        <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-700">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                
+                <CardFooter className="pt-4">
+                  <Button
+                    className={`w-full font-semibold ${
+                      pkg.popular 
+                        ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
+                        : 'bg-gray-900 hover:bg-gray-800 text-white'
+                    }`}
+                    asChild
+                  >
+                    <Link href="/packages">
+                      Choose Package
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
             ))}
           </div>
         )}
 
-        <div className="text-center mt-12">
-          <Button variant="outline" size="lg" asChild>
+        <div className="text-center mt-8">
+          <Button variant="outline" size="lg" asChild className="border-yellow-500 text-yellow-600 hover:bg-yellow-50">
             <Link href="/packages">
-              View All Packages
+              Compare All Packages
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
