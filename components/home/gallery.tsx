@@ -1,8 +1,21 @@
-"use client"
+"use client";
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, Plus, Edit, Trash2, Upload, X, Link as LinkIcon, Check } from 'lucide-react';
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Upload, 
+  X, 
+  Link as LinkIcon, 
+  Check, 
+  Camera,
+  Users,
+  Star,
+  Award
+} from 'lucide-react';
 import { useEditMode } from '@/contexts/editModeContext';
 import { EditableText } from '@/components/ui/editable-text';
 import { Button } from '@/components/ui/button';
@@ -11,33 +24,35 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 
-interface GalleryImage {
+interface StudentImage {
   id: number;
   src: string;
   alt: string;
-  title: string;
+  studentName: string;
+  achievement?: string; // e.g., "First Time Pass", "Manual License", etc.
+  date?: string;
   isUploaded?: boolean;
 }
 
 interface GalleryProps {
   title?: string;
   subtitle?: string;
-  images?: GalleryImage[];
+  images?: StudentImage[];
 }
 
 interface ImageEditModalProps {
-  image: GalleryImage | null;
+  image: StudentImage | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (image: GalleryImage) => void;
+  onSave: (image: StudentImage) => void;
   onDelete?: (id: number) => void;
   isNew?: boolean;
 }
 
 const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = false }: ImageEditModalProps) => {
-  const [editedImage, setEditedImage] = useState<GalleryImage | null>(null);
+  const [editedImage, setEditedImage] = useState<StudentImage | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadMode, setUploadMode] = useState<'url' | 'file'>('url');
+  const [uploadMode, setUploadMode] = useState<'url' | 'file'>('file');
 
   useEffect(() => {
     setEditedImage(image);
@@ -50,8 +65,8 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('contentKey', `gallery_image_${editedImage.id}_${Date.now()}`);
-      formData.append('altText', editedImage.alt || `Gallery image ${editedImage.id}`);
+      formData.append('contentKey', `student_image_${editedImage.id}_${Date.now()}`);
+      formData.append('altText', editedImage.alt || `${editedImage.studentName} - driving student`);
 
       const response = await fetch('/api/admin/upload-image', {
         method: 'POST',
@@ -72,7 +87,7 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
         isUploaded: true
       } : null);
 
-      toast.success('Image uploaded successfully');
+      toast.success('Student image uploaded successfully');
     } catch (error) {
       console.error('Upload error:', error);
       toast.error(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -82,11 +97,11 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
   };
 
   const handleSave = () => {
-    if (editedImage && editedImage.src && editedImage.title.trim()) {
+    if (editedImage && editedImage.src && editedImage.studentName.trim()) {
       onSave(editedImage);
       onClose();
     } else {
-      toast.error('Please provide both image URL/file and title');
+      toast.error('Please provide both image and student name');
     }
   };
 
@@ -100,191 +115,252 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
   if (!isOpen || !editedImage) return null;
 
   return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4"
-          onClick={onClose}
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
       >
-        <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold">
-              {isNew ? 'Add New Image' : 'Edit Image'}
-            </h3>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-900">
+            {isNew ? 'Add Student Success Story' : 'Edit Student'}
+          </h3>
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="space-y-6">
+          {/* Image Preview */}
+          <div className="relative h-48 w-full rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center border-2 border-dashed border-gray-200">
+            {editedImage.src ? (
+              <Image
+                src={editedImage.src}
+                alt={editedImage.alt}
+                width={400}
+                height={192}
+                className="max-w-full max-h-full w-auto h-auto object-contain"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                onError={() => {
+                  console.error('Image failed to load:', editedImage.src);
+                }}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <Camera className="h-12 w-12 mb-2" />
+                <span className="text-sm">Upload student photo</span>
+              </div>
+            )}
+          </div>
+
+          {/* Upload Mode Selector */}
+          <div className="flex gap-2">
+            <Button
+              variant={uploadMode === 'file' ? 'default' : 'outline'}
+              onClick={() => setUploadMode('file')}
+              className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Photo
+            </Button>
+            <Button
+              variant={uploadMode === 'url' ? 'default' : 'outline'}
+              onClick={() => setUploadMode('url')}
+              className="flex-1 rounded-xl"
+            >
+              <LinkIcon className="h-4 w-4 mr-2" />
+              Use URL
             </Button>
           </div>
 
-          <div className="space-y-6">
-            {/* Image Preview */}
-            <div className="relative h-48 w-full rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-              {editedImage.src ? (
-                  <Image
-                      src={editedImage.src}
-                      alt={editedImage.alt}
-                      width={400}
-                      height={192}
-                      className="max-w-full max-h-full w-auto h-auto object-contain"
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                      onError={(e) => {
-                        console.error('Image failed to load:', editedImage.src);
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                  />
-              ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400">
-                    No image selected
-                  </div>
-              )}
-            </div>
-
-            {/* Upload Mode Selector */}
-            <div className="flex gap-2">
-              <Button
-                  variant={uploadMode === 'url' ? 'default' : 'outline'}
-                  onClick={() => setUploadMode('url')}
-                  className="flex-1"
-              >
-                <LinkIcon className="h-4 w-4 mr-2" />
-                URL
-              </Button>
-              <Button
-                  variant={uploadMode === 'file' ? 'default' : 'outline'}
-                  onClick={() => setUploadMode('file')}
-                  className="flex-1"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload
-              </Button>
-            </div>
-
-            {/* Image Source Input */}
-            {uploadMode === 'url' ? (
-                <div>
-                  <Label htmlFor="image-url">Image URL</Label>
-                  <Input
-                      id="image-url"
-                      type="url"
-                      value={editedImage.src}
-                      onChange={(e) => setEditedImage(prev => prev ? { ...prev, src: e.target.value } : null)}
-                      placeholder="https://example.com/image.jpg"
-                      className="mt-1"
-                  />
-                </div>
-            ) : (
-                <div>
-                  <Label>Upload Image</Label>
-                  <div className="mt-1">
-                    <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/jpg,image/gif"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(file);
-                        }}
-                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        disabled={isUploading}
-                    />
-                    {isUploading && (
-                        <div className="mt-2 text-sm text-blue-600 flex items-center">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                          Uploading...
-                        </div>
-                    )}
-                  </div>
-                </div>
-            )}
-
-            {/* Image Details */}
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="image-title">Title *</Label>
-                <Input
-                    id="image-title"
-                    value={editedImage.title}
-                    onChange={(e) => setEditedImage(prev => prev ? { ...prev, title: e.target.value } : null)}
-                    placeholder="Enter image title"
-                    className="mt-1"
-                    required
+          {/* Image Source Input */}
+          {uploadMode === 'file' ? (
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Upload Student Photo</Label>
+              <div className="mt-2">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-colors"
+                  disabled={isUploading}
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="image-alt">Alt Text (for accessibility)</Label>
-                <Input
-                    id="image-alt"
-                    value={editedImage.alt}
-                    onChange={(e) => setEditedImage(prev => prev ? { ...prev, alt: e.target.value } : null)}
-                    placeholder="Describe the image for screen readers"
-                    className="mt-1"
-                />
+                {isUploading && (
+                  <div className="mt-3 text-sm text-emerald-600 flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600 mr-2"></div>
+                    Uploading student photo...
+                  </div>
+                )}
               </div>
             </div>
+          ) : (
+            <div>
+              <Label htmlFor="image-url" className="text-sm font-medium text-gray-700">Image URL</Label>
+              <Input
+                id="image-url"
+                type="url"
+                value={editedImage.src}
+                onChange={(e) => setEditedImage(prev => prev ? { ...prev, src: e.target.value } : null)}
+                placeholder="https://example.com/student-photo.jpg"
+                className="mt-2 rounded-xl"
+              />
+            </div>
+          )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <Button onClick={handleSave} className="flex-1" disabled={!editedImage.src || !editedImage.title.trim()}>
-                <Check className="h-4 w-4 mr-2" />
-                Save
-              </Button>
-              {!isNew && onDelete && (
-                  <Button variant="destructive" onClick={handleDelete}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-              )}
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
+          {/* Student Details */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="student-name" className="text-sm font-medium text-gray-700">Student Name *</Label>
+              <Input
+                id="student-name"
+                value={editedImage.studentName}
+                onChange={(e) => setEditedImage(prev => prev ? { ...prev, studentName: e.target.value } : null)}
+                placeholder="Enter student's name"
+                className="mt-2 rounded-xl"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="achievement" className="text-sm font-medium text-gray-700">Achievement</Label>
+              <select
+                id="achievement"
+                value={editedImage.achievement || ''}
+                onChange={(e) => setEditedImage(prev => prev ? { ...prev, achievement: e.target.value } : null)}
+                className="mt-2 block w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="">Select achievement</option>
+                <option value="First Time Pass">First Time Pass</option>
+                <option value="Manual License">Manual License</option>
+                <option value="Auto License">Auto License</option>
+                <option value="Motorcycle License">Motorcycle License</option>
+                <option value="Truck License">Truck License</option>
+                <option value="Refresher Course">Refresher Course</option>
+                <option value="Defensive Driving">Defensive Driving</option>
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="date" className="text-sm font-medium text-gray-700">Date (Optional)</Label>
+              <Input
+                id="date"
+                type="date"
+                value={editedImage.date || ''}
+                onChange={(e) => setEditedImage(prev => prev ? { ...prev, date: e.target.value } : null)}
+                className="mt-2 rounded-xl"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="alt-text" className="text-sm font-medium text-gray-700">Alt Text (for accessibility)</Label>
+              <Input
+                id="alt-text"
+                value={editedImage.alt}
+                onChange={(e) => setEditedImage(prev => prev ? { ...prev, alt: e.target.value } : null)}
+                placeholder={`${editedImage.studentName || 'Student'} - successful driving student`}
+                className="mt-2 rounded-xl"
+              />
             </div>
           </div>
-        </motion.div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4">
+            <Button 
+              onClick={handleSave} 
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 rounded-xl" 
+              disabled={!editedImage.src || !editedImage.studentName.trim()}
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Save Student
+            </Button>
+            {!isNew && onDelete && (
+              <Button variant="destructive" onClick={handleDelete} className="rounded-xl">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            )}
+            <Button variant="outline" onClick={onClose} className="rounded-xl">
+              Cancel
+            </Button>
+          </div>
+        </div>
       </motion.div>
+    </motion.div>
   );
 };
 
 export function Gallery({
-                          title = 'Our Learning Experience',
-                          subtitle = 'See our students and instructors in action.',
-                          images: initialImages
-                        }: GalleryProps) {
+  title = 'Our Successful Students',
+  subtitle = 'Meet some of our amazing students who achieved their driving goals with us.',
+  images: initialImages
+}: GalleryProps) {
   const { isEditMode, saveContent } = useEditMode();
-  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [editingImage, setEditingImage] = useState<GalleryImage | null>(null);
+  const [studentImages, setStudentImages] = useState<StudentImage[]>([]);
+  const [editingImage, setEditingImage] = useState<StudentImage | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isNewImage, setIsNewImage] = useState(false);
 
-  // Initialize gallery images
+  // Initialize student images
   useEffect(() => {
-    const fallbackImages: GalleryImage[] = [
+    const fallbackImages: StudentImage[] = [
       {
         id: 1,
-        src: "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        alt: "Professional driving instruction",
-        title: "Professional Instruction"
+        src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        alt: "Sarah - successful driving student",
+        studentName: "Sarah M.",
+        achievement: "First Time Pass",
+        date: "2024-01-15"
       },
       {
         id: 2,
-        src: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        alt: "Modern driving school vehicles",
-        title: "Modern Vehicles"
+        src: "https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        alt: "Emma - successful driving student",
+        studentName: "Emma T.",
+        achievement: "Manual License",
+        date: "2024-01-20"
       },
       {
         id: 3,
-        src: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        alt: "Student practicing parking maneuvers",
-        title: "Practical Training"
+        src: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        alt: "James - successful driving student",
+        studentName: "James W.",
+        achievement: "First Time Pass",
+        date: "2024-02-03"
+      },
+      {
+        id: 4,
+        src: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        alt: "Michael - successful driving student",
+        studentName: "Michael R.",
+        achievement: "Auto License",
+        date: "2024-02-10"
+      },
+      {
+        id: 5,
+        src: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        alt: "Lisa - successful driving student",
+        studentName: "Lisa K.",
+        achievement: "First Time Pass",
+        date: "2024-02-18"
+      },
+      {
+        id: 6,
+        src: "https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        alt: "David - successful driving student",
+        studentName: "David L.",
+        achievement: "Manual License",
+        date: "2024-02-25"
       }
     ];
 
@@ -292,19 +368,18 @@ export function Gallery({
 
     // Process initial images from props/database
     if (initialImages && Array.isArray(initialImages) && initialImages.length > 0) {
-      // Validate and clean the initial images
       const validImages = initialImages.filter(img =>
-          img &&
-          typeof img.src === 'string' &&
-          img.src.trim() !== '' &&
-          typeof img.title === 'string' &&
-          img.title.trim() !== ''
+        img &&
+        typeof img.src === 'string' &&
+        img.src.trim() !== '' &&
+        typeof img.studentName === 'string' &&
+        img.studentName.trim() !== ''
       ).map(img => ({
         ...img,
         id: img.id || Date.now() + Math.random(),
-        alt: img.alt || `Gallery image: ${img.title}`,
+        alt: img.alt || `${img.studentName} - successful driving student`,
         src: img.src.trim(),
-        title: img.title.trim()
+        studentName: img.studentName.trim()
       }));
 
       if (validImages.length > 0) {
@@ -312,345 +387,341 @@ export function Gallery({
       }
     }
 
-    setGalleryImages(imagesToUse);
+    setStudentImages(imagesToUse);
   }, [initialImages]);
 
-  // Auto-advance carousel
-  useEffect(() => {
-    if (!isAutoPlaying || galleryImages.length <= 1 || isEditMode) return;
-
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % galleryImages.length);
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, galleryImages.length, isEditMode]);
-
-  const saveGalleryImages = async (updatedImages: GalleryImage[]) => {
+  const saveStudentImages = async (updatedImages: StudentImage[]) => {
     try {
-      await saveContent('gallery_images', updatedImages, 'json');
+      await saveContent('student_gallery_images', updatedImages, 'json');
       return true;
     } catch (error) {
-      console.error('Failed to save gallery images:', error);
-      toast.error('Failed to save gallery changes');
+      console.error('Failed to save student images:', error);
+      toast.error('Failed to save student gallery changes');
       return false;
     }
   };
 
   const handleAddImage = () => {
-    const newImage: GalleryImage = {
+    const newImage: StudentImage = {
       id: Date.now(),
       src: '',
       alt: '',
-      title: 'New Image',
+      studentName: '',
+      achievement: '',
+      date: ''
     };
     setEditingImage(newImage);
     setIsNewImage(true);
     setShowEditModal(true);
   };
 
-  const handleEditImage = (image: GalleryImage) => {
+  const handleEditImage = (image: StudentImage) => {
     setEditingImage({ ...image });
     setIsNewImage(false);
     setShowEditModal(true);
   };
 
-  const handleSaveImage = async (updatedImage: GalleryImage) => {
-    let updatedImages: GalleryImage[];
+  const handleSaveImage = async (updatedImage: StudentImage) => {
+    let updatedImages: StudentImage[];
 
     if (isNewImage) {
-      updatedImages = [...galleryImages, updatedImage];
+      updatedImages = [...studentImages, updatedImage];
     } else {
-      updatedImages = galleryImages.map(img =>
-          img.id === updatedImage.id ? updatedImage : img
+      updatedImages = studentImages.map(img =>
+        img.id === updatedImage.id ? updatedImage : img
       );
     }
 
-    setGalleryImages(updatedImages);
+    setStudentImages(updatedImages);
 
-    const success = await saveGalleryImages(updatedImages);
+    const success = await saveStudentImages(updatedImages);
     if (success) {
-      toast.success(isNewImage ? 'Image added successfully' : 'Image updated successfully');
+      toast.success(isNewImage ? 'Student added successfully' : 'Student updated successfully');
     }
   };
 
   const handleDeleteImage = async (id: number) => {
-    const updatedImages = galleryImages.filter(img => img.id !== id);
-    setGalleryImages(updatedImages);
+    const updatedImages = studentImages.filter(img => img.id !== id);
+    setStudentImages(updatedImages);
 
-    // Adjust current index if necessary
-    if (currentIndex >= updatedImages.length && updatedImages.length > 0) {
-      setCurrentIndex(updatedImages.length - 1);
-    } else if (updatedImages.length === 0) {
-      setCurrentIndex(0);
-    }
-
-    const success = await saveGalleryImages(updatedImages);
+    const success = await saveStudentImages(updatedImages);
     if (success) {
-      toast.success('Image deleted successfully');
+      toast.success('Student removed successfully');
     }
   };
 
-  const goToSlide = (index: number) => {
-    setCurrentIndex(index);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
-  };
-
-  const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
-  };
-
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % galleryImages.length);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
-  };
-
-  if (galleryImages.length === 0 && !isEditMode) {
+  if (studentImages.length === 0 && !isEditMode) {
     return null;
   }
 
   return (
-      <section className="py-12 sm:py-16 lg:py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <EditableText
-                contentKey="gallery_title"
-                tagName="h2"
-                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4"
-                placeholder="Enter gallery title..."
-            >
-              {title}
-            </EditableText>
-            <EditableText
-                contentKey="gallery_subtitle"
-                tagName="p"
-                className="text-lg text-gray-600 max-w-2xl mx-auto"
-                placeholder="Enter gallery subtitle..."
-                multiline={true}
-            >
-              {subtitle}
-            </EditableText>
+    <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-40 h-40 bg-teal-400 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-12 sm:mb-16"
+        >
+          <EditableText
+            contentKey="student_gallery_title"
+            tagName="h2"
+            className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-emerald-800 to-teal-700 bg-clip-text text-transparent"
+            placeholder="Enter gallery title..."
+          >
+            {title}
+          </EditableText>
+          <EditableText
+            contentKey="student_gallery_subtitle"
+            tagName="p"
+            className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto px-4 leading-relaxed"
+            placeholder="Enter gallery subtitle..."
+            multiline={true}
+          >
+            {subtitle}
+          </EditableText>
+        </motion.div>
+
+        {/* Stats Bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="flex justify-center mb-12"
+        >
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-emerald-100">
+            <div className="flex items-center space-x-8">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <Users className="h-5 w-5 text-emerald-600 mr-2" />
+                  <span className="text-2xl font-bold text-emerald-600">{studentImages.length}</span>
+                </div>
+                <p className="text-sm text-gray-600">Success Stories</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <Star className="h-5 w-5 text-yellow-500 mr-2" />
+                  <span className="text-2xl font-bold text-yellow-500">95%</span>
+                </div>
+                <p className="text-sm text-gray-600">Pass Rate</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <Award className="h-5 w-5 text-blue-600 mr-2" />
+                  <span className="text-2xl font-bold text-blue-600">
+                    {studentImages.filter(img => img.achievement === 'First Time Pass').length}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">First Time Pass</p>
+              </div>
+            </div>
           </div>
+        </motion.div>
 
-          {/* Main Gallery Display - Professional Layout */}
-          {galleryImages.length > 0 && (
-              <div className="relative w-full max-w-6xl mx-auto">
-                <div className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-white border border-gray-200">
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.div
-                        key={currentIndex}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="relative group"
-                    >
-                      {/* Professional image container with consistent aspect ratio */}
-                      <div className="relative w-full aspect-[16/10] bg-gray-50 flex items-center justify-center overflow-hidden">
-                        <Image
-                            src={galleryImages[currentIndex].src}
-                            alt={galleryImages[currentIndex].alt}
-                            width={1200}
-                            height={750}
-                            className="w-full h-full object-cover"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-                            priority={currentIndex === 0}
-                            onError={(e) => {
-                              console.error('Gallery image failed to load:', galleryImages[currentIndex].src);
-                            }}
-                        />
-                        
-                        {/* Overlay gradient for better text readability */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
+        {/* Student Gallery Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+        >
+          <AnimatePresence mode="popLayout">
+            {studentImages.map((student, index) => (
+              <motion.div
+                key={student.id}
+                layout
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+                className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-300"
+              >
+                {/* Student Photo */}
+                <div className="relative aspect-[3/4] overflow-hidden bg-gray-100">
+                  <Image
+                    src={student.src}
+                    alt={student.alt}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                  />
+                  
+                  {/* Achievement Badge */}
+                  {student.achievement && (
+                    <div className="absolute top-3 left-3">
+                      <span className="px-3 py-1 bg-emerald-500/90 text-white text-xs font-bold rounded-full backdrop-blur-sm flex items-center">
+                        <Award className="h-3 w-3 mr-1" />
+                        {student.achievement}
+                      </span>
+                    </div>
+                  )}
 
-                        {/* Edit overlay for current image */}
-                        {isEditMode && (
-                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                              <Button
-                                  onClick={() => handleEditImage(galleryImages[currentIndex])}
-                                  className="bg-white/90 text-black hover:bg-white"
-                                  size="sm"
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </Button>
-                            </div>
-                        )}
-
-                        {/* Navigation buttons - Professional styling */}
-                        {galleryImages.length > 1 && (
-                            <>
-                              <button
-                                  onClick={goToPrevious}
-                                  className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-white/95 hover:bg-white text-gray-700 hover:text-gray-900 rounded-full p-2.5 shadow-lg hover:shadow-xl transition-all duration-200 z-20 backdrop-blur-sm"
-                                  aria-label="Previous image"
-                              >
-                                <ChevronLeft className="h-5 w-5" />
-                              </button>
-                              <button
-                                  onClick={goToNext}
-                                  className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-white/95 hover:bg-white text-gray-700 hover:text-gray-900 rounded-full p-2.5 shadow-lg hover:shadow-xl transition-all duration-200 z-20 backdrop-blur-sm"
-                                  aria-label="Next image"
-                              >
-                                <ChevronRight className="h-5 w-5" />
-                              </button>
-                            </>
-                        )}
-
-                        {/* Image title overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/80 to-transparent">
-                          <h3 className="text-white text-lg sm:text-xl font-semibold">
-                            {galleryImages[currentIndex].title}
-                          </h3>
-                        </div>
-                      </div>
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-              </div>
-          )}
-
-          {/* Thumbnail strip for better navigation */}
-          {galleryImages.length > 1 && (
-              <div className="mt-6">
-                <div className="flex justify-center space-x-2 overflow-x-auto pb-2">
-                  {galleryImages.map((image, index) => (
-                      <button
-                          key={index}
-                          onClick={() => goToSlide(index)}
-                          className={`flex-shrink-0 relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden transition-all duration-200 ${
-                              currentIndex === index 
-                                ? 'ring-2 ring-blue-500 ring-offset-2 scale-105' 
-                                : 'opacity-70 hover:opacity-100'
-                          }`}
-                          aria-label={`Go to ${image.title}`}
+                  {/* Edit Controls */}
+                  {isEditMode && (
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleEditImage(student)}
+                        className="h-8 w-8 p-0 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-lg"
                       >
-                        <Image
-                            src={image.src}
-                            alt={image.alt}
-                            width={80}
-                            height={80}
-                            className="w-full h-full object-cover"
-                            sizes="80px"
-                        />
-                        {currentIndex === index && (
-                            <div className="absolute inset-0 bg-blue-500/20"></div>
-                        )}
-                      </button>
-                  ))}
-                </div>
-                
-                {/* Dots indicator as fallback for mobile */}
-                <div className="flex justify-center mt-4 space-x-2 sm:hidden">
-                  {galleryImages.map((_, index) => (
-                      <button
-                          key={index}
-                          onClick={() => goToSlide(index)}
-                          className={`w-2 h-2 rounded-full transition-colors ${
-                              currentIndex === index ? 'bg-blue-500' : 'bg-gray-300'
-                          }`}
-                          aria-label={`Go to slide ${index + 1}`}
-                      />
-                  ))}
-                </div>
-              </div>
-          )}
-
-          {/* Gallery Management Panel */}
-          <AnimatePresence>
-            {isEditMode && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    className="mt-8"
-                >
-                  <Card className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Gallery Management</h3>
-                      <Button onClick={handleAddImage} className="bg-green-600 hover:bg-green-700">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Image
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteImage(student.id)}
+                        className="h-8 w-8 p-0 rounded-full shadow-lg"
+                      >
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
+                  )}
 
-                    {/* Image thumbnails */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      {galleryImages.map((image, index) => (
-                          <div key={image.id} className="relative group">
-                            <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                              <Image
-                                  src={image.src}
-                                  alt={image.alt}
-                                  width={120}
-                                  height={120}
-                                  className="w-full h-full object-cover"
-                                  sizes="120px"
-                              />
-                            </div>
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors duration-200 rounded-lg flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1">
-                                <Button
-                                    size="sm"
-                                    onClick={() => handleEditImage(image)}
-                                    className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => handleDeleteImage(image.id)}
-                                    className="h-8 w-8 p-0"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                            <p className="text-xs text-center mt-1 truncate">{image.title}</p>
-                          </div>
-                      ))}
-                    </div>
-                  </Card>
-                </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Empty state for edit mode */}
-          {isEditMode && galleryImages.length === 0 && (
-              <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-12"
-              >
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
-                  <p className="text-gray-500 mb-4">No images in gallery</p>
-                  <Button onClick={handleAddImage} className="bg-green-600 hover:bg-green-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Image
-                  </Button>
+                  {/* Gradient Overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
+                  
+                  {/* Student Info Overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                    <h3 className="font-bold text-lg mb-1">{student.studentName}</h3>
+                    {student.date && (
+                      <p className="text-xs text-white/80">
+                        {new Date(student.date).toLocaleDateString('en-AU', {
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </motion.div>
-          )}
+            ))}
+          </AnimatePresence>
+        </motion.div>
 
-          {/* Image Edit Modal */}
-          <ImageEditModal
-              image={editingImage}
-              isOpen={showEditModal}
-              onClose={() => {
-                setShowEditModal(false);
-                setEditingImage(null);
-                setIsNewImage(false);
-              }}
-              onSave={handleSaveImage}
-              onDelete={handleDeleteImage}
-              isNew={isNewImage}
-          />
-        </div>
-      </section>
+        {/* Empty State */}
+        {studentImages.length === 0 && !isEditMode && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16"
+          >
+            <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No student stories yet</h3>
+            <p className="text-gray-500">
+              Student success stories will appear here once they're added.
+            </p>
+          </motion.div>
+        )}
+
+        {/* Admin Controls */}
+        <AnimatePresence>
+          {isEditMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="mt-12"
+            >
+              <Card className="p-6 bg-white/80 backdrop-blur-sm border border-emerald-100 rounded-2xl">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-gray-900">Student Gallery Management</h3>
+                  <Button 
+                    onClick={handleAddImage} 
+                    className="bg-emerald-600 hover:bg-emerald-700 rounded-xl"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Student
+                  </Button>
+                </div>
+
+                {studentImages.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 mb-4">No student stories added yet</p>
+                    <Button 
+                      onClick={handleAddImage} 
+                      className="bg-emerald-600 hover:bg-emerald-700 rounded-xl"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Student Story
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {studentImages.map((student) => (
+                      <div key={student.id} className="relative group">
+                        <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 border-2 border-gray-200">
+                          <Image
+                            src={student.src}
+                            alt={student.alt}
+                            width={120}
+                            height={160}
+                            className="w-full h-full object-cover"
+                            sizes="120px"
+                          />
+                        </div>
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors duration-200 rounded-xl flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleEditImage(student)}
+                              className="h-8 w-8 p-0 bg-white/90 hover:bg-white text-gray-700 rounded-full"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteImage(student.id)}
+                              className="h-8 w-8 p-0 rounded-full"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-center">
+                          <p className="text-xs font-medium text-gray-700 truncate">
+                            {student.studentName}
+                          </p>
+                          {student.achievement && (
+                            <p className="text-xs text-emerald-600 font-medium">
+                              {student.achievement}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Image Edit Modal */}
+        <ImageEditModal
+          image={editingImage}
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingImage(null);
+            setIsNewImage(false);
+          }}
+          onSave={handleSaveImage}
+          onDelete={handleDeleteImage}
+          isNew={isNewImage}
+        />
+      </div>
+    </section>
   );
 }

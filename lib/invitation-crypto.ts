@@ -81,8 +81,8 @@ export function decryptInvitationCode(code: string): { userId: string; isValid: 
       }
       
       const [encrypted, authTagHex, ivHex] = parts;
-      const authTag = Buffer.from(authTagHex, 'hex');
-      const iv = Buffer.from(ivHex, 'hex');
+      const authTag = Buffer.from(authTagHex || '', 'hex');
+      const iv = Buffer.from(ivHex || '', 'hex');
       
       // Create key from secret (must be 32 bytes for aes-256-gcm)
       const key = crypto.scryptSync(INVITATION_SECRET, 'salt', 32);
@@ -92,7 +92,7 @@ export function decryptInvitationCode(code: string): { userId: string; isValid: 
       decipher.setAuthTag(authTag);
       decipher.setAAD(Buffer.from('invitation-code'));
       
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      let decrypted = decipher.update(encrypted || '', 'hex', 'utf8');
       decrypted += decipher.final('utf8');
       
       const data: InvitationData = JSON.parse(decrypted);

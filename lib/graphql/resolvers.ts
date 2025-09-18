@@ -5,7 +5,7 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { createDataLoaders } from './dataloaders';
 import { GraphQLError } from 'graphql';
 import { validateQuotaTransaction, validateBooking } from './validators';
-import { pubsub } from './pubsub';
+import { pubsub, publishBookingCreated, publishQuotaUpdated } from './pubsub';
 
 // Custom scalar for UUID
 const UUIDType = new GraphQLScalarType({
@@ -413,8 +413,15 @@ export const resolvers = {
       if (error) throw new GraphQLError(error.message);
 
       // Publish subscription
-      pubsub.publish('BOOKING_STATUS_CHANGED', {
-        bookingStatusChanged: data,
+      await publishBookingCreated({
+        booking: {
+          id: data.id,
+          title: data.title,
+          startTime: data.start_time,
+          endTime: data.end_time,
+          status: data.status,
+          userId: supabaseUserId
+        },
         userId: supabaseUserId
       });
 
@@ -480,8 +487,12 @@ export const resolvers = {
 
       // Publish subscription
       const updatedQuota = await context.dataloaders.quotaLoader.load(supabaseUserId);
-      pubsub.publish('QUOTA_UPDATED', {
-        quotaUpdated: updatedQuota,
+      await publishQuotaUpdated({
+        quota: {
+          totalHours: updatedQuota.totalHours,
+          usedHours: updatedQuota.usedHours,
+          availableHours: updatedQuota.totalHours - updatedQuota.usedHours
+        },
         userId: supabaseUserId
       });
 

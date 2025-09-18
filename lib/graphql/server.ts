@@ -103,8 +103,10 @@ const permissions = shield({
     createPackage: isAdmin,
     updatePackage: isAdmin,
     deletePackage: isAdmin,
-    updateBookingStatus: isAdmin,
-    createQuotaTransaction: isAdmin,
+    updateBooking: isAdmin,
+    purchaseQuota: isAuthenticated,
+    consumeQuota: isAuthenticated,
+    refundQuota: isAdmin,
   },
   Subscription: {
     '*': and(rateLimit(rateLimiters.subscription), isAuthenticated),
@@ -571,16 +573,16 @@ export const getMetrics = () => {
     },
     rateLimiters: {
       general: {
-        totalHits: rateLimiters.general.totalHits,
-        remainingPoints: rateLimiters.general.remainingPoints || 0,
+        totalHits: 0, // RateLimiterMemory doesn't expose totalHits
+        remainingPoints: 0,
       },
       mutation: {
-        totalHits: rateLimiters.mutation.totalHits,
-        remainingPoints: rateLimiters.mutation.remainingPoints || 0,
+        totalHits: 0,
+        remainingPoints: 0,
       },
       subscription: {
-        totalHits: rateLimiters.subscription.totalHits,
-        remainingPoints: rateLimiters.subscription.remainingPoints || 0,
+        totalHits: 0,
+        remainingPoints: 0,
       },
     },
     websocket: {

@@ -130,7 +130,7 @@ export const validateCreateUser = (input: any): ValidationResult => {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { isValid: false, errors: ['Validation failed'] };
@@ -145,7 +145,7 @@ export const validateUpdateUser = (input: any): ValidationResult => {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { isValid: false, errors: ['Validation failed'] };
@@ -160,7 +160,7 @@ export const validateCreatePackage = (input: any): ValidationResult => {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { isValid: false, errors: ['Validation failed'] };
@@ -175,7 +175,7 @@ export const validateUpdatePackage = (input: any): ValidationResult => {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { isValid: false, errors: ['Validation failed'] };
@@ -190,7 +190,7 @@ export const validateBooking = (input: any): ValidationResult => {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { isValid: false, errors: ['Validation failed'] };
@@ -205,7 +205,7 @@ export const validateUpdateBooking = (input: any): ValidationResult => {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { isValid: false, errors: ['Validation failed'] };
@@ -220,7 +220,7 @@ export const validateReview = (input: any): ValidationResult => {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { isValid: false, errors: ['Validation failed'] };
@@ -235,7 +235,7 @@ export const validateQuotaTransaction = (input: any): ValidationResult => {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { isValid: false, errors: ['Validation failed'] };
@@ -250,7 +250,7 @@ export const validatePagination = (input: any): ValidationResult => {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { isValid: false, errors: ['Validation failed'] };
@@ -265,7 +265,7 @@ export const validateFilter = (input: any): ValidationResult => {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        errors: error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        errors: error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`)
       };
     }
     return { isValid: false, errors: ['Validation failed'] };
@@ -297,7 +297,7 @@ export const validateBookingConflict = async (userId: string, startTime: string,
     if (conflicts && conflicts.length > 0) {
       return {
         isValid: false,
-        errors: [`Booking conflicts with existing booking: ${conflicts[0].title}`]
+        errors: [`Booking conflicts with existing booking: ${conflicts[0]?.title || 'Unknown'}`]
       };
     }
 

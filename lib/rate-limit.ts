@@ -40,6 +40,10 @@ class RateLimiter {
     current.count++;
     return true;
   }
+
+  getRequestInfo(key: string): { count: number; resetTime: number } | undefined {
+    return this.requests.get(key);
+  }
 }
 
 const rateLimiter = new RateLimiter();
@@ -50,7 +54,7 @@ export const paymentRateLimit = {
   maxRequests: 5, // 5 payment attempts per 15 minutes
   keyGenerator: (req: NextRequest) => {
     const forwarded = req.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0] : req.ip || 'unknown';
+    const ip = forwarded ? forwarded.split(',')[0] : 'unknown';
     return `payment:${ip}`;
   }
 };
@@ -68,22 +72,22 @@ export async function checkRateLimit(
   req: NextRequest, 
   config: RateLimitConfig
 ): Promise<{ allowed: boolean; remaining?: number; resetTime?: number }> {
-  const key = config.keyGenerator ? config.keyGenerator(req) : req.ip || 'unknown';
+  const key = config.keyGenerator ? config.keyGenerator(req) : 'unknown';
   const allowed = await rateLimiter.isAllowed(key, config);
   
   if (!allowed) {
-    const current = rateLimiter.requests.get(key);
+    const current = rateLimiter.getRequestInfo(key);
     return {
       allowed: false,
       remaining: 0,
-      resetTime: current?.resetTime
+      resetTime: current?.resetTime || Date.now()
     };
   }
   
-  const current = rateLimiter.requests.get(key);
+  const current = rateLimiter.getRequestInfo(key);
   return {
     allowed: true,
     remaining: config.maxRequests - (current?.count || 0),
-    resetTime: current?.resetTime
+    resetTime: current?.resetTime || Date.now()
   };
 }
