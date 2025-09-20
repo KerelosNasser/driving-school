@@ -1,0 +1,602 @@
+{
+  "content": {
+    "hero_title": {
+      "content_key": "hero_title",
+      "content_value": "Learn to Drive with Confidence",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_subtitle": {
+      "content_key": "hero_subtitle",
+      "content_value": "Professional driving lessons with experienced instructors at EG Driving School - tailored to your needs.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_feature_1": {
+      "content_key": "hero_feature_1",
+      "content_value": "Licensed Instructors",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_feature_3": {
+      "content_key": "hero_feature_3",
+      "content_value": "Flexible Scheduling",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_feature_4": {
+      "content_key": "hero_feature_4",
+      "content_value": "Personalized Pace",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_title": {
+      "content_key": "features_title",
+      "content_value": "Why Choose EG Driving School?",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_subtitle": {
+      "content_key": "features_subtitle",
+      "content_value": "We're committed to providing the best driving education experience.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_1_title": {
+      "content_key": "features_item_1_title",
+      "content_value": "Safety First",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_1_description": {
+      "content_key": "features_item_1_description",
+      "content_value": "Our instructors prioritize safety with dual-control vehicles and comprehensive safety protocols.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_2_description": {
+      "content_key": "features_item_2_description",
+      "content_value": "We offer lessons 7 days a week, including evenings, to fit your busy schedule.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_3_description": {
+      "content_key": "features_item_3_description",
+      "content_value": "Book and manage your lessons online with our simple scheduling system.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_4_title": {
+      "content_key": "features_item_4_title",
+      "content_value": "Modern Vehicles",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_4_description": {
+      "content_key": "features_item_4_description",
+      "content_value": "Learn in late-model cars equipped with the latest safety features and technology.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_5_title": {
+      "content_key": "features_item_5_title",
+      "content_value": "Certified Instructors",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_5_description": {
+      "content_key": "features_item_5_description",
+      "content_value": "All our instructors are fully licensed and certified with years of teaching experience.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_6_title": {
+      "content_key": "features_item_6_title",
+      "content_value": "Wide Coverage",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_6_description": {
+      "content_key": "features_item_6_description",
+      "content_value": "We service multiple areas with pick-up and drop-off at your preferred locations.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_7_title": {
+      "content_key": "features_item_7_title",
+      "content_value": "Affordable Packages",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_7_description": {
+      "content_key": "features_item_7_description",
+      "content_value": "Choose from a range of packages designed to suit different budgets and learning needs.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_8_title": {
+      "content_key": "features_item_8_title",
+      "content_value": "Ongoing Support",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_8_description": {
+      "content_key": "features_item_8_description",
+      "content_value": "Get personalized feedback and support throughout your learning journey.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "gallery_title": {
+      "content_key": "gallery_title",
+      "content_value": "Our Learning Experience",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "gallery_subtitle": {
+      "content_key": "gallery_subtitle",
+      "content_value": "See our students and instructors in action.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_title": {
+      "content_key": "instructor_title",
+      "content_value": "Meet Your Instructor",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_rating": {
+      "content_key": "instructor_rating",
+      "content_value": "4.9",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_cert_title": {
+      "content_key": "instructor_cert_title",
+      "content_value": "Certified Instructor",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_cert_subtitle": {
+      "content_key": "instructor_cert_subtitle",
+      "content_value": "Queensland Transport Approved",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_feature_1": {
+      "content_key": "instructor_feature_1",
+      "content_value": "Dual-control vehicle",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_feature_2": {
+      "content_key": "instructor_feature_2",
+      "content_value": "All Brisbane suburbs",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_feature_3": {
+      "content_key": "instructor_feature_3",
+      "content_value": "Flexible scheduling",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_feature_4": {
+      "content_key": "instructor_feature_4",
+      "content_value": "Keys2drive accredited",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "cta_title": {
+      "content_key": "cta_title",
+      "content_value": "Ready to Start Your Driving Journey?",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "cta_subtitle": {
+      "content_key": "cta_subtitle",
+      "content_value": "Book your first lesson today and take the first step towards getting your license with Brisbane's most trusted driving instructor.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "cta_phone_text": {
+      "content_key": "cta_phone_text",
+      "content_value": "Call us at",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "cta_phone_number": {
+      "content_key": "cta_phone_number",
+      "content_value": "0400 000 000",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "cta_email_text": {
+      "content_key": "cta_email_text",
+      "content_value": "Email us at",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "cta_email_address": {
+      "content_key": "cta_email_address",
+      "content_value": "info@brisbanedrivingschool.com",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_testimonial_quote": {
+      "content_key": "hero_testimonial_quote",
+      "content_value": "The best driving school! I passed my test on the first attempt thanks to their excellent instruction.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_testimonial_author": {
+      "content_key": "hero_testimonial_author",
+      "content_value": "— Sarah T., Recent Graduate",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_feature_2": {
+      "content_key": "hero_feature_2",
+      "content_value": "Modern Vehicle",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_2_title": {
+      "content_key": "features_item_2_title",
+      "content_value": "Flexible Hours",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_3_title": {
+      "content_key": "features_item_3_title",
+      "content_value": "Easy Booking",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "gallery_images": {
+      "content_key": "gallery_images",
+      "content_value": null,
+      "content_json": [
+        {
+          "id": 1,
+          "alt": "Professional driving instruction",
+          "src": "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          "title": "Professional Instruction"
+        },
+        {
+          "id": 3,
+          "alt": "Student practicing parking maneuvers",
+          "src": "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          "title": "Practical Training"
+        }
+      ],
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "json"
+    },
+    "instructor_experience": {
+      "content_key": "instructor_experience",
+      "content_value": "10+ Years Experience",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_bio_p2": {
+      "content_key": "instructor_bio_p2",
+      "content_value": "take a methodical approach,  structuring the lesson in a step-by-step way to ensure that the information flows and makes sense. My experience tells me that it is the best way to get results. I am punctual, patient and friendly. I enjoy meeting new people and can help in a range of situations",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_bio_p1": {
+      "content_key": "instructor_bio_p1",
+      "content_value": "Hi there! I'm Michael, a passionate driving instructor with over 10\n years of experience teaching people of all ages how to drive safely and confidently on Brisbane roads.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "instructor_name": {
+      "content_key": "instructor_name",
+      "content_value": "Emael Ghobrial",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "service_areas": {
+      "content_key": "service_areas",
+      "content_value": null,
+      "content_json": [
+        {
+          "id": 1,
+          "lat": -27.4698,
+          "lng": 153.0251,
+          "name": "Brisbane CBD",
+          "popular": true
+        },
+        {
+          "id": 2,
+          "lat": -27.4809,
+          "lng": 153.0176,
+          "name": "South Brisbane",
+          "popular": true
+        },
+        {
+          "id": 3,
+          "lat": -27.4818,
+          "lng": 153.012,
+          "name": "West End",
+          "popular": false
+        },
+        {
+          "id": 4,
+          "lat": -27.457,
+          "lng": 153.0344,
+          "name": "Fortitude Valley",
+          "popular": true
+        },
+        {
+          "id": 5,
+          "lat": -27.4677,
+          "lng": 153.052,
+          "name": "New Farm",
+          "popular": false
+        },
+        {
+          "id": 6,
+          "lat": -27.461,
+          "lng": 153.0024,
+          "name": "Paddington",
+          "popular": false
+        },
+        {
+          "id": 7,
+          "lat": -27.4709,
+          "lng": 152.9999,
+          "name": "Milton",
+          "popular": false
+        },
+        {
+          "id": 8,
+          "lat": -27.4845,
+          "lng": 152.9928,
+          "name": "Toowong",
+          "popular": true
+        },
+        {
+          "id": 9,
+          "lat": -27.4975,
+          "lng": 153.0095,
+          "name": "St Lucia",
+          "popular": false
+        },
+        {
+          "id": 10,
+          "lat": -27.5016,
+          "lng": 152.9719,
+          "name": "Indooroopilly",
+          "popular": true
+        },
+        {
+          "id": 11,
+          "lat": -27.4476,
+          "lng": 153.0153,
+          "name": "Kelvin Grove",
+          "popular": false
+        },
+        {
+          "id": 12,
+          "lat": -27.3861,
+          "lng": 153.0344,
+          "name": "Chermside",
+          "popular": true
+        },
+        {
+          "id": 13,
+          "lat": -27.5047,
+          "lng": 153.1,
+          "name": "Carindale",
+          "popular": false
+        },
+        {
+          "id": 14,
+          "lat": -27.5397,
+          "lng": 153.0785,
+          "name": "Mount Gravatt",
+          "popular": false
+        },
+        {
+          "id": 15,
+          "lat": -27.5777,
+          "lng": 153.0571,
+          "name": "Sunnybank",
+          "popular": true
+        },
+        {
+          "id": 16,
+          "lat": -27.4418,
+          "lng": 153.1735,
+          "name": "Wynnum",
+          "popular": false
+        },
+        {
+          "id": 17,
+          "lat": -27.32,
+          "lng": 153.07,
+          "name": "Sandgate",
+          "popular": false
+        },
+        {
+          "id": 18,
+          "lat": -27.4447,
+          "lng": 152.95,
+          "name": "The Gap",
+          "popular": false
+        },
+        {
+          "id": 1756075203851,
+          "lat": -27.4474916,
+          "lng": 153.1569945,
+          "name": "Alex Street",
+          "popular": false
+        }
+      ],
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "json"
+    },
+    "features_item_9_title": {
+      "content_key": "features_item_9_title",
+      "content_value": "New Feature",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "about_instructor_name": {
+      "content_key": "about_instructor_name",
+      "content_value": "Emael Ghobrial",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "student_gallery_images": {
+      "content_key": "student_gallery_images",
+      "content_value": null,
+      "content_json": [
+        {
+          "id": 1,
+          "alt": "Sarah - successful driving student",
+          "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          "date": "2024-01-15",
+          "achievement": "First Time Pass",
+          "studentName": "Sarah M."
+        },
+        {
+          "id": 3,
+          "alt": "James - successful driving student",
+          "src": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          "date": "2024-02-03",
+          "achievement": "First Time Pass",
+          "studentName": "James W."
+        },
+        {
+          "id": 4,
+          "alt": "Michael - successful driving student",
+          "src": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          "date": "2024-02-10",
+          "achievement": "Auto License",
+          "studentName": "Michael R."
+        },
+        {
+          "id": 5,
+          "alt": "Lisa - successful driving student",
+          "src": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          "date": "2024-02-18",
+          "achievement": "First Time Pass",
+          "studentName": "Lisa K."
+        },
+        {
+          "id": 6,
+          "alt": "David - successful driving student",
+          "src": "https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          "date": "2024-02-25",
+          "achievement": "Manual License",
+          "studentName": "David L."
+        }
+      ],
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "json"
+    }
+  },
+  "timestamp": 1758242811097,
+  "version": "v1758242811097-cb1cye4j7"
+}

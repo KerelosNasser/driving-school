@@ -4,5 +4,6 @@
     "Gravatt",
     "supabase",
     "timegrid"
-  ]
+  ],
+  "typescript.autoClosingTags": false
 }

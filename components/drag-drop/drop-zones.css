@@ -1,0 +1,418 @@
+/* Page Drop Zones Styles */
+.page-drop-zones {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Section Drop Zones */
+.section-drop-zone {
+  position: relative;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 2px dashed transparent;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.section-drop-zone.section-header {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.section-drop-zone.section-main {
+  background-color: #ffffff;
+  border-color: #e5e7eb;
+}
+
+.section-drop-zone.section-sidebar {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.section-drop-zone.section-footer {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+/* Section Header */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.section-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.component-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+  background-color: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Component Zones */
+.component-zones {
+  position: relative;
+  min-height: 100px;
+}
+
+/* Component Placeholders */
+.component-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+
+.component-placeholder:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.component-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.component-type {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+  text-transform: capitalize;
+}
+
+/* Empty Section Drop Zone */
+.empty-section-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background-color: #fafafa;
+  transition: all 0.2s ease-in-out;
+}
+
+.empty-section-drop-zone:hover {
+  border-color: #9ca3af;
+  background-color: #f5f5f5;
+}
+
+.drop-zone-label {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+}
+
+.allowed-components {
+  margin-top: 0.5rem;
+}
+
+/* Component Drop Zones */
+.component-drop-zone {
+  position: relative;
+  height: 40px;
+  margin: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drop-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.drop-line {
+  height: 2px;
+  background-color: #3b82f6;
+  border-radius: 1px;
+  flex: 1;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.drop-label {
+  position: absolute;
+  background-color: #3b82f6;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+/* Active drop zone states */
+.drop-zone.active .drop-line,
+.drop-zone.active .drop-label {
+  opacity: 1;
+}
+
+.drop-zone.can-drop .empty-section-drop-zone {
+  border-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.drop-zone.active .empty-section-drop-zone {
+  border-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+  transform: scale(1.02);
+}
+
+.drop-zone.invalid .empty-section-drop-zone {
+  border-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+/* Trash Drop Zone */
+.trash-drop-zone-container {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1000;
+}
+
+.trash-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background-color: #fee2e2;
+  border: 2px dashed #fca5a5;
+  border-radius: 50%;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.trash-drop-zone:hover,
+.drop-zone.can-drop .trash-drop-zone {
+  background-color: #fecaca;
+  border-color: #f87171;
+  transform: scale(1.1);
+}
+
+.drop-zone.active .trash-drop-zone {
+  background-color: #dc2626;
+  border-color: #dc2626;
+  transform: scale(1.2);
+}
+
+.drop-zone.active .trash-drop-zone .trash-label {
+  color: white;
+}
+
+.trash-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #dc2626;
+  margin-top: 0.25rem;
+  text-align: center;
+}
+
+/* Drop Zone Indicators */
+.drop-zone-indicators {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.drop-zone-indicator {
+  position: absolute;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  transition: all 0.2s ease-in-out;
+  pointer-events: none;
+}
+
+.drop-zone-indicator.section {
+  border-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.drop-zone-indicator.component {
+  border-color: #10b981;
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.drop-zone-indicator.trash {
+  border-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.drop-zone-indicator.active {
+  opacity: 1;
+  transform: scale(1.02);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .section-drop-zone {
+    padding: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .empty-section-drop-zone {
+    padding: 2rem 1rem;
+  }
+
+  .trash-drop-zone-container {
+    bottom: 1rem;
+    right: 1rem;
+  }
+
+  .trash-drop-zone {
+    width: 60px;
+    height: 60px;
+  }
+
+  .component-placeholder {
+    padding: 0.5rem;
+  }
+}
+
+/* Animation for drag operations */
+@keyframes dropZoneHighlight {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.drop-zone.can-drop {
+  animation: dropZoneHighlight 0.2s ease-out;
+}
+
+/* Drag preview styles */
+.drag-preview {
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  opacity: 0.9;
+  transform: rotate(5deg);
+  pointer-events: none;
+}
+
+.drag-preview .component-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.drag-preview .component-icon {
+  font-size: 1.25rem;
+}
+
+.drag-preview .component-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Ghost indicators for other users' drag operations */
+.ghost-drag-indicator {
+  position: absolute;
+  border: 2px dashed #fbbf24;
+  background-color: rgba(251, 191, 36, 0.1);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ghost-drag-indicator::after {
+  content: attr(data-user-name);
+  position: absolute;
+  top: -1.5rem;
+  left: 0;
+  background-color: #fbbf24;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Accessibility improvements */
+.drop-zone:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.component-placeholder:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .section-drop-zone {
+    border-color: #000000;
+  }
+
+  .drop-zone.active .empty-section-drop-zone {
+    border-color: #000000;
+    background-color: #ffffff;
+  }
+
+  .trash-drop-zone {
+    border-color: #000000;
+    background-color: #ffffff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .section-drop-zone,
+  .component-placeholder,
+  .empty-section-drop-zone,
+  .trash-drop-zone,
+  .drop-zone-indicator {
+    transition: none;
+  }
+
+  .drop-zone.can-drop {
+    animation: none;
+  }
+}
