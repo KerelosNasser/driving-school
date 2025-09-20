@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { 
@@ -14,7 +14,11 @@ import {
   Camera,
   Users,
   Star,
-  Award
+  Award,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause
 } from 'lucide-react';
 import { useEditMode } from '@/contexts/editModeContext';
 import { EditableText } from '@/components/ui/editable-text';
@@ -310,6 +314,10 @@ export function Gallery({
   const [editingImage, setEditingImage] = useState<StudentImage | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isNewImage, setIsNewImage] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
   // Initialize student images
   useEffect(() => {
@@ -444,10 +452,93 @@ export function Gallery({
     const updatedImages = studentImages.filter(img => img.id !== id);
     setStudentImages(updatedImages);
 
+    // Adjust current index if needed
+    if (currentIndex >= updatedImages.length && updatedImages.length > 0) {
+      setCurrentIndex(updatedImages.length - 1);
+    } else if (updatedImages.length === 0) {
+      setCurrentIndex(0);
+    }
+
     const success = await saveStudentImages(updatedImages);
     if (success) {
       toast.success('Student removed successfully');
     }
+  };
+
+  // Navigation functions
+  const goToPrevious = useCallback(() => {
+    setCurrentIndex(prev => prev === 0 ? studentImages.length - 1 : prev - 1);
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 3000);
+  }, [studentImages.length]);
+
+  const goToNext = useCallback(() => {
+    setCurrentIndex(prev => prev === studentImages.length - 1 ? 0 : prev + 1);
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 3000);
+  }, [studentImages.length]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (studentImages.length <= 1) return;
+      
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault();
+          goToPrevious();
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          goToNext();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [goToPrevious, goToNext, studentImages.length]);
+
+  // Auto-play functionality
+  useEffect(() => {
+    if (!isAutoPlaying || studentImages.length <= 1) return;
+
+    const interval = setInterval(() => {
+      goToNext();
+    }, 5000); // Change image every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, goToNext, studentImages.length]);
+
+  // Touch/swipe handling
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsAutoPlaying(false); // Pause auto-play on touch
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && studentImages.length > 1) {
+      goToNext();
+    }
+    if (isRightSwipe && studentImages.length > 1) {
+      goToPrevious();
+    }
+
+    // Resume auto-play after 3 seconds of inactivity
+    setTimeout(() => setIsAutoPlaying(true), 3000);
   };
 
   if (studentImages.length === 0 && !isEditMode) {
@@ -527,85 +618,213 @@ export function Gallery({
           </div>
         </motion.div>
 
-        {/* Student Gallery Grid */}
+        {/* Horizontal Carousel Gallery */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          className="relative"
         >
-          <AnimatePresence mode="popLayout">
-            {studentImages.map((student, index) => (
-              <motion.div
-                key={student.id}
-                layout
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
-                className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-300"
+          {studentImages.length > 0 && (
+            <>
+              {/* Navigation Arrows */}
+              <div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20">
+                <Button
+                  onClick={goToPrevious}
+                  className="h-10 w-10 sm:h-12 sm:w-12 p-0 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-lg backdrop-blur-sm border border-gray-200 transition-all duration-200 hover:scale-105"
+                  disabled={studentImages.length <= 1}
+                >
+                  <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+                </Button>
+              </div>
+              
+              <div className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20">
+                <Button
+                  onClick={goToNext}
+                  className="h-10 w-10 sm:h-12 sm:w-12 p-0 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-lg backdrop-blur-sm border border-gray-200 transition-all duration-200 hover:scale-105"
+                  disabled={studentImages.length <= 1}
+                >
+                  <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+                </Button>
+              </div>
+
+              {/* Carousel Container */}
+              <div 
+                className="overflow-hidden rounded-2xl"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
               >
-                {/* Student Photo */}
-                <div className="relative aspect-[3/4] overflow-hidden bg-gray-100">
-                  <Image
-                    src={student.src}
-                    alt={student.alt}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                  />
-                  
-                  {/* Achievement Badge */}
-                  {student.achievement && (
-                    <div className="absolute top-3 left-3">
-                      <span className="px-3 py-1 bg-emerald-500/90 text-white text-xs font-bold rounded-full backdrop-blur-sm flex items-center">
-                        <Award className="h-3 w-3 mr-1" />
-                        {student.achievement}
-                      </span>
-                    </div>
+                <div className="flex items-center justify-center min-h-[380px] sm:min-h-[440px] md:min-h-[500px] lg:min-h-[600px] relative px-4">
+                  <AnimatePresence mode="wait">
+                    {studentImages.map((student, index) => {
+                      const isActive = index === currentIndex;
+                      const isPrev = index === (currentIndex === 0 ? studentImages.length - 1 : currentIndex - 1);
+                      const isNext = index === (currentIndex === studentImages.length - 1 ? 0 : currentIndex + 1);
+                      const isVisible = isActive || isPrev || isNext;
+
+                      if (!isVisible) return null;
+
+                      return (
+                        <motion.div
+                          key={student.id}
+                          initial={{ opacity: 0, scale: 0.8, x: isNext ? 100 : isPrev ? -100 : 0 }}
+                          animate={{
+                            opacity: isActive ? 1 : 0.4,
+                            scale: isActive ? 1 : 0.75,
+                            x: isActive ? 0 : isNext ? '50%' : isPrev ? '-50%' : 0,
+                            zIndex: isActive ? 10 : 5
+                          }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.5, ease: "easeInOut" }}
+                          className={`absolute group bg-white rounded-2xl overflow-hidden shadow-lg transition-all duration-500 ${
+                            isActive 
+                              ? 'w-[260px] h-[360px] sm:w-[300px] sm:h-[420px] md:w-[350px] md:h-[480px] lg:w-[400px] lg:h-[550px] shadow-2xl shadow-emerald-500/20' 
+                              : 'w-[180px] h-[260px] sm:w-[220px] sm:h-[320px] md:w-[260px] md:h-[380px] lg:w-[300px] lg:h-[420px] cursor-pointer'
+                          }`}
+                          onClick={() => {
+                            if (!isActive) {
+                              setCurrentIndex(index);
+                              setIsAutoPlaying(false);
+                              setTimeout(() => setIsAutoPlaying(true), 3000);
+                            }
+                          }}
+                        >
+                          {/* Student Photo */}
+                          <div className="relative w-full h-full overflow-hidden bg-gray-100">
+                            <Image
+                              src={student.src}
+                              alt={student.alt}
+                              fill
+                              className={`object-cover transition-transform duration-500 ${
+                                isActive ? 'group-hover:scale-105' : ''
+                              }`}
+                              sizes="(max-width: 640px) 280px, (max-width: 1024px) 320px, 400px"
+                              priority={isActive}
+                            />
+                            
+                            {/* Achievement Badge - Only show on active image */}
+                            {student.achievement && isActive && (
+                              <div className="absolute top-4 left-4">
+                                <span className="px-3 py-1.5 bg-emerald-500/90 text-white text-sm font-bold rounded-full backdrop-blur-sm flex items-center">
+                                  <Award className="h-4 w-4 mr-1.5" />
+                                  {student.achievement}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Edit Controls - Only show on active image */}
+                            {isEditMode && isActive && (
+                              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditImage(student);
+                                  }}
+                                  className="h-9 w-9 p-0 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-lg"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteImage(student.id);
+                                  }}
+                                  className="h-9 w-9 p-0 rounded-full shadow-lg"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+
+                            {/* Gradient Overlay */}
+                            <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent ${
+                              isActive ? 'h-32' : 'h-24'
+                            }`} />
+                            
+                            {/* Student Info Overlay */}
+                            <div className={`absolute bottom-0 left-0 right-0 text-white ${
+                              isActive ? 'p-6' : 'p-4'
+                            }`}>
+                              <h3 className={`font-bold mb-1 ${
+                                isActive ? 'text-xl sm:text-2xl' : 'text-lg'
+                              }`}>
+                                {student.studentName}
+                              </h3>
+                              {student.date && isActive && (
+                                <p className="text-sm text-white/90 mb-2">
+                                  {new Date(student.date).toLocaleDateString('en-AU', {
+                                    month: 'long',
+                                    year: 'numeric'
+                                  })}
+                                </p>
+                              )}
+                              {!isActive && (
+                                <p className="text-xs text-white/80">
+                                  Click to view
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="flex flex-col items-center mt-8 space-y-4">
+                <div className="flex items-center justify-center space-x-6">
+                  {/* Play/Pause Button */}
+                  {studentImages.length > 1 && (
+                    <Button
+                      onClick={() => setIsAutoPlaying(!isAutoPlaying)}
+                      className="h-8 w-8 p-0 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-md border border-gray-200"
+                    >
+                      {isAutoPlaying ? (
+                        <Pause className="h-4 w-4" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
+                    </Button>
                   )}
 
-                  {/* Edit Controls */}
-                  {isEditMode && (
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleEditImage(student)}
-                        className="h-8 w-8 p-0 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-lg"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDeleteImage(student.id)}
-                        className="h-8 w-8 p-0 rounded-full shadow-lg"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Gradient Overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
-                  
-                  {/* Student Info Overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                    <h3 className="font-bold text-lg mb-1">{student.studentName}</h3>
-                    {student.date && (
-                      <p className="text-xs text-white/80">
-                        {new Date(student.date).toLocaleDateString('en-AU', {
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </p>
-                    )}
+                  {/* Dots Indicator */}
+                  <div className="flex space-x-2">
+                    {studentImages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setCurrentIndex(index);
+                          setIsAutoPlaying(false);
+                          setTimeout(() => setIsAutoPlaying(true), 3000);
+                        }}
+                        className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                          index === currentIndex 
+                            ? 'bg-emerald-500 w-8' 
+                            : 'bg-gray-300 hover:bg-gray-400'
+                        }`}
+                      />
+                    ))}
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+
+                {/* Navigation Instructions */}
+                {studentImages.length > 1 && (
+                  <p className="text-sm text-gray-500 text-center">
+                    <span className="hidden sm:inline">Use arrow keys, </span>
+                    <span className="sm:hidden">Swipe or </span>
+                    click arrows to navigate • Auto-plays every 5 seconds
+                  </p>
+                )}
+              </div>
+            </>
+          )}
         </motion.div>
 
         {/* Empty State */}
