@@ -3,16 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Award, Star, Calendar, Clock, MapPin, Car, Plus, Edit, Trash2, Search, Shield, Users, CheckCircle } from 'lucide-react';
+import { Award, Star, Calendar, MapPin, Car, Plus, Edit, Trash2, Search, Shield, Users, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useEditMode } from '@/contexts/editModeContext';
 import { EditableText } from '@/components/ui/editable-text';
 import { EditableImage } from '@/components/ui/editable-image';
-import { ComponentPalette } from '@/components/drag-drop/ComponentPalette';
-import { PageDropZones } from '@/components/drag-drop/PageDropZones';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Card } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -693,9 +689,10 @@ const LocationItem: React.FC<LocationItemProps> = ({
 
   return (
     <div
-      className={`relative group w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] ${isSelected
-        ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg'
-        : 'bg-gray-100 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-yellow-100'
+      className={`relative group w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] ${
+        isSelected
+          ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg'
+          : 'bg-gray-100 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-yellow-100'
         }`}
     >
       <button

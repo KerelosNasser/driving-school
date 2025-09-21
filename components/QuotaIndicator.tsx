@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { Clock, AlertCircle, Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -62,7 +61,7 @@ export function QuotaIndicator() {
   // Show loading state
   if (loading) {
     return (
-      <div className="flex items-center space-x-2 text-gray-500">
+      <div className="flex items-center space-x-2 text-emerald-200">
         <Loader2 className="h-4 w-4 animate-spin" />
         <span className="text-sm">Loading...</span>
       </div>
@@ -75,7 +74,7 @@ export function QuotaIndicator() {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center space-x-2 text-red-500 cursor-pointer">
+            <div className="flex items-center space-x-2 text-red-400 cursor-pointer">
               <AlertCircle className="h-4 w-4" />
               <span className="text-sm">Quota Error</span>
             </div>
@@ -99,20 +98,21 @@ export function QuotaIndicator() {
           <TooltipTrigger asChild>
             <Link href="/service-center" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <Clock className={`h-4 w-4 ${
-                hasNoQuota ? 'text-red-500' : isLowQuota ? 'text-yellow-500' : 'text-green-500'
+                hasNoQuota ? 'text-red-400' : isLowQuota ? 'text-yellow-400' : 'text-green-400'
               }`} />
-              <Badge 
-                variant={hasNoQuota ? 'destructive' : isLowQuota ? 'secondary' : 'default'}
-                className={`text-xs ${
+              <Button 
+                variant="ghost"
+                size="sm"
+                className={`text-xs px-2 py-1 h-auto ${
                   hasNoQuota 
-                    ? 'bg-red-100 text-red-800 hover:bg-red-200' 
+                    ? 'bg-red-900/30 text-red-300 hover:bg-red-800/40' 
                     : isLowQuota 
-                    ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                    : 'bg-green-100 text-green-800 hover:bg-green-200'
+                    ? 'bg-yellow-900/30 text-yellow-300 hover:bg-yellow-800/40'
+                    : 'bg-emerald-900/30 text-emerald-300 hover:bg-emerald-800/40'
                 }`}
               >
                 {quota.remaining_hours}h left
-              </Badge>
+              </Button>
             </Link>
           </TooltipTrigger>
           <TooltipContent>
@@ -120,7 +120,7 @@ export function QuotaIndicator() {
               <p><strong>Total:</strong> {quota.total_hours} hours</p>
               <p><strong>Used:</strong> {quota.used_hours} hours</p>
               <p><strong>Remaining:</strong> {quota.remaining_hours} hours</p>
-              <p className="text-xs text-gray-500 mt-1">Click to manage quota</p>
+              <p className="text-xs text-emerald-200/80 mt-1">Click to manage quota</p>
             </div>
           </TooltipContent>
         </Tooltip>
@@ -133,7 +133,7 @@ export function QuotaIndicator() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" className="bg-white/10 border-emerald-500/30 text-emerald-100 hover:bg-white/20 hover:text-white">
             <Link href="/packages" className="flex items-center space-x-2">
               <Clock className="h-4 w-4" />
               <span>Get Hours</span>
