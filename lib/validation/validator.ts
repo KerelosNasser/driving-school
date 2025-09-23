@@ -210,7 +210,9 @@ export class ContentValidator {
         },
         {
           field: 'content',
-          required: false,
+          // The renderer expects a page-level `content` string (HTML/JSON) in many places.
+          // Make this required so we fail-fast on malformed DB rows instead of rendering empty boxes.
+          required: true,
           type: 'string',
           sanitizer: (value: string) => InputSanitizer.sanitizeHtml(value)
         }

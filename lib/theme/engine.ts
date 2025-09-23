@@ -96,7 +96,9 @@ export class ThemeEngineImpl implements ThemeEngine {
    */
   async applyTheme(theme: Theme): Promise<void> {
     try {
-      const validation = this.validateTheme(theme);
+      // Ensure theme has all required sections by merging with defaults.
+      const themeToApply = this.ensureCompleteTheme(theme);
+      const validation = this.validateTheme(themeToApply);
       
       if (!validation.isValid) {
         const error = errorRecoverySystem.createError(
@@ -115,14 +117,14 @@ export class ThemeEngineImpl implements ThemeEngine {
       }
 
       // Apply theme via optimized CSS variables
-      await cssVariableManager.optimizedUpdate(this.themeToVariables(theme));
-      
-      // Update current theme
-      this.currentTheme = theme;
-      
-      // Store in caches
-      this.themes.set(theme.id, theme);
-      themeCache.set(theme.id, theme, 2); // Higher priority for applied themes
+  await cssVariableManager.optimizedUpdate(this.themeToVariables(themeToApply));
+
+  // Update current theme
+  this.currentTheme = themeToApply;
+
+  // Store in caches
+  this.themes.set(themeToApply.id, themeToApply);
+  themeCache.set(themeToApply.id, themeToApply, 2); // Higher priority for applied themes
 
       // Emit theme change event
       if (typeof window !== 'undefined') {
@@ -144,11 +146,52 @@ export class ThemeEngineImpl implements ThemeEngine {
   }
 
   /**
+   * Ensure a theme has all required sections by merging missing pieces from the default theme.
+   * This prevents partial admin presets from failing strict validation when applied live.
+   */
+  private ensureCompleteTheme(theme: Theme): Theme {
+    // Shallow clone to avoid mutating caller object
+    const merged: Theme = JSON.parse(JSON.stringify(this.defaultTheme));
+
+    // Merge top-level
+    merged.id = theme.id || merged.id;
+    merged.name = theme.name || merged.name;
+    // Preserve description if provided on incoming theme object (non-standard fields allowed)
+    if ((theme as any).description) {
+      (merged as any).description = (theme as any).description;
+    }
+
+    // Deep-merge common sections (colors, gradients, typography, effects, metadata)
+    merged.colors = { ...merged.colors, ...(theme.colors || {}) } as any;
+    merged.gradients = { ...merged.gradients, ...(theme.gradients || {}) } as any;
+    merged.typography = { ...merged.typography, ...(theme.typography || {}) } as any;
+    merged.effects = { ...merged.effects, ...(theme.effects || {}) } as any;
+    merged.metadata = { ...merged.metadata, ...(theme.metadata || {}) } as any;
+
+    // If theme provides specific nested maps (e.g., primary color shades), merge those too
+    const colorScales = ['primary', 'secondary', 'accent', 'neutral'];
+    colorScales.forEach(scale => {
+      if (theme.colors && (theme.colors as any)[scale]) {
+        (merged.colors as any)[scale] = { ...(merged.colors as any)[scale], ...(theme.colors as any)[scale] };
+      }
+    });
+
+    // Apply any other top-level fields present on the provided theme
+    Object.keys(theme).forEach(key => {
+      if (!(merged as any)[key]) {
+        (merged as any)[key] = (theme as any)[key];
+      }
+    });
+
+    return merged;
+  }
+
+  /**
    * Validate a theme configuration
    */
   validateTheme(theme: Theme): ValidationResult {
     const errors: ValidationError[] = [];
-    const warnings: ValidationError[] = [];
+    const _warnings: ValidationError[] = [];
 
     // Validate theme structure
     if (!theme.id || typeof theme.id !== 'string') {
@@ -175,7 +218,7 @@ export class ThemeEngineImpl implements ThemeEngine {
         severity: 'error'
       });
     } else {
-      this.validateColorPalette(theme.colors, errors, warnings);
+      this.validateColorPalette(theme.colors, errors, _warnings);
     }
 
     // Validate gradients
@@ -185,8 +228,8 @@ export class ThemeEngineImpl implements ThemeEngine {
         message: 'Theme gradients are required',
         severity: 'error'
       });
-    } else {
-      this.validateGradients(theme.gradients, errors, warnings);
+      } else {
+      this.validateGradients(theme.gradients, errors, _warnings);
     }
 
     // Validate typography
@@ -210,12 +253,12 @@ export class ThemeEngineImpl implements ThemeEngine {
     // Perform accessibility validation
     const accessibilityResult = accessibilityValidator.validateThemeAccessibility(theme);
     errors.push(...accessibilityResult.errors);
-    warnings.push(...accessibilityResult.warnings);
+    _warnings.push(...accessibilityResult.warnings);
 
     return {
       isValid: errors.length === 0,
       errors,
-      warnings
+      warnings: _warnings
     };
   }
 
@@ -703,6 +746,67 @@ export class ThemeEngineImpl implements ThemeEngine {
   }
 
   /**
+   * Convert theme object to CSS variable map (used by applyTheme)
+   */
+  private themeToVariables(theme: Theme): Record<string, string> {
+    const variables: Record<string, string> = {};
+
+    // Convert colors
+    Object.entries(theme.colors.primary).forEach(([shade, color]) => {
+      variables[`--theme-primary-${shade}`] = color as string;
+    });
+
+    Object.entries(theme.colors.secondary).forEach(([shade, color]) => {
+      variables[`--theme-secondary-${shade}`] = color as string;
+    });
+
+    Object.entries(theme.colors.accent).forEach(([shade, color]) => {
+      variables[`--theme-accent-${shade}`] = color as string;
+    });
+
+    Object.entries(theme.colors.neutral).forEach(([shade, color]) => {
+      variables[`--theme-neutral-${shade}`] = color as string;
+    });
+
+    // Convert gradients
+    Object.entries(theme.gradients).forEach(([key, gradient]) => {
+      // safe stringify gradient stops
+      const colorStops = (gradient.colorStops || []).map((stop: any) => `${stop.color} ${stop.position}%`).join(', ');
+      variables[`--theme-gradient-${key}`] = `linear-gradient(${gradient.direction}, ${colorStops})`;
+    });
+
+    // Convert effects
+    if (theme.effects?.backdropBlur) {
+      Object.entries(theme.effects.backdropBlur).forEach(([size, value]) => {
+        variables[`--theme-backdrop-blur-${size}`] = value as string;
+      });
+    }
+
+    if (theme.effects?.boxShadow) {
+      Object.entries(theme.effects.boxShadow).forEach(([type, value]) => {
+        variables[`--theme-shadow-${type}`] = value as string;
+      });
+    }
+
+    if (theme.effects?.borderRadius) {
+      Object.entries(theme.effects.borderRadius).forEach(([size, value]) => {
+        variables[`--theme-radius-${size}`] = value as string;
+      });
+    }
+
+    // Convert typography
+    try {
+      variables['--theme-font-sans'] = theme.typography.fontFamily.sans.join(', ');
+      variables['--theme-font-serif'] = theme.typography.fontFamily.serif.join(', ');
+      variables['--theme-font-mono'] = theme.typography.fontFamily.mono.join(', ');
+    } catch (e) {
+      // If typography shape differs, fallback to defaults
+    }
+
+    return variables;
+  }
+
+  /**
    * Reset to default theme
    */
   resetToDefault(): void {
@@ -826,7 +930,7 @@ export class ThemeEngineImpl implements ThemeEngine {
   /**
    * Update theme metadata
    */
-  async updateThemeMetadata(themeId: string, metadata: Partial<ThemeMetadata>): Promise<Theme> {
+  async updateThemeMetadata(themeId: string, metadata: Partial<any>): Promise<Theme> {
     const theme = await this.loadTheme(themeId);
     
     const updatedTheme: Theme = {

@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Mail, Phone, MapPin, Clock, Send, MessageCircle, Shield } from "lucide-react";
 import { BusinessPhone, BusinessEmail, BusinessAddress } from "@/components/ui/global-editable-text";
 import { EditableText } from "@/components/ui/editable-text";
+import { useGlobalContent } from '@/contexts/globalContentContext';
+
+  const { content } = useGlobalContent();
 
 export default function ContactPage() {
   return (
@@ -256,7 +259,7 @@ export default function ContactPage() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="your.email@example.com"
+                      placeholder={`${content.business_email}`}
                       className="rounded-xl border-gray-200 focus:border-emerald-500 focus:ring-emerald-500"
                     />
                   </div>

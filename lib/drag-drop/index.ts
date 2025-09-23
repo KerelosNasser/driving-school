@@ -24,3 +24,4 @@ export { useDragDrop } from './useDragDrop';
 export { useDropZone } from './hooks/useDropZone';
 export { useDragSource } from './hooks/useDragSource';
 export { useRealtimeDragDrop } from './hooks/useRealtimeDragDrop';
+export { DebugMountChecker } from './DebugMountChecker';

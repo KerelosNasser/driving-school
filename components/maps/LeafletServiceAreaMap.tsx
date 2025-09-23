@@ -1,15 +1,51 @@
 // components/maps/LeafletServiceAreaMap.tsx
-'use client';
+"use client";
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import defaultGlobalContentJson from '@/data/global-content.json';
 import dynamic from 'next/dynamic';
 import type { Map, Marker, LatLngExpression, LeafletMouseEvent } from 'leaflet';
 
-// Extend Map interface for web connections
+// Extend Map interface for web connections and coverage polygon
 declare module 'leaflet' {
   interface Map {
     _webConnections?: L.Polyline[];
+    _connectionIndex?: Record<number, L.Polyline[]>;
+    _coveragePolygon?: L.Polygon;
   }
+}
+
+// Compute a convex hull (Monotone chain) for an array of [lat, lng] points
+function convexHull(points: [number, number][]) {
+  if (points.length <= 2) return points.slice();
+
+  // Sort by x (lng), then y (lat)
+  const pts = points.slice().sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+
+  const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
+    (a[1] - o[1]) * (b[0] - o[0]) - (a[0] - o[0]) * (b[1] - o[1]);
+
+  const lower: [number, number][] = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2]!, lower[lower.length - 1]!, p) <= 0) {
+      lower.pop();
+    }
+    lower.push(p);
+  }
+
+  const upper: [number, number][] = [];
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i]!;
+    while (upper.length >= 2 && cross(upper[upper.length - 2]!, upper[upper.length - 1]!, p) <= 0) {
+      upper.pop();
+    }
+    upper.push(p);
+  }
+
+  // Concatenate lower and upper to get full hull; remove last point of each to avoid duplication
+  lower.pop();
+  upper.pop();
+  return lower.concat(upper);
 }
 
 const MAP_CONFIG = {
@@ -95,34 +131,39 @@ function LeafletServiceAreaMap({
   }, []);
 
   // Create custom icons
+  // Render a professional SVG pin for service areas. Uses a divIcon with inline SVG so we can
+  // easily style and animate it on hover/selection.
   const createAreaIcon = useCallback((L: typeof import('leaflet'), area: ServiceArea, isSelected: boolean) => {
-    const size = isSelected ? 36 : 30;
-    const color = isSelected ? '#ca8a04' : area.popular ? '#eab308' : '#94A3B8';
+    const width = isSelected ? 40 : 34;
+    const height = isSelected ? 50 : 42;
+    const color = isSelected ? '#ca8a04' : area.popular ? '#f59e0b' : '#3b82f6';
+
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 32 42" aria-hidden="true">
+        <defs>
+          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.25" />
+          </filter>
+        </defs>
+        <g filter="url(#shadow)">
+          <path d="M16 0C9.372 0 4 5.372 4 12c0 7.5 10.667 18.667 11.167 19.167a1 1 0 0 0 1.666 0C17.333 30.667 28 19.5 28 12 28 5.372 22.628 0 16 0z" fill="${color}"/>
+          <circle cx="16" cy="12" r="6" fill="white" />
+          <text x="16" y="15" font-size="8" font-weight="700" text-anchor="middle" fill="${color}">${area.name ? area.name.charAt(0) : ''}</text>
+        </g>
+      </svg>
+    `;
+
+    const html = `
+      <div class="leaflet-pin-wrapper" style="width: ${width}px; height: ${height}px; display:flex; align-items:flex-start; justify-content:center;">
+        ${svg}
+      </div>
+    `;
 
     return L.divIcon({
-      html: `
-        <div style="
-          width: ${size}px;
-          height: ${size}px;
-          background: ${color};
-          border: 3px solid white;
-          border-radius: 50%;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-          font-size: ${isSelected ? '16px' : '14px'};
-          ${area.popular ? 'position: relative;' : ''}
-        ">
-          ${area.popular ? '<div style="position: absolute; top: -8px; right: -8px; font-size: 16px;">⭐</div>' : ''}
-          ${isEditMode ? '<div style="position: absolute; bottom: -8px; right: -8px; background: white; color: #3b82f6; border: 1px solid #3b82f6; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px;">✎</div>' : ''}
-        </div>
-      `,
-      className: 'custom-area-icon',
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2],
+      html,
+      className: 'professional-pin-icon',
+      iconSize: [width, height],
+      iconAnchor: [width / 2, height - 6],
     });
   }, [isEditMode]);
 
@@ -159,7 +200,7 @@ function LeafletServiceAreaMap({
     try {
       // Clear existing map
       if (mapInstanceRef.current) {
-        // Clean up web connections
+        // Clean up web connections and connection index
         if (mapInstanceRef.current._webConnections) {
           mapInstanceRef.current._webConnections.forEach((connection: L.Polyline) => {
             try {
@@ -168,107 +209,103 @@ function LeafletServiceAreaMap({
               console.warn('Error removing connection:', e);
             }
           });
+          mapInstanceRef.current._webConnections = [];
         }
-        mapInstanceRef.current.remove();
+        if (mapInstanceRef.current._connectionIndex) {
+          try {
+            Object.values(mapInstanceRef.current._connectionIndex).forEach(arr => arr.forEach(line => {
+              try { mapInstanceRef.current?.removeLayer(line); } catch (e) { /* ignore */ }
+            }));
+          } catch (e) {
+            // ignore
+          }
+          // delete the index map
+          delete mapInstanceRef.current._connectionIndex;
+        }
+        // Stop any ongoing animations and remove remaining layers safely before removal.
+        try {
+          const mAny = mapInstanceRef.current as any;
+          if (mAny && typeof mAny.stop === 'function') {
+            mAny.stop();
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        try {
+          mapInstanceRef.current.eachLayer((layer: any) => {
+            try { mapInstanceRef.current?.removeLayer(layer); } catch (e) { /* ignore */ }
+          });
+        } catch (e) {
+          // ignore
+        }
+
+        try {
+          const mAny = mapInstanceRef.current as any;
+          if (mAny && typeof mAny.stop === 'function') {
+            mAny.stop();
+          }
+        } catch (e) {}
+
+        try {
+          mapInstanceRef.current.eachLayer((layer: any) => {
+            try { mapInstanceRef.current?.removeLayer(layer); } catch (e) { /* ignore */ }
+          });
+        } catch (e) {}
+
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          // ignore
+        }
         mapInstanceRef.current = null;
       }
 
-      // Create new map instance
+      // Create new map instance with consistent controls and theme-friendly classes
       const mapInstance = L.map(mapContainerRef.current, {
         ...MAP_CONFIG,
-        preferCanvas: true, // Better performance for many markers
+        // preferCanvas disabled to avoid runtime canvas context errors in some environments
+        preferCanvas: false,
         zoomControl: true,
         scrollWheelZoom: true,
+        // disable animated transitions to avoid internal position reads during teardown
+        zoomAnimation: false,
+        fadeAnimation: false,
+        markerZoomAnimation: false,
       });
       
       mapInstanceRef.current = mapInstance;
 
-      // Add tile layer with error handling
-      const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
+      // Use a cleaner basemap that fits a modern UI (Carto Positron). Keep a robust fallback to OSM.
+      const tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+      const tileLayer = L.tileLayer(tileUrl, {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
         maxZoom: MAP_CONFIG.maxZoom,
         minZoom: 8,
         errorTileUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2Y5ZjlmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjY2NjIj5UaWxlIEVycm9yPC90ZXh0Pjwvc3ZnPg=='
       });
-      
+
       tileLayer.addTo(mapInstance);
 
-      // Add coverage area
-      L.polygon(COVERAGE_COORDS, {
-        color: isEditMode ? '#3b82f6' : '#eab308',
-        weight: 2,
-        opacity: 0.8,
-        fillColor: '#fef3c7',
-        fillOpacity: isEditMode ? 0.1 : 0.05,
-        dashArray: isEditMode ? '5, 10' : '10, 10',
-      }).addTo(mapInstance).bindPopup(`
-        <div>
-          <h3>🎯 Service Coverage Area</h3>
-          <p>We provide driving lessons throughout Brisbane</p>
-          ${isEditMode ? '<p style="color: #3b82f6; font-size: 12px;">💡 Click anywhere to add location</p>' : ''}
-        </div>
-      `);
-
-      // Add office marker
-      const officeIcon = createOfficeIcon(L);
-      L.marker(MAP_CONFIG.center, { icon: officeIcon })
-          .addTo(mapInstance)
-          .bindPopup(`
-          <div>
-            <h3>🏢 EG Driving School</h3>
-            <p>📍 Brisbane, Queensland</p>
-            <p>📞 (07) 1234 5678</p>
-            <p>✉️ info@egdrivingschool.com</p>
-          </div>
-        `);
-
-      // Add spider web connections between service areas
-      if (serviceAreas.length > 1) {
-        const webConnections: L.Polyline[] = [];
-        const mainOffice = MAP_CONFIG.center as [number, number];
-        
-        // Create connections from office to all popular areas
-        const popularAreas = serviceAreas.filter(area => area.popular);
-        popularAreas.forEach(area => {
-          const connection = L.polyline([
-            mainOffice,
-            [area.lat, area.lng]
-          ], {
-            color: '#eab308',
-            weight: 2,
-            opacity: 0.4,
-            dashArray: '5, 10'
-          }).addTo(mapInstance);
-          webConnections.push(connection);
-        });
-
-        // Create connections between nearby service areas (spider web effect)
-        serviceAreas.forEach((area1, i) => {
-          serviceAreas.slice(i + 1).forEach(area2 => {
-            const distance = Math.sqrt(
-              Math.pow(area1.lat - area2.lat, 2) + 
-              Math.pow(area1.lng - area2.lng, 2)
-            );
-            
-            // Connect areas that are relatively close (adjust threshold as needed)
-            if (distance < 0.1) {
-              const connection = L.polyline([
-                [area1.lat, area1.lng],
-                [area2.lat, area2.lng]
-              ], {
-                color: area1.popular && area2.popular ? '#fbbf24' : '#d1d5db',
-                weight: area1.popular && area2.popular ? 2 : 1,
-                opacity: area1.popular && area2.popular ? 0.6 : 0.3,
-                dashArray: area1.popular && area2.popular ? '3, 6' : '2, 8'
-              }).addTo(mapInstance);
-              webConnections.push(connection);
-            }
-          });
-        });
-
-        // Store connections for cleanup
-        mapInstance._webConnections = webConnections;
+      // Remove default zoom control and add a themed one in bottom-right
+      try {
+        if (mapInstance.zoomControl) {
+          mapInstance.zoomControl.remove();
+        }
+        L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
+        const newZoom = document.querySelector('.leaflet-control-zoom');
+        if (newZoom) {
+          newZoom.classList.add('rounded-md', 'bg-white/80', 'backdrop-blur-sm', 'shadow-sm');
+          (newZoom as HTMLElement).style.margin = '0.5rem';
+        }
+      } catch (e) {
+        // ignore control styling errors
       }
+
+      // Coverage area/polygon will be created later from actual service area points
+
+      // We'll add spider-web connections after creating markers (below) so connections
+      // can be indexed per-marker for hover highlighting.
 
       // Add map click handler for edit mode
       if (isEditMode && onMapClick) {
@@ -290,7 +327,7 @@ function LeafletServiceAreaMap({
 
         const marker = L.marker([area.lat, area.lng], {
           icon: areaIcon,
-          riseOnHover: true,
+          pane: 'markerPane'
         })
             .addTo(mapInstance)
             .bindPopup(`
@@ -308,13 +345,67 @@ function LeafletServiceAreaMap({
           onAreaSelect?.(area.id);
         });
 
+        // No hover animations: keep markers visually stable. Any tooltip/popups still work.
+
         newMarkers[area.id] = marker;
       });
 
       setMarkers(newMarkers);
 
-      // Fit bounds
-      if (serviceAreas.length > 0) {
+      // Build a convex hull polygon around all service area points to represent the coverage border
+      const pts = serviceAreas.map(a => [a.lat, a.lng] as [number, number]);
+      let hullPoints: [number, number][] = [];
+      if (pts.length >= 3) {
+        // convexHull expects [lat, lng] pairs, but sorts by lng then lat - it will work
+        hullPoints = convexHull(pts.map(p => [p[0], p[1]]));
+      }
+
+      if (hullPoints.length >= 3) {
+        // convert hullPoints to [lat, lng] tuples for Leaflet (already in that form)
+            const hullPolygon = L.polygon(hullPoints, {
+              color: '#10b981', // emerald-500
+              weight: 2,
+              opacity: 0.95,
+              fillColor: '#06b6d4', // teal-400 subtle fill
+              fillOpacity: 0.06,
+              dashArray: '8,6'
+            }).addTo(mapInstance);
+
+        // Store polygon for cleanup and hover interactions
+        mapInstance._coveragePolygon = hullPolygon as L.Polygon;
+
+        // When hovering a marker, highlight the hull briefly
+        Object.values(newMarkers).forEach((m) => {
+          m.on('mouseover', () => {
+            try {
+              mapInstance._coveragePolygon?.setStyle({ weight: 3, fillOpacity: 0.12 });
+            } catch (e) {}
+          });
+          m.on('mouseout', () => {
+            try {
+              mapInstance._coveragePolygon?.setStyle({ weight: 2, fillOpacity: 0.06 });
+            } catch (e) {}
+          });
+        });
+      } else {
+        // Fallback: draw a soft coverage area around default coords if not enough points
+        const fallback = L.polygon(COVERAGE_COORDS, {
+          color: isEditMode ? '#3b82f6' : '#eab308',
+          weight: 2,
+          opacity: 0.8,
+          fillColor: '#fef3c7',
+          fillOpacity: isEditMode ? 0.1 : 0.05,
+          dashArray: isEditMode ? '5, 10' : '10, 10',
+        }).addTo(mapInstance);
+        mapInstance._coveragePolygon = fallback as L.Polygon;
+      }
+
+      // Fit bounds: if there is exactly one marker, setView to avoid fitBounds creating
+      // a tiny bounds that can lead to grey/blank tiles in some tile servers.
+      if (serviceAreas.length === 1) {
+        const only = serviceAreas[0];
+        mapInstance.setView([only.lat, only.lng], Math.max(MAP_CONFIG.zoom, 13));
+      } else if (serviceAreas.length > 1) {
         const group = new L.FeatureGroup(Object.values(newMarkers));
         mapInstance.fitBounds(group.getBounds().pad(0.1));
       } else {
@@ -384,13 +475,27 @@ function LeafletServiceAreaMap({
   useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
-        // Clean up web connections
+        // Clean up web connections and coverage polygon
+        try {
+          mapInstanceRef.current.off();
+        } catch (e) {
+          // ignore
+        }
+
         if (mapInstanceRef.current._webConnections) {
           mapInstanceRef.current._webConnections.forEach((connection: L.Polyline) => {
-            mapInstanceRef.current?.removeLayer(connection);
+            try { mapInstanceRef.current?.removeLayer(connection); } catch (e) { /* ignore */ }
           });
         }
-        mapInstanceRef.current.remove();
+        if (mapInstanceRef.current._coveragePolygon) {
+          try { mapInstanceRef.current.removeLayer(mapInstanceRef.current._coveragePolygon); } catch (e) { /* ignore */ }
+          delete mapInstanceRef.current._coveragePolygon;
+        }
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          // ignore
+        }
         mapInstanceRef.current = null;
       }
     };
@@ -416,14 +521,14 @@ function LeafletServiceAreaMap({
 
   return (
       <div className="w-full h-full relative">
-        <div
-            ref={mapContainerRef}
-            className="w-full h-full rounded-lg"
-            style={{
-              cursor: isEditMode ? 'crosshair' : 'default',
-              background: '#f8f9fa'
-            }}
-        />
+          <div
+              ref={mapContainerRef}
+              className="w-full h-full"
+              style={{
+                cursor: isEditMode ? 'crosshair' : 'default',
+                background: 'linear-gradient(90deg, rgba(16,185,129,0.06), rgba(14,165,233,0.04))'
+              }}
+          />
         {loading && (
             <div className="absolute inset-0 bg-white/90 flex items-center justify-center">
               <div className="text-center">

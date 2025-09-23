@@ -10,6 +10,7 @@ import { Suspense } from 'react';
 import { EditModeProvider } from "@/contexts/editModeContext";
 import { GlobalContentProvider } from "@/contexts/globalContentContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import EditModeHUD from '@/components/drag-drop/EditModeHUD';
 
 // Optimized font loading
 const geistSans = Geist({
@@ -148,6 +149,7 @@ export default function RootLayout({
                   </LayoutWrapper>
                 </PostSignupWrapper>
               </GlobalContentProvider>
+              <EditModeHUD />
             </EditModeProvider>
           </Suspense>
         </ThemeProvider>

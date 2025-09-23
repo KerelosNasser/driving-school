@@ -373,17 +373,25 @@
       "alt_text": null,
       "content_type": "text"
     },
-    "instructor_bio_p1": {
-      "content_key": "instructor_bio_p1",
-      "content_value": "Hi there! I'm Michael, a passionate driving instructor with over 10\n years of experience teaching people of all ages how to drive safely and confidently on Brisbane roads.",
+    "instructor_name": {
+      "content_key": "instructor_name",
+      "content_value": "Emael Ghobrial",
       "content_json": null,
       "file_url": null,
       "alt_text": null,
       "content_type": "text"
     },
-    "instructor_name": {
-      "content_key": "instructor_name",
-      "content_value": "Emael Ghobrial",
+    "instructor_bio_p1": {
+      "content_key": "instructor_bio_p1",
+      "content_value": "Hi, my name is Emeal and I have been a driving instructor since 2017 and am qualified to instruct in both manual and automatic vehicles.",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "features_item_9_title": {
+      "content_key": "features_item_9_title",
+      "content_value": "New Feature",
       "content_json": null,
       "file_url": null,
       "alt_text": null,
@@ -405,20 +413,6 @@
           "lat": -27.4809,
           "lng": 153.0176,
           "name": "South Brisbane",
-          "popular": true
-        },
-        {
-          "id": 3,
-          "lat": -27.4818,
-          "lng": 153.012,
-          "name": "West End",
-          "popular": false
-        },
-        {
-          "id": 4,
-          "lat": -27.457,
-          "lng": 153.0344,
-          "name": "Fortitude Valley",
           "popular": true
         },
         {
@@ -531,22 +525,6 @@
       "alt_text": null,
       "content_type": "json"
     },
-    "features_item_9_title": {
-      "content_key": "features_item_9_title",
-      "content_value": "New Feature",
-      "content_json": null,
-      "file_url": null,
-      "alt_text": null,
-      "content_type": "text"
-    },
-    "about_instructor_name": {
-      "content_key": "about_instructor_name",
-      "content_value": "Emael Ghobrial",
-      "content_json": null,
-      "file_url": null,
-      "alt_text": null,
-      "content_type": "text"
-    },
     "student_gallery_images": {
       "content_key": "student_gallery_images",
       "content_value": null,
@@ -595,8 +573,24 @@
       "file_url": null,
       "alt_text": null,
       "content_type": "json"
+    },
+    "about_instructor_name": {
+      "content_key": "about_instructor_name",
+      "content_value": "Emael Ghobrial",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "business_address": {
+      "content_key": "business_address",
+      "content_value": "36 South st, Burpengary East, QLD 4505",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
     }
   },
-  "timestamp": 1758242811097,
-  "version": "v1758242811097-cb1cye4j7"
+  "timestamp": 1758648801983,
+  "version": "v1758648801983-r6h291cbv"
 }

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useDrag, useDrop } from 'react-dnd';
+import { DragDropProvider } from '@/lib/drag-drop';
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -976,7 +976,7 @@ export const NavigationEditor: React.FC = () => {
   const rootItems = buildTreeItems(items);
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <DragDropProvider>
       <div className="space-y-4">
         {/* Navigation Preview */}
         {showPreview && (
@@ -1115,6 +1115,6 @@ export const NavigationEditor: React.FC = () => {
           </Card>
         </div>
       </div>
-    </DndProvider>
+    </DragDropProvider>
   );
 };

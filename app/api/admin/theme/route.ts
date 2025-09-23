@@ -16,11 +16,8 @@ async function isUserAdmin(_userId: string): Promise<boolean> {
 // GET - Retrieve current theme configuration
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    // Public: allow reading theme configuration without authentication so
+    // the site can render the configured theme for all visitors.
     const supabase = await createServerComponentClient({ cookies });
 
     const { data, error } = await supabase

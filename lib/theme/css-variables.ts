@@ -114,7 +114,7 @@ export class CSSVariableManagerImpl implements CSSVariableManager {
       // Update current variables cache
       Object.assign(this.currentVariables, variables);
       
-    } catch (error) {
+  } catch (_error) {
       const themeError = errorRecoverySystem.createError(
         'Optimized CSS update failed',
         'CSS_OPTIMIZATION_FAILED',
@@ -191,8 +191,8 @@ export class CSSVariableManagerImpl implements CSSVariableManager {
             }
           });
         }
-      } catch (error) {
-        console.warn(`Failed to set CSS variable ${property}:`, error);
+      } catch (_error) {
+        console.warn(`Failed to set CSS variable ${property}:`, _error);
         this.applyFallback(property);
       }
     });
@@ -204,7 +204,8 @@ export class CSSVariableManagerImpl implements CSSVariableManager {
   private applyFallback(property: string): void {
     const fallbacks = this.fallbackChains.get(property);
     if (fallbacks && fallbacks.length > 0) {
-      const fallbackValue = this.defaultVariables[fallbacks[0]] || this.defaultVariables[property];
+      const firstFallback = fallbacks[0];
+      const fallbackValue = (firstFallback && this.defaultVariables[firstFallback]) || this.defaultVariables[property];
       if (fallbackValue) {
         document.documentElement.style.setProperty(property, fallbackValue);
       }
@@ -466,9 +467,9 @@ export class CSSVariableManagerImpl implements CSSVariableManager {
     
     // Extract blur value
     const blurMatch = value.match(/blur\(([\d.]+(?:px|rem|em)?)\)/);
-    if (!blurMatch) return false;
+    if (!blurMatch || !blurMatch[1]) return false;
     
-    const blurValue = parseFloat(blurMatch[1]);
+    const blurValue = parseFloat(blurMatch[1] as string);
     return !isNaN(blurValue) && blurValue >= 0;
   }
 

@@ -1,34 +1,34 @@
 'use client'
 
+import { useGlobalContent } from '@/contexts/globalContentContext';
+
 export function OrganizationSchema() {
+  const { content } = useGlobalContent();
+
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "DrivingSchool",
-    "name": "EG Driving School",
+    "name": content.business_name,
     "description": "Professional driving instruction service offering comprehensive driving lessons and test preparation.",
-    "url": "https://your-domain.vercel.app",
-    "logo": "https://your-domain.vercel.app/logo.png",
-    "image": "https://your-domain.vercel.app/og-image.jpg",
-    "telephone": "+61-XXX-XXX-XXX", // Replace with actual phone
-    "email": "info@egdrivingschool.com", // Replace with actual email
+    "url": typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.vercel.app',
+    "logo": `${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.vercel.app'}/logo.png`,
+    "image": `${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.vercel.app'}/og-image.jpg`,
+    "telephone": content.business_phone,
+    "email": content.business_email,
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": "Your Street Address",
-      "addressLocality": "Your City",
-      "addressRegion": "Your State",
-      "postalCode": "Your Postal Code",
+      "streetAddress": content.business_address || "",
+      "addressLocality": "",
+      "addressRegion": "",
+      "postalCode": "",
       "addressCountry": "AU"
     },
     "geo": {
       "@type": "GeoCoordinates",
-      "latitude": -27.4698, // Replace with actual coordinates
+      "latitude": -27.4698,
       "longitude": 153.0251
     },
-    "openingHours": [
-      "Mo-Fr 08:00-18:00",
-      "Sa 08:00-16:00",
-      "Su 10:00-16:00"
-    ],
+    "openingHours": [content.operating_hours || "Mo-Fr 08:00-18:00"],
     "priceRange": "$$",
     "areaServed": {
       "@type": "State",
@@ -38,38 +38,9 @@ export function OrganizationSchema() {
     "hasOfferCatalog": {
       "@type": "OfferCatalog",
       "name": "Driving Lesson Packages",
-      "itemListElement": [
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Service",
-            "name": "Beginner Package",
-            "description": "Perfect for beginners who are just starting their driving journey"
-          }
-        },
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Service",
-            "name": "Standard Package",
-            "description": "Our most popular package for learners with some experience"
-          }
-        },
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Service",
-            "name": "Premium Package",
-            "description": "Comprehensive package for complete preparation"
-          }
-        }
-      ]
+      "itemListElement": []
     },
-    "sameAs": [
-      "https://www.facebook.com/egdrivingschool", // Replace with actual social media
-      "https://www.instagram.com/egdrivingschool",
-      "https://www.linkedin.com/company/egdrivingschool"
-    ]
+    "sameAs": [content.facebook_url || '', content.instagram_url || '', content.linkedin_url || '']
   }
 
   return (
@@ -81,21 +52,23 @@ export function OrganizationSchema() {
 }
 
 export function LocalBusinessSchema() {
+  const { content } = useGlobalContent();
+
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    "@id": "https://your-domain.vercel.app/#organization",
-    "name": "EG Driving School",
+    "@id": `${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.vercel.app'}/#organization`,
+    "name": content.business_name,
     "description": "Professional driving school offering comprehensive driving lessons and test preparation with experienced instructors.",
-    "url": "https://your-domain.vercel.app",
-    "telephone": "+61-XXX-XXX-XXX",
-    "email": "info@egdrivingschool.com",
+    "url": typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.vercel.app',
+    "telephone": content.business_phone,
+    "email": content.business_email,
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": "Your Street Address",
-      "addressLocality": "Your City",
-      "addressRegion": "Your State",
-      "postalCode": "Your Postal Code",
+      "streetAddress": content.business_address || "",
+      "addressLocality": "",
+      "addressRegion": "",
+      "postalCode": "",
       "addressCountry": "AU"
     },
     "geo": {
@@ -109,18 +82,6 @@ export function LocalBusinessSchema() {
         "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         "opens": "08:00",
         "closes": "18:00"
-      },
-      {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": "Saturday",
-        "opens": "08:00",
-        "closes": "16:00"
-      },
-      {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": "Sunday",
-        "opens": "10:00",
-        "closes": "16:00"
       }
     ],
     "aggregateRating": {

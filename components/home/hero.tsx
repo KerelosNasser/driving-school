@@ -281,7 +281,7 @@ export function Hero({
                     <div className="flex justify-between items-start mb-6">
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">
-                          {testPackage?.name || "Test Preparation"}
+                          {testPackage?.name || "Test prep intensive"}
                         </h3>
                         <div className="w-12 h-1 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full mt-2"></div>
                       </div>
@@ -313,32 +313,29 @@ export function Hero({
                             $
                             {testPackage?.price
                               ? testPackage.price.toFixed(0)
-                              : "499"}
+                              : "208"}
                           </div>
                           <div className="text-white/80 text-xs mt-1">
-                            {testPackage?.hours || 10} hours
+                            {testPackage?.hours || 3} hours
                           </div>
                         </div>
                       </div>
                     </div>
-
-                    {/* Features list - compact for mobile */}
-                    <div className="mb-6">
-                      <div className="space-y-3">
-                        {testPackage?.features
-                          ?.slice(0, 3)
-                          .map((feature: string, index: number) => (
-                            <div key={index} className="flex items-center">
-                              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center mr-3">
-                                <Check className="h-3 w-3 text-emerald-600" />
-                              </div>
-                              <span className="text-gray-700 text-sm">
-                                {feature}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
+{/* Features list - compact for mobile */}
+<div className="mb-6">
+  <div className="space-y-3">
+    {(testPackage?.features || ['Best for learners preparing driving test', 'Dedicated feedback after session', 'Comperhensive coverage'])
+      .slice(0, 3)
+      .map((feature: string, index: number) => (
+        <div key={index} className="flex items-center">
+          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center mr-3">
+            <Check className="h-3 w-3 text-emerald-600" />
+          </div>
+          <span className="text-gray-700 text-sm">{feature}</span>
+        </div>
+      ))}
+  </div>
+</div>
 
                     {/* CTA button - full width and prominent */}
                     <button className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center">
@@ -353,11 +350,6 @@ export function Hero({
                       Includes test day booking and car hire
                     </p>
                   </div>
-                </div>
-
-                {/* Floating tag */}
-                <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-white text-emerald-700 text-sm font-bold px-4 py-2 rounded-full shadow-lg whitespace-nowrap">
-                  Best value for test preparation
                 </div>
               </div>
             </div>

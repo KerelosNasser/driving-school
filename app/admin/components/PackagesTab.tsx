@@ -59,13 +59,41 @@ export function PackagesTab({ initialPackages = [] }: PackagesTabProps) {
         body: JSON.stringify(packageData)
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save package');
+      // Attempt to parse JSON body (if any) for both success and error cases.
+      let data: any = null;
+      try {
+        // Some responses may be empty; guard against that.
+        data = await response.json().catch(() => null);
+      } catch (e) {
+        // If parsing fails, capture text for debugging and log minimally.
+        const text = await response.text().catch(() => null);
+        console.warn(`Failed to parse JSON response from packages API (status ${response.status})`, text ? `response text: ${String(text).slice(0, 200)}` : 'no text');
+        throw new Error(`Invalid JSON response from server (status ${response.status})`);
       }
 
-      const data = await response.json();
-      
+      if (!response.ok) {
+        const serverMsg = data && (data.error || data.message) ? `${data.error || data.message}${data.details ? `: ${data.details}` : ''}` : `Failed to save package (status ${response.status})`;
+        // Log a concise warning (avoid printing raw objects which Next.js may surface)
+        console.warn(`Packages API returned error (status ${response.status}): ${serverMsg}`);
+        // Handle out-of-band deletion: if a package was deleted elsewhere while
+        // the user was editing it, the server will respond 404 with a
+        // 'Package not found' message. In that case, close the dialog and
+        // refresh the list so the UI doesn't try to update a missing item.
+        if (response.status === 404 && typeof serverMsg === 'string' && serverMsg.toLowerCase().includes('package not found')) {
+          toast.error('Package not found — it may have been deleted elsewhere. Refreshing list.');
+          setDialogOpen(false);
+          setEditingPackage(null);
+          fetchPackages();
+          return;
+        }
+        throw new Error(serverMsg);
+      }
+
+      if (!data || !data.package) {
+        console.warn(`Packages API returned unexpected body for save (status ${response.status})`);
+        throw new Error('Unexpected server response: missing `package` object');
+      }
+
       if (editingPackage) {
         setPackages(prev => prev.map(pkg => 
           pkg.id === editingPackage.id ? data.package : pkg
@@ -79,8 +107,10 @@ export function PackagesTab({ initialPackages = [] }: PackagesTabProps) {
       setDialogOpen(false);
       setEditingPackage(null);
     } catch (error) {
-      console.error('Error saving package:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to save package');
+      // Surface a user-friendly toast and log a short warning for debugging.
+      const msg = error instanceof Error ? error.message : 'Failed to save package';
+      console.warn('Error saving package:', msg);
+      toast.error(msg);
     }
   };
 
@@ -93,18 +123,34 @@ export function PackagesTab({ initialPackages = [] }: PackagesTabProps) {
         method: 'DELETE'
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete package');
+      let respBody: any = null;
+      try {
+        respBody = await response.json().catch(() => null);
+      } catch (e) {
+        respBody = null;
       }
 
-      setPackages(prev => prev.filter(pkg => pkg.id !== packageToDelete.id));
+      if (!response.ok) {
+        const serverMsg = respBody && (respBody.error || respBody.message) ? `${respBody.error || respBody.message}${respBody.details ? `: ${respBody.details}` : ''}` : `Failed to delete package (status ${response.status})`;
+        console.warn(`Packages API delete error (status ${response.status}): ${serverMsg}`);
+        throw new Error(serverMsg);
+      }
+
+      // Validate body contains deleted package info (optional)
+      if (respBody && respBody.package) {
+        setPackages(prev => prev.filter(pkg => pkg.id !== respBody.package.id));
+      } else {
+        // Fall back to removing by id we attempted to delete
+        setPackages(prev => prev.filter(pkg => pkg.id !== packageToDelete.id));
+      }
+
       toast.success('Package deleted successfully');
       setDeleteDialogOpen(false);
       setPackageToDelete(null);
     } catch (error) {
-      console.error('Error deleting package:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete package');
+      const msg = error instanceof Error ? error.message : 'Failed to delete package';
+      console.warn('Error deleting package:', msg);
+      toast.error(msg);
     }
   };
 

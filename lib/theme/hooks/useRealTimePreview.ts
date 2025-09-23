@@ -31,8 +31,8 @@ export interface UseRealTimePreviewReturn {
   getThemeDifferences: (theme1: Theme, theme2: Theme) => string[];
   
   // Refs
-  previewContainerRef: React.RefObject<HTMLDivElement>;
-  controlsContainerRef: React.RefObject<HTMLDivElement>;
+  previewContainerRef: React.RefObject<HTMLDivElement | null>;
+  controlsContainerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function useRealTimePreview(options: UseRealTimePreviewOptions = {}): UseRealTimePreviewReturn {
@@ -147,8 +147,36 @@ export function useRealTimePreview(options: UseRealTimePreviewOptions = {}): Use
       // Save theme first
       await themeEngine.saveTheme(theme);
       
-      // Apply to live site
+      // Apply to live site (preview manager will ensure UI updates)
       realTimePreviewManager.applyThemeToLiveSite(theme);
+
+      // Also apply via theme engine to ensure global document-level variables/classes are set
+      // (some codepaths of preview manager only target preview iframe/container)
+      if (typeof window !== 'undefined') {
+        try {
+          await themeEngine.applyTheme(theme);
+        } catch (applyErr) {
+          // Non-fatal: log and continue; the preview manager may still have applied UI updates
+          console.warn('themeEngine.applyTheme failed in applyToLiveSite:', applyErr);
+        }
+      }
+      
+      // Persist to server so ThemeContext and other clients can read the same config
+      try {
+        const resp = await fetch('/api/admin/theme', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ config: theme })
+        });
+
+        if (!resp.ok) {
+          const text = await resp.text().catch(() => '');
+          console.warn('Failed to persist theme to server (PUT /api/admin/theme):', resp.status, text);
+        }
+      } catch (err) {
+        console.warn('Error while persisting theme to server:', err);
+      }
       
       // Update current design reference
       setCurrentDesignTheme(theme);
@@ -165,6 +193,8 @@ export function useRealTimePreview(options: UseRealTimePreviewOptions = {}): Use
       throw error;
     }
   }, []);
+
+// ...existing code...
 
   // Create side-by-side comparison
   const createComparison = useCallback((currentTheme: Theme, modifiedTheme: Theme) => {
@@ -259,11 +289,15 @@ export function useThemeControl<T = any>(
     const pathParts = path.split('.');
     const updatedTheme = JSON.parse(JSON.stringify(theme)); // Deep clone
     
-    let current = updatedTheme;
+    let current: any = updatedTheme;
     for (let i = 0; i < pathParts.length - 1; i++) {
-      current = current[pathParts[i]];
+      const part = pathParts[i];
+      if (current[part] === undefined || current[part] === null) {
+        current[part] = {};
+      }
+      current = current[part];
     }
-    
+
     current[pathParts[pathParts.length - 1]] = value;
     
     // Update metadata

@@ -23,35 +23,52 @@ export function useDropZone({ zone, onDrop, userId, userName }: UseDropZoneProps
 
   // Register/unregister drop zone
   useEffect(() => {
-    registerDropZone(zone);
+    try {
+      registerDropZone(zone);
+    } catch (err) {
+      console.error('Failed to register drop zone (useDropZone):', err);
+    }
+
     return () => {
-      unregisterDropZone(zone.id);
+      try {
+        unregisterDropZone(zone.id);
+      } catch (err) {
+        // ignore
+      }
     };
   }, [zone.id, registerDropZone, unregisterDropZone]);
 
   const [{ isOver, canDrop, isOverCurrent }, drop] = useDrop({
     accept: zone.accepts,
     drop: (item: DragItem, monitor) => {
-      if (!monitor.isOver({ shallow: true })) {
-        return;
-      }
+      try {
+        if (!monitor.isOver({ shallow: true })) return;
 
-      const validation = validateDrop?.(item, zoneRef.current);
-      if (!validation?.canDrop) {
-        console.warn('Drop validation failed:', validation?.reason);
-        return;
-      }
+        const validation = validateDrop?.(item, zoneRef.current);
+        if (!validation?.canDrop) {
+          console.warn('Drop validation failed:', validation?.reason);
+          return;
+        }
 
-      const success = handleDrop(item, zoneRef.current, userId, userName);
-      if (success) {
-        onDrop(item, zoneRef.current);
-      }
+        const success = handleDrop(item, zoneRef.current, userId, userName);
+        if (success) onDrop(item, zoneRef.current);
 
-      return { targetZone: zoneRef.current, success };
+        return { targetZone: zoneRef.current, success };
+      } catch (err) {
+        console.group('Drop handler failed');
+        console.error(err);
+        console.groupEnd();
+        return { targetZone: zoneRef.current, success: false };
+      }
     },
     canDrop: (item: DragItem) => {
-      const validation = validateDrop?.(item, zoneRef.current);
-      return validation?.canDrop || false;
+      try {
+        const validation = validateDrop?.(item, zoneRef.current);
+        return validation?.canDrop || false;
+      } catch (err) {
+        console.error('canDrop validator failed', err);
+        return false;
+      }
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),

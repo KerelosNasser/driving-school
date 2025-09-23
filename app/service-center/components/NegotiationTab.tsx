@@ -185,7 +185,7 @@ export default function NegotiationTab() {
             <div className="space-y-4">
               {/* Instructor Email (Optional) */}
               <div>
-                <Label htmlFor="instructor-email">Instructor Email (Optional)</Label>
+                <Label htmlFor="instructor-email">emealghobrial@gmail.com</Label>
                 <Input
                   id="instructor-email"
                   type="email"

@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { ServiceAreaMap } from '@/components/home/service-area-map';
 import { Award, Star, Calendar, MapPin, Car, Plus, Edit, Trash2, Search, Shield, Users, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -52,11 +53,12 @@ export default function AboutPage() {
   useEffect(() => {
     const loadServiceAreas = async () => {
       try {
-        const response = await fetch('/api/admin/content?page=about&key=service_areas');
+        const response = await fetch('/api/admin/content?page=home&key=service_areas');
         if (response.ok) {
           const { data } = await response.json();
           if (data?.length > 0 && data[0].content_json) {
             setServiceAreas(data[0].content_json);
+            setIsLoading(false);
             return;
           }
         }
@@ -152,7 +154,7 @@ export default function AboutPage() {
     setServiceAreas(updatedAreas);
 
     if (selectedAreaId === id) {
-      setSelectedAreaId(updatedAreas.length > 0 ? updatedAreas[0].id : null);
+      setSelectedAreaId(updatedAreas.length > 0 ? updatedAreas[0]?.id ?? null : null);
     }
 
     const success = await saveServiceAreas(updatedAreas);
@@ -214,7 +216,7 @@ export default function AboutPage() {
               className="inline-flex items-center space-x-2 bg-emerald-500/20 backdrop-blur-sm border border-emerald-400/30 rounded-full px-4 py-2 text-sm font-semibold mb-6"
             >
               <Shield className="h-4 w-4 text-emerald-400" />
-              <span>RMS Approved • 15+ Years Experience</span>
+              <span>15+ Years Experience</span>
             </motion.div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
@@ -266,12 +268,12 @@ export default function AboutPage() {
             >
               <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-white">
                 <EditableImage
-                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a"
+                  src="/images/instructor.png"
                   alt="Driving Instructor"
                   contentKey="about_instructor_image"
-                  width={600}
+                  width={300}
                   height={600}
-                  className="w-full aspect-square object-cover"
+                  className="w-full aspect-square object-contain"
                   priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/20 via-transparent to-transparent" />
@@ -394,7 +396,7 @@ export default function AboutPage() {
                   className="text-2xl text-emerald-600 font-bold"
                   placeholder="Instructor Name"
                 >
-                  Michael Thompson
+                  Emael Ghobrial
                 </EditableText>
                 <p className="text-lg text-gray-600 mt-2">Professional Driving Instructor</p>
               </div>
@@ -406,8 +408,7 @@ export default function AboutPage() {
                 placeholder="Enter instructor bio..."
                 multiline={true}
               >
-                Hi! I'm Michael, a passionate driving instructor with over 15 years of experience teaching people how to drive safely and confidently on Brisbane roads. I believe in creating a supportive learning environment where you can develop your skills at your own pace.
-              </EditableText>
+Hi, my name is Emeal and I have been a driving instructor since 2017 and am qualified to instruct in both manual and automatic vehicles. The primary focus during our driving lessons is to ensure you learn all the necessary technical and safety skills required to be a responsible driver. I like to take a methodical approach,  structuring the lesson in a step-by-step way to ensure that the information flows and makes sense. My experience tells me that it is the best way to get results. I am punctual, patient and friendly. I enjoy meeting new people and can help in a range of situations from brand new learners, to international licence conversions as well as refresher lessons.                </EditableText>
 
               {/* Features - Enhanced Design */}
               <motion.div
@@ -510,21 +511,10 @@ export default function AboutPage() {
               )}
             </div>
 
-            {isLoading ? (
-              <div className="h-[500px] w-full bg-gray-200 animate-pulse rounded-xl flex items-center justify-center">
-                <p className="text-gray-600">Loading map...</p>
-              </div>
-            ) : (
-              <div className="h-[500px] w-full rounded-xl shadow-2xl overflow-hidden">
-                <EditableLeafletServiceAreaMap
-                  selectedAreaId={selectedAreaId}
-                  onAreaSelect={setSelectedAreaId}
-                  serviceAreas={serviceAreas}
-                  onMapClick={handleMapClick}
-                  isEditMode={isEditMode}
-                />
-              </div>
-            )}
+                <div className="h-[500px] w-full rounded-xl shadow-2xl overflow-hidden">
+                  {/* Pass the filtered areas so the map reflects the sidebar list; hide the map's internal search to avoid duplication */}
+                  <ServiceAreaMap initialServiceAreas={filteredAreas} showSearch={false} />
+                </div>
           </div>
 
           <div className="bg-white p-8 rounded-2xl shadow-xl space-y-6 sticky top-8">

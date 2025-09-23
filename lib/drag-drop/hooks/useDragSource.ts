@@ -29,10 +29,25 @@ export function useDragSource({
   const [{ isDragging, canDrag }, drag, preview] = useDrag({
     type: item.type,
     item: () => {
-      const currentItem = itemRef.current;
-      handleDragStart(currentItem, userId, userName);
-      onDragStart?.(currentItem);
-      return currentItem;
+      try {
+        const currentItem = itemRef.current;
+        handleDragStart(currentItem, userId, userName);
+        onDragStart?.(currentItem);
+        return currentItem;
+      } catch (err) {
+        const details = err instanceof Error ? err.message : String(err);
+        console.group('Draggable init failed');
+        console.error(err);
+        console.groupEnd();
+        try {
+          // Show explicit helpful message for pointer/touch missing support
+          if (typeof window !== 'undefined' && !(window as any).PointerEvent) {
+            console.warn("Touch event support missing—include @dnd-kit/sensors/pointer or a compatible polyfill.");
+          }
+        } catch (e) {}
+        onDragStart?.(itemRef.current);
+        return itemRef.current;
+      }
     },
     end: (draggedItem, monitor) => {
       const dropResult = monitor.getDropResult();

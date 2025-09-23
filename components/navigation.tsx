@@ -6,6 +6,7 @@ import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
 import { Menu, X, Car, Phone, Edit3, EyeOff, Shield, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useEditMode } from '@/contexts/editModeContext';
+import { useGlobalContent } from '@/contexts/globalContentContext';
 import { QuotaIndicator } from '@/components/QuotaIndicator';
 
 export function Navigation() {
@@ -13,7 +14,27 @@ export function Navigation() {
   const [scrolled, setScrolled] = useState(false);
   const { user, isLoaded } = useUser();
   const { isEditMode, toggleEditMode, isAdmin } = useEditMode();
+  const { content } = useGlobalContent();
   const isAdminUser = user?.emailAddresses[0]?.emailAddress === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+
+  // Keep track of native dragging so we can keep the nav visible when editing and dragging
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const onDragStart = () => setIsDragging(true);
+    const onDragEnd = () => setIsDragging(false);
+
+    // listen globally for native drag events (react-dnd uses native events under the hood)
+    window.addEventListener('dragstart', onDragStart);
+    window.addEventListener('dragend', onDragEnd);
+    window.addEventListener('drop', onDragEnd);
+
+    return () => {
+      window.removeEventListener('dragstart', onDragStart);
+      window.removeEventListener('dragend', onDragEnd);
+      window.removeEventListener('drop', onDragEnd);
+    };
+  }, []);
 
   const navItems = [
     { href: '/', label: 'Home' },
@@ -32,9 +53,12 @@ export function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // When in edit mode and a drag is active, give nav a very large z-index so it's always on top
+  const zClass = isEditMode && isDragging ? 'z-[99999]' : 'z-50';
+
   return (
     <nav 
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+      className={`fixed top-0 w-full ${zClass} transition-all duration-300 ${
         scrolled 
           ? 'bg-gradient-to-r from-emerald-900/95 via-teal-800/90 to-blue-900/95 backdrop-blur-md shadow-lg border-b border-emerald-700/30' 
           : 'bg-gradient-to-r from-emerald-900/90 via-teal-800/85 to-blue-900/90 backdrop-blur-sm'
@@ -50,7 +74,7 @@ export function Navigation() {
             </div>
             <div>
               <span className="font-bold text-xl text-white group-hover:text-emerald-200 transition-colors">
-                EG Driving School
+                {content.business_name}
               </span>
               <div className="hidden sm:flex items-center space-x-2 text-xs text-emerald-200">
                 <Shield className="h-3 w-3 text-green-400" />
@@ -110,12 +134,12 @@ export function Navigation() {
           {/* Desktop CTA Section */}
           <div className="hidden md:flex items-center space-x-3">
             {/* Phone Number */}
-            <a 
-              href="tel:+61431512095" 
+            <a
+              href={`tel:${content.business_phone}`}
               className="flex items-center text-emerald-300 hover:text-emerald-200 transition-colors"
             >
               <Phone className="h-4 w-4 mr-1" />
-              <span className="font-medium text-sm">04 3151 2095</span>
+              <span className="font-medium text-sm">{content.business_phone}</span>
             </a>
             
             {/* Quota Indicator */}
@@ -221,12 +245,12 @@ export function Navigation() {
               {/* Mobile CTA Section */}
               <div className="px-4 pt-3 border-t border-emerald-700/30 space-y-3">
                 {/* Phone CTA */}
-                <a 
-                  href="tel:+61431512095" 
+                <a
+                  href={`tel:${content.business_phone}`}
                   className="flex items-center justify-center bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white py-3 px-4 rounded-lg transition-colors font-medium"
                 >
                   <Phone className="h-4 w-4 mr-2" />
-                  Call Now: 04 3151 2095
+                  {`Call Now: ${content.business_phone}`}
                 </a>
 
                 {/* Quota Indicator */}

@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, Car, Shield, Star, Award } from 'lucide-react';
+import { useGlobalContent } from '@/contexts/globalContentContext';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const { content } = useGlobalContent();
   
   const trustStats = [
     { icon: Star, value: '4.9★', label: 'Rating' },
@@ -36,13 +38,13 @@ export function Footer() {
               <div className="flex items-center space-x-2">
                 <Car className="h-8 w-8 text-emerald-400" />
                 <div>
-                  <h3 className="text-lg font-bold">EG Driving School</h3>
+                  <h3 className="text-lg font-bold">{content.business_name}</h3>
                   <p className="text-xs text-emerald-300">Licensed & Trusted</p>
                 </div>
               </div>
               
               <p className="text-emerald-100 text-sm leading-relaxed">
-                Brisbane's premier driving school with over 15 years of experience helping students become safe, confident drivers.
+                {`Brisbane's premier driving school with over ${content && content.service_radius_km ? content.service_radius_km : '15'} years of experience helping students become safe, confident drivers.`}
               </p>
               
               {/* Social Links */}
@@ -89,24 +91,24 @@ export function Footer() {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-emerald-300">Contact</h3>
               <div className="space-y-3">
-                <a 
-                  href="tel:+61431512095" 
+                <a
+                  href={`tel:${content.business_phone}`}
                   className="flex items-center space-x-2 text-emerald-100 hover:text-white transition-colors text-sm"
                 >
                   <Phone size={16} className="text-green-400" />
-                  <span>04 3151 2095</span>
+                  <span>{content.business_phone}</span>
                 </a>
-                <a 
-                  href="mailto:info@egdrivingschool.com" 
+                <a
+                  href={`mailto:${content.business_email}`}
                   className="flex items-center space-x-2 text-emerald-100 hover:text-white transition-colors text-sm"
                 >
                   <Mail size={16} className="text-blue-400" />
-                  <span>info@egdrivingschool.com</span>
+                  <span>{content.business_email}</span>
                 </a>
                 <div className="flex items-start space-x-2 text-emerald-100 text-sm">
                   <MapPin size={16} className="text-purple-400 mt-0.5" />
                   <div>
-                    <div>Brisbane & Surrounds</div>
+                    <div>{content.business_address || 'Brisbane & Surrounds'}</div>
                     <div className="text-xs text-emerald-200/80">Queensland, Australia</div>
                   </div>
                 </div>
@@ -142,7 +144,7 @@ export function Footer() {
         <div className="border-t border-emerald-700/30 py-6">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
             <div className="text-center sm:text-left">
-              <p className="text-emerald-200/80 text-sm">© {currentYear} EG Driving School. All rights reserved.</p>
+              <p className="text-emerald-200/80 text-sm">© {currentYear} {content.business_name}. All rights reserved.</p>
               <p className="text-xs text-emerald-200/60 mt-1">Licensed Driving Instructor | ABN: 12 345 678 901</p>
             </div>
             

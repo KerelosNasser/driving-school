@@ -147,8 +147,8 @@ export interface RealtimeDragDropConfig {
       this.activeGhosts.delete(sessionId);
       this.emit('ghostExpired', sessionId);
     });
-  }  //
- Public methods for broadcasting drag events
+  }
+  // Public methods for broadcasting drag events
   public broadcastDragStart(item: DragItem): void {
     const event: DragStartEvent = {
       type: 'drag_start',
@@ -209,8 +209,8 @@ export interface RealtimeDragDropConfig {
       userId: this.userId,
       userName: this.userName,
       item,
-      currentPosition,
-      targetZone,
+      currentPosition: currentPosition as any,
+      targetZone: targetZone as any,
       timestamp: new Date().toISOString(),
       sessionId: this.sessionId
     };
@@ -227,8 +227,9 @@ export interface RealtimeDragDropConfig {
         payload: event
       });
     }
-  }  // Re
-mote event handlers
+  }
+
+  // Remote event handlers
   private handleRemoteDragStart(event: DragStartEvent): void {
     if (event.userId === this.userId) return; // Ignore own events
 

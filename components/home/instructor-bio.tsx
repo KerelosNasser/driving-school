@@ -5,6 +5,7 @@ import { CheckCircle, Star, Award, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EditableText } from '@/components/ui/editable-text';
 import { EditableImage } from '@/components/ui/editable-image';
+import { useGlobalContent } from '@/contexts/globalContentContext';
 
 interface InstructorBioProps {
     title?: string;
@@ -22,9 +23,9 @@ interface InstructorBioProps {
 
 export function InstructorBio({
 title = 'Meet Your Instructor',
-name = 'Michael Thompson',
-bioP1 = "Hi there! I'm Michael, a passionate driving instructor with over 15 years of experience teaching people of all ages how to drive safely and confidently on Brisbane roads.",
-bioP2 = "I believe in creating a relaxed, supportive learning environment where you can develop your skills at your own pace. My teaching approach is patient, thorough, and tailored to your individual needs.",
+name,
+bioP1,
+bioP2,
 imageUrl = 'https://img1.wsimg.com/isteam/ip/14e0fa52-5b69-4038-a086-1acfa9374b62/20230411_110458.jpg/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=w:1200,h:1600,cg:true',
 imageAlt = 'A friendly and professional driving instructor',
 experience = '15+ Years Experience',
@@ -33,6 +34,13 @@ certTitle = 'Certified Instructor',
 certSubtitle = 'Queensland Transport Approved',
 features = [],
 }: InstructorBioProps) {
+
+    const { content } = useGlobalContent();
+
+    // fallback to global content if props not provided
+    name = name || content.instructor_name;
+    bioP1 = bioP1 || content.instructor_bio_short;
+    bioP2 = bioP2 || '';
 
     const defaultFeatures = [
         'Dual-control vehicle',

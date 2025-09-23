@@ -34,8 +34,9 @@ export function usePages() {
       if (filters?.page) params.set('page', filters.page.toString());
       if (filters?.limit) params.set('limit', filters.limit.toString());
 
-      const response = await fetch(`/api/admin/pages?${params}`);
-      const result = await response.json();
+  const response = await fetch(`/api/admin/pages?${params}`).catch(() => null as any);
+  if (!response) throw new Error('Network error while fetching pages');
+  const result = await response.json();
 
       if (!result.success) {
         throw new Error(result.error?.message || 'Failed to fetch pages');
@@ -144,8 +145,9 @@ export function usePages() {
 
   const getPage = useCallback(async (slug: string) => {
     try {
-      const response = await fetch(`/api/admin/pages?slug=${slug}`);
-      const result = await response.json();
+  const response = await fetch(`/api/admin/pages?slug=${slug}`).catch(() => null as any);
+  if (!response) throw new Error('Network error while fetching page');
+  const result = await response.json();
 
       if (!result.success) {
         throw new Error(result.error?.message || 'Failed to fetch page');

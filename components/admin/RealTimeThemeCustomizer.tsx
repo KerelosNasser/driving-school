@@ -121,12 +121,28 @@ export function RealTimeThemeCustomizer({
 
     try {
       await applyToLiveSite(activeTheme);
+      // Persist via helper so server-side ThemeContext GET will return the updated config
+      try {
+        const { default: persistThemeToServer } = await import('@/lib/theme/persist');
+        const result = await persistThemeToServer(activeTheme);
+        if (!result.ok) {
+          // If server persist failed, surface an error to the admin
+          const errText = await (result.text || Promise.resolve(''));
+          console.warn('Server persist failed:', result.status, errText);
+          toast.error('Theme applied locally but failed to persist to server');
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to persist theme via helper:', err);
+        toast.error('Theme applied locally but failed to persist to server');
+        return;
+      }
       
       if (onThemeApply) {
         onThemeApply(activeTheme);
       }
       
-      toast.success('Theme applied successfully!');
+      toast.success('Theme applied and persisted successfully!');
     } catch (error) {
       console.error('Failed to apply theme:', error);
       toast.error('Failed to apply theme');

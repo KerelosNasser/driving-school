@@ -321,56 +321,14 @@ export function Gallery({
 
   // Initialize student images
   useEffect(() => {
-    const fallbackImages: StudentImage[] = [
-      {
-        id: 1,
-        src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        alt: "Sarah - successful driving student",
-        studentName: "Sarah M.",
-        achievement: "First Time Pass",
-        date: "2024-01-15"
-      },
-      {
-        id: 2,
-        src: "https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        alt: "Emma - successful driving student",
-        studentName: "Emma T.",
-        achievement: "Manual License",
-        date: "2024-01-20"
-      },
-      {
-        id: 3,
-        src: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        alt: "James - successful driving student",
-        studentName: "James W.",
-        achievement: "First Time Pass",
-        date: "2024-02-03"
-      },
-      {
-        id: 4,
-        src: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        alt: "Michael - successful driving student",
-        studentName: "Michael R.",
-        achievement: "Auto License",
-        date: "2024-02-10"
-      },
-      {
-        id: 5,
-        src: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        alt: "Lisa - successful driving student",
-        studentName: "Lisa K.",
-        achievement: "First Time Pass",
-        date: "2024-02-18"
-      },
-      {
-        id: 6,
-        src: "https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        alt: "David - successful driving student",
-        studentName: "David L.",
-        achievement: "Manual License",
-        date: "2024-02-25"
-      }
-    ];
+const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
+  id: i + 1,
+  src: `/images/students/${i + 1}.webp`,
+  alt: "Sarah - successful driving student",
+  studentName: "",
+  achievement: "",
+  date: ""
+}));
 
     let imagesToUse = fallbackImages;
 
@@ -813,15 +771,6 @@ export function Gallery({
                     ))}
                   </div>
                 </div>
-
-                {/* Navigation Instructions */}
-                {studentImages.length > 1 && (
-                  <p className="text-sm text-gray-500 text-center">
-                    <span className="hidden sm:inline">Use arrow keys, </span>
-                    <span className="sm:hidden">Swipe or </span>
-                    click arrows to navigate • Auto-plays every 5 seconds
-                  </p>
-                )}
               </div>
             </>
           )}

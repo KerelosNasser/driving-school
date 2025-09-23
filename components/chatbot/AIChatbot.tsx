@@ -207,7 +207,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
             {/* Pulsing Background Ring */}
             {showPulse && (
               <motion.div
-                className="absolute inset-0 rounded-full bg-yellow-400"
+                className="absolute inset-0 rounded-full bg-emerald-400"
                 animate={{
                   scale: [1, 1.8, 1],
                   opacity: [0.7, 0, 0.7],
@@ -232,7 +232,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                   ease: "easeInOut"
                 }}
               >
-                <Sparkles className="h-6 w-6 text-yellow-500" />
+                <Sparkles className="h-6 w-6 text-emerald-500" />
               </motion.div>
             )}
 
@@ -240,9 +240,9 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
               animate={showPulse ? {
                 scale: [1, 1.1, 1],
                 boxShadow: [
-                  "0 0 0 0 rgba(234, 179, 8, 0.7)",
+                  "0 0 0 0 rgba(5, 251, 165, 0.7)",
                   "0 0 0 20px rgba(234, 179, 8, 0)",
-                  "0 0 0 0 rgba(234, 179, 8, 0.7)"
+                  "0 0 0 0 rgba(5, 251, 165, 0.7)"
                 ]
               } : {}}
               transition={{
@@ -253,7 +253,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
             >
               <Button
                 onClick={handleChatbotOpen}
-                className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-2xl border-2 border-white relative overflow-hidden"
+                className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-2xl border-2 border-white relative overflow-hidden"
                 size="icon"
               >
                 <motion.div
@@ -301,8 +301,8 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed inset-4 sm:bottom-6 sm:right-6 sm:top-auto sm:left-auto z-50 sm:w-96 sm:h-[600px] flex"
           >
-            <Card className="w-full h-full flex flex-col shadow-2xl border-2 border-yellow-200">
-              <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-t-lg p-4 flex-shrink-0">
+            <Card className="w-full h-full flex flex-col shadow-2xl border-2 border-emerald-200">
+              <CardHeader className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-t-lg p-4 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <motion.div
@@ -315,7 +315,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                       <CardTitle className="text-lg">Brisbane Driving School</CardTitle>
                       <div className="flex items-center gap-1 mt-1">
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <span className="text-yellow-100 text-xs">EG AI Assistant • Online </span>
+                        <span className="text-emerald-100 text-xs">EG AI Assistant • Online </span>
                       </div>
                     </div>
                   </div>
@@ -325,7 +325,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                         variant="ghost"
                         size="icon"
                         onClick={clearChatHistory}
-                        className="text-white hover:bg-yellow-700 h-8 w-8"
+                        className="text-white hover:bg-emerald-700 h-8 w-8"
                         title="Clear chat history"
                       >
                         <RotateCcw className="h-4 w-4" />
@@ -335,7 +335,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => setIsOpen(false)}
-                      className="text-white hover:bg-yellow-700 h-8 w-8"
+                      className="text-white hover:bg-emerald-700 h-8 w-8"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -357,7 +357,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                     >
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                         message.sender === 'user' 
-                          ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white' 
+                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white' 
                           : 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-600'
                       }`}>
                         {message.sender === 'user' ? (
@@ -368,7 +368,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                       </div>
                       <div className={`max-w-[80%] p-3 rounded-lg shadow-sm ${
                         message.sender === 'user'
-                          ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white'
+                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                           : 'bg-white text-gray-900 border border-gray-200'
                       }`}>
                         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -390,7 +390,7 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                       </div>
                       <div className="bg-white p-3 rounded-lg border border-gray-200">
                         <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-yellow-600" />
+                          <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
                           <span className="text-sm text-gray-600">AI is thinking...</span>
                         </div>
                       </div>
@@ -407,13 +407,13 @@ export function AIChatbot({ delayMs = 5000 }: ChatbotProps) {
                       onKeyPress={handleKeyPress}
                       placeholder="Ask me anything about driving lessons..."
                       disabled={isLoading}
-                      className="flex-1 border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
+                      className="flex-1 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                     />
                     <Button
                       onClick={sendMessage}
                       disabled={!inputValue.trim() || isLoading}
                       size="icon"
-                      className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700"
+                      className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
                     >
                       <Send className="h-4 w-4" />
                     </Button>

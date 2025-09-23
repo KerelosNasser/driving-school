@@ -44,48 +44,94 @@ export function useDragDrop(options: UseDragDropOptions = {}): UseDragDropReturn
 
   // Initialize drag drop manager
   useEffect(() => {
-    managerRef.current = DragDropManager.getInstance();
-    
-    // Set up event listeners
-    const unsubscribeDragStart = managerRef.current.onDragStart((event) => {
-      setIsDragging(true);
-      setCurrentDragItem(event.item);
-      onDragStart?.(event);
-    });
+    try {
+      managerRef.current = DragDropManager.getInstance();
 
-    const unsubscribeDragEnd = managerRef.current.onDragEnd((event) => {
-      setIsDragging(false);
-      setCurrentDragItem(null);
-      onDragEnd?.(event);
-    });
+      // Set up event listeners
+      const unsubscribeDragStart = managerRef.current.onDragStart((event) => {
+        try {
+          setIsDragging(true);
+          setCurrentDragItem(event.item);
+          onDragStart?.(event);
+        } catch (e) {
+          console.error('DragDrop: onDragStart handler failed', e);
+        }
+      });
 
-    const unsubscribeDrop = managerRef.current.onDrop((event) => {
-      onDrop?.(event);
-    });
+      const unsubscribeDragEnd = managerRef.current.onDragEnd((event) => {
+        try {
+          setIsDragging(false);
+          setCurrentDragItem(null);
+          onDragEnd?.(event);
+        } catch (e) {
+          console.error('DragDrop: onDragEnd handler failed', e);
+        }
+      });
 
-    cleanupFunctionsRef.current = [unsubscribeDragStart, unsubscribeDragEnd, unsubscribeDrop];
+      const unsubscribeDrop = managerRef.current.onDrop((event) => {
+        try {
+          onDrop?.(event);
+        } catch (e) {
+          console.error('DragDrop: onDrop handler failed', e);
+        }
+      });
 
-    // Update active zones periodically
-    const updateZones = () => {
-      if (managerRef.current) {
-        setActiveZones(managerRef.current.getActiveZones());
-      }
-    };
+      cleanupFunctionsRef.current = [unsubscribeDragStart, unsubscribeDragEnd, unsubscribeDrop];
 
-    const intervalId = setInterval(updateZones, 1000);
-    updateZones(); // Initial update
+      // Update active zones periodically
+      const updateZones = () => {
+        try {
+          if (managerRef.current) {
+            setActiveZones(managerRef.current.getActiveZones());
+          }
+        } catch (e) {
+          console.error('DragDrop: updateZones failed', e);
+        }
+      };
 
-    return () => {
-      clearInterval(intervalId);
-      cleanupFunctionsRef.current.forEach(cleanup => cleanup());
-    };
+      const intervalId = setInterval(updateZones, 1000);
+      updateZones(); // Initial update
+
+      return () => {
+        clearInterval(intervalId);
+        cleanupFunctionsRef.current.forEach(cleanup => cleanup());
+      };
+    } catch (err) {
+      const details = err instanceof Error ? err.message : String(err);
+      console.group('DragDrop initialization failed');
+      console.error(err);
+      console.groupEnd();
+      // Attempt to notify developer
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__DND_INIT_ERROR = details;
+      } catch (e) {}
+      // Ensure app still mounts
+      return () => {};
+    }
   }, [onDragStart, onDragEnd, onDrop]);
 
   // Zone management functions
   const registerDropZone = useCallback((zone: DropZone) => {
-    if (managerRef.current) {
+    try {
+      if (!managerRef.current) throw new Error('DragDropManager not initialized');
+
+      // Detect duplicate zone ids
+      const existing = managerRef.current.getActiveZones().find(z => z.id === zone.id);
+      if (existing) {
+        const msg = `Draggable ID '${zone.id}' duplicated—keys must be unique.`;
+        console.warn(msg);
+        // surface to developer console
+        console.group('DragDrop duplicate id');
+        console.warn('Existing zone:', existing);
+        console.warn('New zone:', zone);
+        console.groupEnd();
+      }
+
       managerRef.current.registerDropZone(zone);
       setActiveZones(managerRef.current.getActiveZones());
+    } catch (err) {
+      console.error('Failed to register drop zone:', err);
     }
   }, []);
 

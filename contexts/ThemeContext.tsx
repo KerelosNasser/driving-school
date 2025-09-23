@@ -109,6 +109,28 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
     loadTheme();
   }, []);
 
+  // Re-fetch theme when an admin applies a theme to live site
+  useEffect(() => {
+    const handler = async () => {
+      try {
+        const response = await fetch('/api/admin/theme');
+        if (response.ok) {
+          const { data } = await response.json();
+          setTheme(data);
+          applyTheme(data);
+        }
+      } catch (err) {
+        // non-fatal
+        console.warn('Failed to reload theme after live apply:', err);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('themeAppliedToLive', handler as EventListener);
+      return () => window.removeEventListener('themeAppliedToLive', handler as EventListener);
+    }
+  }, []);
+
   // Apply theme to document
   const applyTheme = (themeConfig: ThemeConfig) => {
     if (typeof window === 'undefined') return;

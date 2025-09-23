@@ -1,0 +1,24 @@
+{
+  "business_name": "EG Driving School",
+  "business_phone": "0431512095",
+  "business_email": "info@egdrivingschool.com",
+  "business_address": "Brisbane, Queensland, Australia",
+
+  "instructor_name": "Emael Ghobrial",
+  "instructor_phone": "0431512095",
+  "instructor_email": "info@egdrivingschool.com",
+  "instructor_bio_short": "Experienced driving instructor with 15+ years of teaching.",
+
+  "facebook_url": "",
+  "instagram_url": "",
+  "linkedin_url": "",
+
+  "operating_hours": "7:00 AM - 7:00 PM",
+  "operating_days": "Monday - Sunday",
+
+  "emergency_contact": "",
+
+  "booking_advance_days": 14,
+  "default_lesson_duration": 60,
+  "service_radius_km": 50
+}

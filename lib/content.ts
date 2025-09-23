@@ -41,9 +41,16 @@ export async function getPageContent(pageName: string): Promise<PageContent> {
     return contentMap;
   } catch (error) {
     console.error('Error in getPageContent:', error);
-    return {};
+    // Return a minimal fallback so the renderer never receives `undefined` or malformed content
+    return FALLBACK_PAGE_CONTENT;
   }
 }
+
+// Minimal fallback content map used when DB fetch or validation fails
+export const FALLBACK_PAGE_CONTENT: PageContent = {
+  'hero_title': { content_key: 'hero_title', content_value: 'Default Title', content_type: 'text' },
+  'hero_subtitle': { content_key: 'hero_subtitle', content_value: 'Default subtitle', content_type: 'text' },
+};
 
 export async function getContentItem(pageName: string, contentKey: string): Promise<ContentItem | null> {
   const supabase =  await createServerComponentClient({ cookies });
