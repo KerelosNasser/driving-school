@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { withCentralizedStateManagement } from '@/lib/api-middleware';
-import { supabaseAdmin } from '@/lib/api/utils';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const supabaseAdmin = supabase;
 
 // Centralized state management replaces individual rate limiting
 

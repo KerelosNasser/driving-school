@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { History, Plus, Minus, CreditCard, Calendar, ChevronLeft, ChevronRight, Filter, Loader2, AlertCircle } from 'lucide-react';
+import { History, Plus, Minus, CreditCard, Calendar, ChevronLeft, ChevronRight, Filter, Loader2, AlertCircle, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -87,7 +87,7 @@ export default function TransactionHistoryTab() {
 
   const getTransactionIcon = (type: string, hoursChange: number) => {
     if (hoursChange > 0) {
-      return <Plus className="h-4 w-4 text-green-600" />;
+      return <Plus className="h-4 w-4 text-emerald-600" />;
     } else {
       return <Minus className="h-4 w-4 text-red-600" />;
     }
@@ -96,11 +96,11 @@ export default function TransactionHistoryTab() {
   const getTransactionColor = (type: string, _hoursChange: number) => {
     switch (type) {
       case 'purchase':
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-100 text-emerald-800';
       case 'booking':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-teal-100 text-teal-800';
       case 'refund':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-blue-100 text-blue-800';
       case 'adjustment':
         return 'bg-yellow-100 text-yellow-800';
       default:
@@ -152,25 +152,29 @@ export default function TransactionHistoryTab() {
 
       {/* Transaction History Section */}
       <div className="space-y-6">
-          {/* Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <History className="h-5 w-5" />
+          {/* Header & Filters */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white">
+              <CardTitle className="flex items-center space-x-3 text-xl font-bold">
+                <div className="p-2 bg-white/20 rounded-full">
+                  <History className="h-6 w-6" />
+                </div>
                 <span>Transaction History</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-emerald-100">
                 View all changes to your quota balance
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <Filter className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">Filter by type:</span>
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-emerald-100 rounded-full">
+                    <Filter className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <span className="font-semibold text-emerald-700">Filter by type:</span>
                 </div>
                 <Select value={filterType} onValueChange={handleFilterChange}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-64 h-12 rounded-xl border-gray-300 focus:border-emerald-500 focus:ring-emerald-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -186,18 +190,20 @@ export default function TransactionHistoryTab() {
           </Card>
 
           {/* Transaction List */}
-          <Card>
+          <Card className="border-0 shadow-lg">
             <CardContent className="p-0">
               {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                  <span>Loading transactions...</span>
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+                  <span className="text-gray-600 font-medium">Loading transactions...</span>
                 </div>
               ) : transactions.length === 0 ? (
-                <div className="text-center py-12">
-                  <History className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 mb-2">No transactions found</p>
-                  <p className="text-sm text-gray-400">
+                <div className="text-center py-16">
+                  <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                    <History className="h-10 w-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">No transactions found</h3>
+                  <p className="text-gray-500">
                     {filterType === 'all' 
                       ? 'Your quota transactions will appear here'
                       : `No ${filterType} transactions found`
@@ -205,66 +211,69 @@ export default function TransactionHistoryTab() {
                   </p>
                 </div>
               ) : (
-                <div className="divide-y">
-                  {transactions.map((transaction, index) => {
+                <div className="divide-y divide-gray-100">
+                  {transactions.map((transaction) => {
                     const { date, time } = formatDate(transaction.created_at);
                     const isPositive = transaction.hours_change > 0;
                     
                     return (
-                      <motion.div
+                      <div
                         key={transaction.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
                         className="p-6 hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-4">
+                          <div className="flex items-start space-x-4 flex-1">
                             {/* Transaction Icon */}
-                            <div className={`p-2 rounded-full ${
-                              isPositive ? 'bg-green-100' : 'bg-red-100'
+                            <div className={`p-3 rounded-xl shadow-sm ${
+                              isPositive ? 'bg-emerald-100' : 'bg-red-100'
                             }`}>
                               {getTransactionIcon(transaction.transaction_type, transaction.hours_change)}
                             </div>
                             
                             {/* Transaction Details */}
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <h4 className="font-semibold text-gray-900">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                                <h4 className="font-bold text-gray-900 text-lg">
                                   {transaction.description}
                                 </h4>
-                                <Badge className={getTransactionColor(transaction.transaction_type, transaction.hours_change)}>
+                                <Badge className={`${getTransactionColor(transaction.transaction_type, transaction.hours_change)} px-3 py-1 rounded-full font-medium w-fit`}>
                                   {getTransactionTypeLabel(transaction.transaction_type)}
                                 </Badge>
                               </div>
                               
                               {/* Additional Details */}
-                              <div className="space-y-1">
+                              <div className="space-y-2">
                                 {transaction.packages && (
-                                  <p className="text-sm text-gray-600">
-                                    Package: {transaction.packages.name} ({transaction.packages.hours} hours)
-                                  </p>
+                                  <div className="flex items-center space-x-2">
+                                    <Package className="h-4 w-4 text-gray-400" />
+                                    <span className="text-sm text-gray-600 font-medium">
+                                      Package: {transaction.packages.name} ({transaction.packages.hours} hours)
+                                    </span>
+                                  </div>
                                 )}
                                 
                                 {transaction.bookings && (
-                                  <p className="text-sm text-gray-600">
-                                    Lesson: {transaction.bookings.date} at {transaction.bookings.time}
-                                    <Badge variant="outline" className="ml-2 text-xs">
+                                  <div className="flex items-center space-x-2">
+                                    <Calendar className="h-4 w-4 text-gray-400" />
+                                    <span className="text-sm text-gray-600 font-medium">
+                                      Lesson: {transaction.bookings.date} at {transaction.bookings.time}
+                                    </span>
+                                    <Badge variant="outline" className="text-xs">
                                       {transaction.bookings.status}
                                     </Badge>
-                                  </p>
+                                  </div>
                                 )}
                                 
-                                <div className="flex items-center space-x-4 text-xs text-gray-500">
-                                  <span className="flex items-center space-x-1">
-                                    <Calendar className="h-3 w-3" />
-                                    <span>{date} at {time}</span>
-                                  </span>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-500">
+                                  <div className="flex items-center space-x-2">
+                                    <Calendar className="h-4 w-4" />
+                                    <span className="font-medium">{date} at {time}</span>
+                                  </div>
                                   {transaction.payment_id && (
-                                    <span className="flex items-center space-x-1">
-                                      <CreditCard className="h-3 w-3" />
-                                      <span>Payment ID: {transaction.payment_id.slice(-8)}</span>
-                                    </span>
+                                    <div className="flex items-center space-x-2">
+                                      <CreditCard className="h-4 w-4" />
+                                      <span className="font-medium">ID: {transaction.payment_id.slice(-8)}</span>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -272,15 +281,16 @@ export default function TransactionHistoryTab() {
                           </div>
                           
                           {/* Hours Change */}
-                          <div className="text-right">
-                            <div className={`text-lg font-bold ${
-                              isPositive ? 'text-green-600' : 'text-red-600'
+                          <div className="text-right ml-4">
+                            <div className={`text-2xl font-bold mb-1 ${
+                              isPositive ? 'text-emerald-600' : 'text-red-600'
                             }`}>
-                              {isPositive ? '+' : ''}{transaction.hours_change} hours
+                              {isPositive ? '+' : ''}{transaction.hours_change}
                             </div>
+                            <div className="text-xs text-gray-500 font-medium">hours</div>
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     );
                   })}
                 </div>
@@ -290,21 +300,22 @@ export default function TransactionHistoryTab() {
 
           {/* Pagination */}
           {pagination && pagination.total_pages > 1 && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="text-sm text-gray-600 font-medium">
                     Showing {((pagination.current_page - 1) * pagination.limit) + 1} to {Math.min(pagination.current_page * pagination.limit, pagination.total_count)} of {pagination.total_count} transactions
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-center space-x-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(pagination.current_page - 1)}
                       disabled={!pagination.has_prev}
+                      className="h-10 px-4 rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="h-4 w-4 mr-1" />
                       Previous
                     </Button>
                     
@@ -323,7 +334,11 @@ export default function TransactionHistoryTab() {
                             variant={pageNum === pagination.current_page ? "default" : "outline"}
                             size="sm"
                             onClick={() => handlePageChange(pageNum)}
-                            className="w-8 h-8 p-0"
+                            className={`w-10 h-10 rounded-xl font-semibold ${
+                              pageNum === pagination.current_page 
+                                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg' 
+                                : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                            }`}
                           >
                             {pageNum}
                           </Button>
@@ -336,9 +351,10 @@ export default function TransactionHistoryTab() {
                       size="sm"
                       onClick={() => handlePageChange(pagination.current_page + 1)}
                       disabled={!pagination.has_next}
+                      className="h-10 px-4 rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
                     >
                       Next
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </div>
                 </div>

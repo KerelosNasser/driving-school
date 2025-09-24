@@ -1,3 +1,4 @@
+
 # 🚗 EG Driving School - Professional Web Application
 A comprehensive, modern web application for a professional driving school business built with cutting-edge technologies. This full-stack application provides everything needed to run a successful driving school, from student management to AI-powered customer support.
 
@@ -358,3 +359,111 @@ For technical support or questions about this application:
 - Check the GitHub issues for common problems
 - Consult the integration guides for third-party services
 - Monitor Sentry for real-time error tracking
+
+# EG Driving School - Next.js Project
+
+This is a comprehensive driving school management platform built with Next.js, Supabase, and Stripe. It includes features for booking lessons, managing user quotas, processing payments, and more.
+
+## Features
+
+- **User Authentication**: Secure sign-up and login with Clerk
+- **Package Management**: Driving lesson packages with different pricing tiers
+- **Booking System**: Calendar-based booking with Google Calendar integration
+- **Payment Processing**: Multiple payment gateways including PayID, Tyro, BPAY, Stripe, and Afterpay
+- **Quota Management**: Track and manage user lesson hours
+- **Review System**: Collect and display student reviews
+- **Admin Dashboard**: Comprehensive admin tools for managing content and users
+- **Real-time Updates**: Real-time notifications and status updates
+- **SEO Optimization**: Dynamic SEO metadata for all pages
+- **Responsive Design**: Mobile-first responsive UI with Tailwind CSS
+
+## Payment Gateways
+
+The platform supports multiple payment gateways optimized for the Australian market, with manual payment methods prioritized as primary options:
+
+1. **PayID** (Primary) - Instant bank transfers using PayID (0.5% + 10¢)
+2. **Tyro** (Primary) - Australian EFTPOS payment provider (1.8% + 30¢)
+3. **BPAY** (Primary) - Bank transfer payments via BPAY (0.6% + 25¢)
+4. **Stripe** - Credit and debit card payments (2.9% + 30¢)
+5. **Afterpay** - Buy-now, pay-later option (3.5% + 30¢, integrated with Stripe)
+6. **PayPal** (Planned) - Popular international payment method
+
+## User Synchronization
+
+The platform automatically synchronizes users between Clerk (authentication) and Supabase (database). When a user who exists in Clerk but not yet in Supabase attempts to make a purchase, they are automatically created in Supabase with their profile information. 
+
+The synchronization process also handles cases where a user with the same email already exists in the database but without a Clerk ID, by linking the Clerk ID to the existing user record.
+
+## Enhanced UI/UX
+
+The checkout process has been completely redesigned with a modern, professional interface that guides users through the payment process with clear instructions and visual feedback. Key improvements include:
+
+- Visually appealing package display with feature highlighting
+- Intuitive payment gateway selection with detailed information
+- Step-by-step progress indicator
+- Clear error messaging and guidance
+- Responsive design for all devices
+- Trust signals and security indicators
+
+## Setup Instructions
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up environment variables (see `.env.example`)
+4. Configure Supabase project
+5. Run database migrations:
+   - Run migrations in order from `sql/migrations/`
+   - Migration 09 adds manual payment sessions table for Tyro, BPAY, and PayID
+   - Migration 11 enhances user synchronization between Clerk and Supabase
+   - Migration 12 fixes foreign key constraint for manual payment sessions
+   - Migration 13 adds atomic function for manual payment session creation
+   - Migration 14 adds payment gateway IDs to environment configuration
+6. Start the development server: `npm run dev`
+
+## Environment Variables
+
+See `.env.example` for required environment variables.
+
+## Database Schema
+
+The database schema is defined in the `sql/` directory:
+- `01_extensions.sql` - Required PostgreSQL extensions
+- `02_tables.sql` - Main tables
+- `03_functions.sql` - Database functions
+- `04_triggers_indexes.sql` - Triggers and indexes
+- `05_permissions.sql` - Row Level Security policies
+- `migrations/` - Sequential database migrations
+
+## Recent Updates
+
+### Migration 09 - Manual Payment Sessions
+Added support for manual payment methods including:
+- Tyro EFTPOS
+- BPAY
+- PayID
+
+This migration creates the `manual_payment_sessions` table to track payments made through these methods.
+
+### Migration 11 - User Synchronization Enhancement
+Enhanced user synchronization between Clerk and Supabase to automatically create users in Supabase when they exist in Clerk but haven't been synced yet. This prevents "User not found" errors during payment processing. The enhancement also handles cases where users with the same email already exist in the database.
+
+### Migration 12 - Manual Payment Sessions Foreign Key Fix
+Fixed the foreign key constraint for manual payment sessions that was incorrectly referencing `auth.users` instead of `public.users`. This resolves the "foreign key constraint violation" errors that were occurring when creating manual payment sessions.
+
+### Migration 13 - Atomic Manual Payment Session Creation
+Added a PostgreSQL function that atomically creates users and manual payment sessions, preventing race conditions and foreign key constraint violations.
+
+### Migration 14 - Payment Gateway IDs Configuration
+Added configuration for payment gateway IDs (Tyro, BPAY, PayID) to the environment variables for better customization and security.
+
+## Deployment
+
+The application can be deployed to Vercel with minimal configuration.
+
+## Contributing
+
+Contributions are welcome! Please follow standard GitHub workflow.
+
+## License
+
+This project is proprietary and confidential.

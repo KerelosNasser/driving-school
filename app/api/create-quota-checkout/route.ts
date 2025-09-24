@@ -19,6 +19,10 @@ const supabaseAdmin = createClient(
 // Input validation schema
 const checkoutSchema = z.object({
   packageId: z.string().min(1, 'Package ID is required'),
+  paymentGateway: z.string().optional().default('stripe'),
+  acceptedTerms: z.boolean().refine(val => val === true, {
+    message: 'You must accept the terms and conditions to proceed',
+  }),
 });
 
 export async function POST(request: NextRequest) {
@@ -45,7 +49,7 @@ export async function POST(request: NextRequest) {
     console.log('📦 Request body:', body);
 
     const validatedInput = checkoutSchema.parse(body);
-    const { packageId } = validatedInput;
+    const { packageId, paymentGateway, acceptedTerms } = validatedInput;
     console.log('✅ Package ID validated:', packageId);
 
     // Get package details (packages table is public-selectable)
@@ -209,6 +213,7 @@ export async function POST(request: NextRequest) {
         price: packageData.price.toString(),
         user_email: userRow.email,
         user_name: userRow.full_name,
+        payment_gateway: paymentGateway,
       },
       consent_collection: {
         terms_of_service: 'required',

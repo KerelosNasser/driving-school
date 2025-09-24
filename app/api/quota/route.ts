@@ -1,22 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { withCentralizedStateManagement } from '@/lib/api-middleware';
-import { supabaseAdmin } from '@/lib/api/utils';
+import { auth } from '@clerk/nextjs/server';
 
-// Centralized state management replaces individual rate limiting
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
+const supabaseAdmin = supabase;
 
 // GET - Fetch user's current quota
 async function handleQuotaGetRequest(_request: NextRequest) {
   try {
-    // Get authenticated user (Clerk) - TEMPORARILY DISABLED FOR TESTING
-    // const { userId: clerkUserId } = await auth();
-    // if (!clerkUserId) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    // Get authenticated user (Clerk)
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Map or provision user in Supabase - USING TEST USER
-    const supabaseUserId = '550e8400-e29b-41d4-a716-446655440000'; // await getOrCreateSupabaseUserId(clerkUserId);
+    // Get user from database using clerk_id
+    const { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .eq('clerk_id', clerkUserId)
+      .single();
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const supabaseUserId = user.id;
 
     // Get user's quota information
     const { data: quota, error } = await supabase
@@ -37,15 +51,20 @@ async function handleQuotaGetRequest(_request: NextRequest) {
           user_id: supabaseUserId,
           total_hours: 0,
           used_hours: 0,
-          available_hours: 0,
+          remaining_hours: 0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }
       });
     }
 
-    // Return quota with available_hours (computed column from database)
-    return NextResponse.json({ quota });
+    // Calculate remaining hours and return quota
+    const quotaWithRemaining = {
+      ...quota,
+      remaining_hours: (quota.total_hours || 0) - (quota.used_hours || 0)
+    };
+    
+    return NextResponse.json({ quota: quotaWithRemaining });
   } catch (error) {
     console.error('Quota API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -89,27 +108,63 @@ async function handleQuotaPostRequest(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Use the update_user_quota function to add hours
-    const { error } = await supabaseAdmin.rpc('update_user_quota', {
-      p_user_id: supabaseUserId,
-      p_hours_change: hours,
-      p_transaction_type: finalTransactionType,
-      p_description: description || `Added ${hours} hours`,
-      p_package_id: package_id || null,
-      p_payment_id: payment_id || null
-    });
+    // Update user quota directly since RPC function doesn't exist
+    const { data: existingQuota } = await supabaseAdmin
+      .from('user_quotas')
+      .select('*')
+      .eq('user_id', supabaseUserId)
+      .single();
+
+    if (!existingQuota) {
+      // Create new quota record
+      const { error: createError } = await supabaseAdmin
+        .from('user_quotas')
+        .insert({
+          user_id: supabaseUserId,
+          total_hours: hours,
+          used_hours: 0
+        });
+      
+      if (createError) {
+        console.error('Error creating user quota:', createError);
+        return NextResponse.json({ error: 'Failed to create quota' }, { status: 500 });
+      }
+    } else {
+      // Update existing quota
+      const { error: updateError } = await supabaseAdmin
+        .from('user_quotas')
+        .update({
+          total_hours: parseFloat(existingQuota.total_hours) + hours,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', supabaseUserId);
+      
+      if (updateError) {
+        console.error('Error updating user quota:', updateError);
+        return NextResponse.json({ error: 'Failed to update quota' }, { status: 500 });
+      }
+    }
+
+    // Log the transaction
+    const { error: transactionError } = await supabaseAdmin
+      .from('quota_transactions')
+      .insert({
+        user_id: supabaseUserId,
+        transaction_type: finalTransactionType,
+        hours_change: hours,
+        amount_paid: 0, // Default for manual additions
+        description: description || `Added ${hours} hours`,
+        package_id: package_id || null,
+        payment_id: payment_id || null,
+        metadata: {}
+      });
+
+    const error = transactionError;
 
     if (error) {
-      console.error('Error updating quota:', error);
-      // Handle specific database errors
-      if (error.message?.includes('Insufficient quota hours')) {
-        return NextResponse.json({ 
-          error: 'Insufficient quota balance',
-          details: error.message 
-        }, { status: 400 });
-      }
+      console.error('Error logging transaction:', error);
       return NextResponse.json({ 
-        error: 'Failed to update quota',
+        error: 'Failed to log transaction',
         details: error.message 
       }, { status: 500 });
     }

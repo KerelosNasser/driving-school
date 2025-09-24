@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Check, ShieldCheck, Clock, Car, CreditCard, Calendar, Star, AlertTriangle,
-  Zap, Award, Users, Phone, Mail, ArrowRight, Loader2, CheckCircle2,
-  Shield, Lock, Trophy, Target, BookOpen, MapPin
+import { Clock, Car, CreditCard, Calendar, Star, AlertTriangle,
+ Award,  Phone, Mail, ArrowRight, Loader2, CheckCircle2,
+  Shield, Lock, Trophy, Target,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +17,7 @@ import { useUser } from '@clerk/nextjs';
 import type { Package } from '@/lib/supabase';
 import GoogleCalendarIntegration from '@/app/service-center/components/GoogleCalendarIntegration';
 import { QuotaIndicator } from '@/components/QuotaIndicator';
+import { parsePaymentError, formatPaymentErrorMessage } from '@/lib/payment-utils';
 
 export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
@@ -28,22 +27,60 @@ export default function PackagesPage() {
   const [quota, setQuota] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('packages');
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const { user, isSignedIn } = useUser();
 
-  const handlePurchaseQuota = async (packageId: string) => {
+  const handlePurchaseQuota = async (packageId: string, paymentMethod: string = 'payid') => {
     if (!isSignedIn) {
       window.location.href = '/sign-in';
       return;
     }
 
     setPurchasing(true);
+    setPaymentError(null);
+    
     try {
-      const response = await fetch('/api/create-quota-checkout', {
+      // For manual payment methods
+      if (['tyro', 'bpay', 'payid'].includes(paymentMethod)) {
+        // Handle manual payment method
+        const response = await fetch('/api/create-quota-checkout-enhanced', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            packageId,
+            acceptedTerms: true,
+            paymentGateway: paymentMethod
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.details || data.error || `HTTP ${response.status}`);
+        }
+
+        // Redirect to manual payment page
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error('No payment URL received');
+        }
+        return;
+      }
+
+      // For standard payment gateway
+      const response = await fetch('/api/create-quota-checkout-enhanced', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ packageId }),
+        body: JSON.stringify({ 
+          packageId,
+          acceptedTerms: true,
+          paymentGateway: paymentMethod
+        }),
       });
 
       const data = await response.json();
@@ -59,7 +96,17 @@ export default function PackagesPage() {
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert(`Checkout failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Parse and format the error message
+      const parsedError = parsePaymentError(error);
+      const formattedMessage = formatPaymentErrorMessage(parsedError);
+      
+      setPaymentError(formattedMessage);
+      
+      // Show alert only for unrecoverable errors
+      if (!parsedError.recoverable) {
+        alert(`Checkout failed: ${formattedMessage}`);
+      }
     } finally {
       setPurchasing(false);
     }
@@ -491,7 +538,7 @@ export default function PackagesPage() {
                               <Button
                                 size="lg"
                                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-lg py-6"
-                                onClick={() => handlePurchaseQuota(selectedPackageDetails.id)}
+                                onClick={() => handlePurchaseQuota(selectedPackageDetails.id, 'payid')}
                                 disabled={purchasing}
                               >
                                 {purchasing ? (
@@ -502,7 +549,7 @@ export default function PackagesPage() {
                                 ) : (
                                   <>
                                     <CreditCard className="mr-3 h-5 w-5" />
-                                    Secure Checkout
+                                    Purchase with PayID
                                   </>
                                 )}
                               </Button>
