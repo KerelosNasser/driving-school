@@ -11,9 +11,8 @@ import { BusinessPhone, BusinessEmail, BusinessAddress } from "@/components/ui/g
 import { EditableText } from "@/components/ui/editable-text";
 import { useGlobalContent } from '@/contexts/globalContentContext';
 
-  const { content } = useGlobalContent();
-
 export default function ContactPage() {
+  const { content } = useGlobalContent();
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
       {/* Background decoration */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useUser } from '@clerk/nextjs';
 import {
   Calendar,
   Car,
@@ -12,6 +13,7 @@ import {
   MapPin,
   Phone,
   Check,
+  Loader2,
 } from "lucide-react";
 
 interface HeroProps {
@@ -31,6 +33,8 @@ export function Hero({
   const [isMobile, setIsMobile] = useState(false);
   const [testPackage, setTestPackage] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const { user, isSignedIn } = useUser();
 
   const defaultFeatures = [
     { text: "RMS Approved Instructors" },
@@ -88,6 +92,49 @@ export function Hero({
 
     fetchTestPackage();
   }, []);
+
+  // Handle package purchase
+  const handlePurchasePackage = async () => {
+    if (!testPackage) return;
+    
+    if (!isSignedIn) {
+      window.location.href = '/sign-in';
+      return;
+    }
+
+    setPurchasing(true);
+    
+    try {
+      const response = await fetch('/api/create-quota-checkout-enhanced', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          packageId: testPackage.id,
+          acceptedTerms: true,
+          paymentGateway: 'payid'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || `HTTP ${response.status}`);
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No payment URL received');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert(`Checkout failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setPurchasing(false);
+    }
+  };
 
   return (
     <section className="relative min-h-screen theme-gradient-hero text-white overflow-hidden">
@@ -338,9 +385,22 @@ export function Hero({
 </div>
 
                     {/* CTA button - full width and prominent */}
-                    <button className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center">
-                      <Calendar className="h-5 w-5 mr-2" />
-                      Book Test Package
+                    <button 
+                      onClick={handlePurchasePackage}
+                      disabled={purchasing}
+                      className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center"
+                    >
+                      {purchasing ? (
+                        <>
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Calendar className="h-5 w-5 mr-2" />
+                          Book Test Package
+                        </>
+                      )}
                     </button>
                   </div>
 

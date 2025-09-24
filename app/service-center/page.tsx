@@ -15,7 +15,7 @@ import QuotaManagementTab from './components/QuotaManagementTab';
 import NegotiationTab from './components/NegotiationTab';
 import TransactionHistoryTab from './components/TransactionHistoryTab';
 import InvitationDashboard from '@/components/InvitationDashboard';
-import Providers from './providers';
+
 import UserDataDisplay from './components/UserDataDisplay';
 import UserDataReview from './components/UserDataReview';
 
@@ -209,7 +209,6 @@ export default function ServiceCenterPage() {
   }
 
   return (
-    <Providers>
       <div className="min-h-screen bg-gradient-to-r from-emerald-900/95 via-teal-800/90 to-blue-900/95">
         {/* Subtle Background Pattern */}
         <div className="absolute inset-0 opacity-10">
@@ -507,6 +506,5 @@ export default function ServiceCenterPage() {
           </div>
         </div>
       </div>
-    </Providers>
   );
 }
