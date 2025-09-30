@@ -307,14 +307,12 @@ export function validateGalleryImages(images: any): any[] {
       img &&
       typeof img === 'object' &&
       typeof img.src === 'string' &&
-      img.src.trim() !== '' &&
-      typeof img.title === 'string' &&
-      img.title.trim() !== ''
+      img.src.trim() !== ''
   ).map((img, index) => ({
     id: img.id || Date.now() + index,
     src: img.src.trim(),
-    alt: img.alt || `Gallery image ${index + 1}`,
-    title: img.title.trim(),
+    alt: img.alt || img.studentName || `Gallery image ${index + 1}`,
+    studentName: img.studentName || '',
     isUploaded: img.isUploaded || false
   }));
 }

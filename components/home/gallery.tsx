@@ -18,8 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Play,
-  Pause
-} from 'lucide-react';
+  Pause} from 'lucide-react';
 import { useEditMode } from '@/contexts/editModeContext';
 import { EditableText } from '@/components/ui/editable-text';
 import { Button } from '@/components/ui/button';
@@ -33,7 +32,7 @@ interface StudentImage {
   src: string;
   alt: string;
   studentName: string;
-  achievement?: string; // e.g., "First Time Pass", "Manual License", etc.
+  achievement?: string;
   date?: string;
   isUploaded?: boolean;
 }
@@ -61,6 +60,57 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
   useEffect(() => {
     setEditedImage(image);
   }, [image]);
+
+  const convertGoogleDriveUrl = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      
+      if (urlObj.hostname === 'drive.google.com' && urlObj.pathname.startsWith('/file/d/')) {
+        const pathParts = urlObj.pathname.split('/');
+        const fileId = pathParts[3];
+        if (fileId) {
+          return `https://drive.google.com/uc?id=${fileId}`;
+        }
+      }
+      
+      if (urlObj.hostname === 'drive.google.com' && urlObj.pathname.startsWith('/thumbnail')) {
+        urlObj.searchParams.set('sz', 's2048');
+        return urlObj.toString();
+      }
+      
+      return url;
+    } catch (_e) {
+      return url;
+    }
+  };
+
+  const isValidImageUrl = (url: string): boolean => {
+    if (!url || url.trim().length === 0) return false;
+    
+    try {
+      const urlToTest = url.startsWith('http') ? url : `https://${url}`;
+      const urlObj = new URL(urlToTest);
+      
+      if (urlObj.hostname.includes('google.com') && urlObj.pathname.includes('/imgres')) {
+        return false;
+      }
+      
+      if (urlObj.hostname.includes('drive.google.com') && urlObj.pathname.includes('/file/d/')) {
+        return true;
+      }
+      
+      if (urlObj.hostname.includes('docs.google.com') && urlObj.pathname.includes('/document/d/')) {
+        return false;
+      }
+      
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.svg'];
+      const urlPath = urlObj.pathname.toLowerCase();
+      
+      return imageExtensions.some(ext => urlPath.endsWith(ext));
+    } catch (_e) {
+      return false;
+    }
+  };
 
   const handleFileUpload = async (file: File) => {
     if (!editedImage) return;
@@ -101,11 +151,24 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
   };
 
   const handleSave = () => {
-    if (editedImage && editedImage.src && editedImage.studentName.trim()) {
-      onSave(editedImage);
+    if (!editedImage) return;
+    
+    if (uploadMode === 'url' && editedImage.src) {
+      if (!isValidImageUrl(editedImage.src)) {
+        toast.error('Please enter a valid direct image URL. Google Images search URLs are not supported.');
+        return;
+      }
+    }
+
+    if (editedImage.src) {
+      const imageToSave = {
+        ...editedImage,
+        studentName: editedImage.studentName.trim() || `Student ${editedImage.id}`
+      };
+      onSave(imageToSave);
       onClose();
     } else {
-      toast.error('Please provide both image and student name');
+      toast.error('Please provide an image');
     }
   };
 
@@ -143,18 +206,19 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
         </div>
 
         <div className="space-y-6">
-          {/* Image Preview */}
           <div className="relative h-48 w-full rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center border-2 border-dashed border-gray-200">
-            {editedImage.src ? (
+            {editedImage.src && isValidImageUrl(editedImage.src) ? (
               <Image
-                src={editedImage.src}
+                src={convertGoogleDriveUrl(editedImage.src)}
                 alt={editedImage.alt}
                 width={400}
                 height={192}
                 className="max-w-full max-h-full w-auto h-auto object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw"
-                onError={() => {
+                onError={(e) => {
                   console.error('Image failed to load:', editedImage.src);
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/images/students/1.webp';
                 }}
               />
             ) : (
@@ -165,7 +229,6 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
             )}
           </div>
 
-          {/* Upload Mode Selector */}
           <div className="flex gap-2">
             <Button
               variant={uploadMode === 'file' ? 'default' : 'outline'}
@@ -185,7 +248,6 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
             </Button>
           </div>
 
-          {/* Image Source Input */}
           {uploadMode === 'file' ? (
             <div>
               <Label className="text-sm font-medium text-gray-700">Upload Student Photo</Label>
@@ -219,20 +281,19 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
                 placeholder="https://example.com/student-photo.jpg"
                 className="mt-2 rounded-xl"
               />
+              <p className="text-xs text-gray-500 mt-1">Note: Please use direct image URLs, not search result pages.</p>
             </div>
           )}
 
-          {/* Student Details */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="student-name" className="text-sm font-medium text-gray-700">Student Name *</Label>
+              <Label htmlFor="student-name" className="text-sm font-medium text-gray-700">Student Name (Optional)</Label>
               <Input
                 id="student-name"
                 value={editedImage.studentName}
                 onChange={(e) => setEditedImage(prev => prev ? { ...prev, studentName: e.target.value } : null)}
-                placeholder="Enter student's name"
+                placeholder="Enter student's name (optional)"
                 className="mt-2 rounded-xl"
-                required
               />
             </div>
 
@@ -278,12 +339,11 @@ const ImageEditModal = ({ image, isOpen, onClose, onSave, onDelete, isNew = fals
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-3 pt-4">
             <Button 
               onClick={handleSave} 
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 rounded-xl" 
-              disabled={!editedImage.src || !editedImage.studentName.trim()}
+              disabled={!editedImage.src}
             >
               <Check className="h-4 w-4 mr-2" />
               Save Student
@@ -319,33 +379,52 @@ export function Gallery({
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-  // Initialize student images
+  const convertGoogleDriveUrl = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      
+      if (urlObj.hostname === 'drive.google.com' && urlObj.pathname.startsWith('/file/d/')) {
+        const pathParts = urlObj.pathname.split('/');
+        const fileId = pathParts[3];
+        if (fileId) {
+          return `https://drive.google.com/uc?id=${fileId}`;
+        }
+      }
+      
+      if (urlObj.hostname === 'drive.google.com' && urlObj.pathname.startsWith('/thumbnail')) {
+        urlObj.searchParams.set('sz', 's2048');
+        return urlObj.toString();
+      }
+      
+      return url;
+    } catch (_e) {
+      return url;
+    }
+  };
+
   useEffect(() => {
-const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
-  id: i + 1,
-  src: `/images/students/${i + 1}.webp`,
-  alt: "Sarah - successful driving student",
-  studentName: "",
-  achievement: "",
-  date: ""
-}));
+    const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
+      id: i + 1,
+      src: `/images/students/${i + 1}.webp`,
+      alt: "Sarah - successful driving student",
+      studentName: "",
+      achievement: "",
+      date: ""
+    }));
 
     let imagesToUse = fallbackImages;
 
-    // Process initial images from props/database
     if (initialImages && Array.isArray(initialImages) && initialImages.length > 0) {
       const validImages = initialImages.filter(img =>
         img &&
         typeof img.src === 'string' &&
-        img.src.trim() !== '' &&
-        typeof img.studentName === 'string' &&
-        img.studentName.trim() !== ''
+        img.src.trim() !== ''
       ).map(img => ({
         ...img,
         id: img.id || Date.now() + Math.random(),
-        alt: img.alt || `${img.studentName} - successful driving student`,
-        src: img.src.trim(),
-        studentName: img.studentName.trim()
+        studentName: img.studentName || `Student ${img.id || Date.now() + Math.random()}`,
+        alt: img.alt || img.studentName || `Student ${img.id || Date.now() + Math.random()} - successful driving student`,
+        src: img.src.trim()
       }));
 
       if (validImages.length > 0) {
@@ -358,7 +437,7 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
 
   const saveStudentImages = async (updatedImages: StudentImage[]) => {
     try {
-      await saveContent('student_gallery_images', updatedImages, 'json');
+      await saveContent('gallery_images', updatedImages, 'json');
       return true;
     } catch (error) {
       console.error('Failed to save student images:', error);
@@ -410,7 +489,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
     const updatedImages = studentImages.filter(img => img.id !== id);
     setStudentImages(updatedImages);
 
-    // Adjust current index if needed
     if (currentIndex >= updatedImages.length && updatedImages.length > 0) {
       setCurrentIndex(updatedImages.length - 1);
     } else if (updatedImages.length === 0) {
@@ -423,7 +501,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
     }
   };
 
-  // Navigation functions
   const goToPrevious = useCallback(() => {
     setCurrentIndex(prev => prev === 0 ? studentImages.length - 1 : prev - 1);
     setIsAutoPlaying(false);
@@ -436,7 +513,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
     setTimeout(() => setIsAutoPlaying(true), 3000);
   }, [studentImages.length]);
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (studentImages.length <= 1) return;
@@ -457,28 +533,30 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [goToPrevious, goToNext, studentImages.length]);
 
-  // Auto-play functionality
   useEffect(() => {
     if (!isAutoPlaying || studentImages.length <= 1) return;
 
     const interval = setInterval(() => {
       goToNext();
-    }, 5000); // Change image every 5 seconds
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [isAutoPlaying, goToNext, studentImages.length]);
 
-  // Touch/swipe handling
   const minSwipeDistance = 50;
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-    setIsAutoPlaying(false); // Pause auto-play on touch
+    if (e.targetTouches && e.targetTouches[0]) {
+      setTouchStart(e.targetTouches[0].clientX);
+    }
+    setIsAutoPlaying(false);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    if (e.targetTouches && e.targetTouches[0]) {
+      setTouchEnd(e.targetTouches[0].clientX);
+    }
   };
 
   const onTouchEnd = () => {
@@ -495,7 +573,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
       goToPrevious();
     }
 
-    // Resume auto-play after 3 seconds of inactivity
     setTimeout(() => setIsAutoPlaying(true), 3000);
   };
 
@@ -505,14 +582,12 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
 
   return (
     <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-20 left-10 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-10 w-40 h-40 bg-teal-400 rounded-full blur-3xl"></div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -539,7 +614,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
           </EditableText>
         </motion.div>
 
-        {/* Stats Bar */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -576,7 +650,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
           </div>
         </motion.div>
 
-        {/* Horizontal Carousel Gallery */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -586,7 +659,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
         >
           {studentImages.length > 0 && (
             <>
-              {/* Navigation Arrows */}
               <div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20">
                 <Button
                   onClick={goToPrevious}
@@ -607,7 +679,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
                 </Button>
               </div>
 
-              {/* Carousel Container */}
               <div 
                 className="overflow-hidden rounded-2xl"
                 onTouchStart={onTouchStart}
@@ -649,10 +720,9 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
                             }
                           }}
                         >
-                          {/* Student Photo */}
                           <div className="relative w-full h-full overflow-hidden bg-gray-100">
                             <Image
-                              src={student.src}
+                              src={convertGoogleDriveUrl(student.src)}
                               alt={student.alt}
                               fill
                               className={`object-cover transition-transform duration-500 ${
@@ -660,9 +730,13 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
                               }`}
                               sizes="(max-width: 640px) 280px, (max-width: 1024px) 320px, 400px"
                               priority={isActive}
+                              onError={(e) => {
+                                console.error('Image failed to load:', student.src);
+                                const target = e.target as HTMLImageElement;
+                                target.src = '/images/students/1.webp';
+                              }}
                             />
                             
-                            {/* Achievement Badge - Only show on active image */}
                             {student.achievement && isActive && (
                               <div className="absolute top-4 left-4">
                                 <span className="px-3 py-1.5 bg-emerald-500/90 text-white text-sm font-bold rounded-full backdrop-blur-sm flex items-center">
@@ -672,7 +746,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
                               </div>
                             )}
 
-                            {/* Edit Controls - Only show on active image */}
                             {isEditMode && isActive && (
                               <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">
                                 <Button
@@ -699,12 +772,10 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
                               </div>
                             )}
 
-                            {/* Gradient Overlay */}
                             <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent ${
                               isActive ? 'h-32' : 'h-24'
                             }`} />
                             
-                            {/* Student Info Overlay */}
                             <div className={`absolute bottom-0 left-0 right-0 text-white ${
                               isActive ? 'p-6' : 'p-4'
                             }`}>
@@ -735,10 +806,8 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
                 </div>
               </div>
 
-              {/* Controls */}
               <div className="flex flex-col items-center mt-8 space-y-4">
                 <div className="flex items-center justify-center space-x-6">
-                  {/* Play/Pause Button */}
                   {studentImages.length > 1 && (
                     <Button
                       onClick={() => setIsAutoPlaying(!isAutoPlaying)}
@@ -752,7 +821,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
                     </Button>
                   )}
 
-                  {/* Dots Indicator */}
                   <div className="flex space-x-2">
                     {studentImages.map((_, index) => (
                       <button
@@ -776,7 +844,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
           )}
         </motion.div>
 
-        {/* Empty State */}
         {studentImages.length === 0 && !isEditMode && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -791,7 +858,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
           </motion.div>
         )}
 
-        {/* Admin Controls */}
         <AnimatePresence>
           {isEditMode && (
             <motion.div
@@ -830,7 +896,7 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
                       <div key={student.id} className="relative group">
                         <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 border-2 border-gray-200">
                           <Image
-                            src={student.src}
+                            src={convertGoogleDriveUrl(student.src)}
                             alt={student.alt}
                             width={120}
                             height={160}
@@ -876,7 +942,6 @@ const fallbackImages: StudentImage[] = Array.from({ length: 23 }, (_, i) => ({
           )}
         </AnimatePresence>
 
-        {/* Image Edit Modal */}
         <ImageEditModal
           image={editingImage}
           isOpen={showEditModal}

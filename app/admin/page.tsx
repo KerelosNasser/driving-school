@@ -57,7 +57,7 @@ interface ServerBooking {
 async function getMergedUsers(): Promise<MergedUser[]> {
   try {
     const clerkClient = createClerkClient({
-      secretKey: process.env.CLERK_SECRET_KEY,
+      secretKey: process.env.CLERK_SECRET_KEY ?? '',
     });
 
     console.log("Fetching users from Clerk and Supabase...");
