@@ -730,7 +730,34 @@ export const NavigationEditor: React.FC = () => {
   const [editingItem, setEditingItem] = useState<NavigationItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [navigationTree, setNavigationTree] = useState<NavigationItem[]>([]);
-  const [showPreview, setShowPreview] = useState(true);
+  const handleAddPage = useCallback(async (pageId: string) => {
+    try {
+      const newItemData = {
+        displayName: pageId.charAt(0).toUpperCase() + pageId.slice(1),
+        urlSlug: pageId,
+        pageId: pageId,
+        orderIndex: items.length,
+        isVisible: true,
+        isActive: true,
+      } as Omit<NavigationItem, 'id'>;
+      await createItem(newItemData);
+    } catch (error) {
+      console.error('Failed to add page to navigation:', error);
+    }
+  }, [createItem, items.length]);
+  const [isAddPageDialogOpen, setIsAddPageDialogOpen] = useState(false);
+  const [availablePages, setAvailablePages] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchPages = async () => {
+      const response = await fetch('/api/pages/all');
+      if (response.ok) {
+        const pages = await response.json();
+        setAvailablePages(pages);
+      }
+    };
+    fetchPages();
+  }, []);
 
   // Load navigation tree
   useEffect(() => {
@@ -1002,12 +1029,18 @@ export const NavigationEditor: React.FC = () => {
                     {showPreview ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
                     {showPreview ? 'Hide Preview' : 'Show Preview'}
                   </Button>
+import { AddPageDialog } from './AddPageDialog';
+
                   {permissions.canAdd && (
                     <Button onClick={handleCreate}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Item
                     </Button>
                   )}
+                  <Button onClick={() => setIsAddPageDialogOpen(true)} variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Page
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -1115,6 +1148,7 @@ export const NavigationEditor: React.FC = () => {
           </Card>
         </div>
       </div>
+      <AddPageDialog open={isAddPageDialogOpen} onOpenChange={setIsAddPageDialogOpen} pages={availablePages} onAddPage={handleAddPage} />
     </DragDropProvider>
   );
 };

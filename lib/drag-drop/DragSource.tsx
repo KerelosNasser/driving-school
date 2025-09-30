@@ -1,39 +1,19 @@
 'use client';
 
-import React from 'react';
-import { useDrag } from 'react-dnd';
-import { DragItem, DragSourceProps } from '../types/drag-drop';
+import { useDraggable } from '@dnd-kit/core';
 
-export function DragSource({ 
-  item, 
-  onDragStart, 
-  onDragEnd, 
-  children 
-}: DragSourceProps) {
-  const [{ isDragging }, drag, preview] = useDrag({
-    type: item.type,
-    item: () => {
-      onDragStart?.(item);
-      return item;
-    },
-    end: (draggedItem, monitor) => {
-      const dropResult = monitor.getDropResult();
-      onDragEnd?.(draggedItem, dropResult);
-    },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
+export function DragSource({ id, data, children }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id,
+    data,
   });
 
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined;
+
   return (
-    <div
-      ref={drag}
-      style={{
-        opacity: isDragging ? 0.5 : 1,
-        cursor: 'grab',
-      }}
-      className={`drag-source ${isDragging ? 'dragging' : ''}`}
-    >
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
       {children}
     </div>
   );

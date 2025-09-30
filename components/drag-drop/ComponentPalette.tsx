@@ -3,6 +3,34 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Filter, TrendingUp } from 'lucide-react';
 import { DragSource, DragItem, ComponentDefinition, ThumbnailGenerator } from '../../lib/drag-drop';
+import { Button } from '@/components/ui/button';
+import { NewPageDialog } from '@/components/admin/NewPageDialog';
+import { useRouter } from 'next/navigation';
+import { 
+  ButtonComponentPreview, 
+  ButtonComponentEdit 
+} from '../component-library/ButtonComponent';
+import { 
+  ImageComponentPreview, 
+  ImageComponentEdit 
+} from '../component-library/ImageComponent';
+import { 
+  TextComponentPreview, 
+  TextComponentEdit 
+} from '../component-library/TextComponent';
+import {  
+  ColumnComponentPreview, 
+  ColumnComponentEdit 
+} from '../component-library/LayoutComponents';
+import { SectionComponent } from '../component-library/SectionComponent';
+import { AlertComponent } from '../component-library/AlertComponent';
+import { AvatarComponent } from '../component-library/AvatarComponent';
+import { BadgeComponent } from '../component-library/BadgeComponent';
+import { CardComponent } from '../component-library/CardComponent';
+import { CalendarComponent } from '../component-library/CalendarComponent';
+import { CheckboxComponent } from '../component-library/CheckboxComponent';
+import { InputComponent } from '../component-library/InputComponent';
+import { LabelComponent } from '../component-library/LabelComponent';
 
 interface ComponentPaletteProps {
   onDragStart?: (item: DragItem) => void;
@@ -10,10 +38,10 @@ interface ComponentPaletteProps {
   userId: string;
   userName: string;
   className?: string;
+  pageId: string;
 }
 
-// Sample component definitions
-const COMPONENT_DEFINITIONS: ComponentDefinition[] = [
+const getComponentDefinitions = (pageId: string): ComponentDefinition[] => [
   // Text Components
   {
     id: 'text-heading',
@@ -29,8 +57,8 @@ const COMPONENT_DEFINITIONS: ComponentDefinition[] = [
         level: { type: 'number', default: 1 }
       }
     },
-    previewComponent: () => null,
-    editComponent: () => null
+    previewComponent: TextComponentPreview,
+    editComponent: TextComponentEdit
   },
   {
     id: 'text-paragraph',
@@ -45,25 +73,24 @@ const COMPONENT_DEFINITIONS: ComponentDefinition[] = [
         text: { type: 'string', default: 'Your paragraph text here...' }
       }
     },
-    previewComponent: () => null,
-    editComponent: () => null
+    previewComponent: TextComponentPreview,
+    editComponent: TextComponentEdit
   },
   {
-    id: 'text-list',
-    name: 'List',
+    id: 'text-label',
+    name: 'Label',
     category: 'text',
-    icon: '📋',
-    description: 'Add a bulleted or numbered list',
-    defaultProps: { items: ['Item 1', 'Item 2', 'Item 3'], type: 'bullet' },
+    icon: '🏷️',
+    description: 'Display a label',
+    defaultProps: { text: 'Label' },
     schema: {
       type: 'object',
       properties: {
-        items: { type: 'array', default: ['Item 1', 'Item 2', 'Item 3'] },
-        type: { type: 'string', default: 'bullet' }
+        text: { type: 'string', default: 'Label' }
       }
     },
-    previewComponent: () => null,
-    editComponent: () => null
+    previewComponent: LabelComponent,
+    editComponent: LabelComponent
   },
 
   // Media Components
@@ -81,42 +108,25 @@ const COMPONENT_DEFINITIONS: ComponentDefinition[] = [
         alt: { type: 'string', default: 'Image description' }
       }
     },
-    previewComponent: () => null,
-    editComponent: () => null
+    previewComponent: ImageComponentPreview,
+    editComponent: ImageComponentEdit
   },
   {
-    id: 'media-gallery',
-    name: 'Gallery',
+    id: 'media-avatar',
+    name: 'Avatar',
     category: 'media',
-    icon: '🖼️',
-    description: 'Add an image gallery',
-    defaultProps: { images: [], columns: 3 },
-    schema: {
-      type: 'object',
-      properties: {
-        images: { type: 'array', default: [] },
-        columns: { type: 'number', default: 3 }
-      }
-    },
-    previewComponent: () => null,
-    editComponent: () => null
-  },
-  {
-    id: 'media-video',
-    name: 'Video',
-    category: 'media',
-    icon: '🎥',
-    description: 'Embed a video',
-    defaultProps: { src: '', autoplay: false },
+    icon: '👤',
+    description: 'Display an avatar',
+    defaultProps: { src: '', fallback: 'AV' },
     schema: {
       type: 'object',
       properties: {
         src: { type: 'string', default: '' },
-        autoplay: { type: 'boolean', default: false }
+        fallback: { type: 'string', default: 'AV' }
       }
     },
-    previewComponent: () => null,
-    editComponent: () => null
+    previewComponent: AvatarComponent,
+    editComponent: AvatarComponent
   },
 
   // Layout Components
@@ -126,16 +136,10 @@ const COMPONENT_DEFINITIONS: ComponentDefinition[] = [
     category: 'layout',
     icon: '📐',
     description: 'Add a content section',
-    defaultProps: { padding: 'medium', background: 'transparent' },
-    schema: {
-      type: 'object',
-      properties: {
-        padding: { type: 'string', default: 'medium' },
-        background: { type: 'string', default: 'transparent' }
-      }
-    },
-    previewComponent: () => null,
-    editComponent: () => null
+    defaultProps: { pageId },
+    schema: {},
+    previewComponent: SectionComponent,
+    editComponent: SectionComponent
   },
   {
     id: 'layout-columns',
@@ -151,27 +155,63 @@ const COMPONENT_DEFINITIONS: ComponentDefinition[] = [
         gap: { type: 'string', default: 'medium' }
       }
     },
-    previewComponent: () => null,
-    editComponent: () => null
+    previewComponent: ColumnComponentPreview,
+    editComponent: ColumnComponentEdit
   },
   {
-    id: 'layout-spacer',
-    name: 'Spacer',
+    id: 'layout-card',
+    name: 'Card',
     category: 'layout',
-    icon: '📏',
-    description: 'Add vertical spacing',
-    defaultProps: { height: 'medium' },
+    icon: '📇',
+    description: 'Display content in a card',
+    defaultProps: { title: 'Card Title', description: 'Card Description', content: 'Card Content', footer: 'Card Footer' },
     schema: {
       type: 'object',
       properties: {
-        height: { type: 'string', default: 'medium' }
+        title: { type: 'string', default: 'Card Title' },
+        description: { type: 'string', default: 'Card Description' },
+        content: { type: 'string', default: 'Card Content' },
+        footer: { type: 'string', default: 'Card Footer' }
       }
     },
-    previewComponent: () => null,
-    editComponent: () => null
+    previewComponent: CardComponent,
+    editComponent: CardComponent
   },
 
   // Interactive Components
+  {
+    id: 'interactive-badge',
+    name: 'Badge',
+    category: 'interactive',
+    icon: '🏷️',
+    description: 'Display a badge',
+    defaultProps: { text: 'Badge' },
+    schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', default: 'Badge' }
+      }
+    },
+    previewComponent: BadgeComponent,
+    editComponent: BadgeComponent
+  },
+  {
+    id: 'interactive-alert',
+    name: 'Alert',
+    category: 'interactive',
+    icon: '🚨',
+    description: 'Display an alert message',
+    defaultProps: { title: 'Heads up!', description: 'This is an alert message.' },
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', default: 'Heads up!' },
+        description: { type: 'string', default: 'This is an alert message.' }
+      }
+    },
+    previewComponent: AlertComponent,
+    editComponent: AlertComponent
+  },
   {
     id: 'interactive-button',
     name: 'Button',
@@ -187,43 +227,52 @@ const COMPONENT_DEFINITIONS: ComponentDefinition[] = [
         link: { type: 'string', default: '' }
       }
     },
-    previewComponent: () => null,
-    editComponent: () => null
+    previewComponent: ButtonComponentPreview,
+    editComponent: ButtonComponentEdit
   },
   {
-    id: 'interactive-form',
-    name: 'Contact Form',
+    id: 'interactive-calendar',
+    name: 'Calendar',
     category: 'interactive',
-    icon: '📝',
-    description: 'Add a contact form',
-    defaultProps: { fields: ['name', 'email', 'message'], submitText: 'Send Message' },
+    icon: '📅',
+    description: 'Display a calendar',
+    defaultProps: {},
+    schema: {},
+    previewComponent: CalendarComponent,
+    editComponent: CalendarComponent
+  },
+  {
+    id: 'interactive-checkbox',
+    name: 'Checkbox',
+    category: 'interactive',
+    icon: '✅',
+    description: 'Display a checkbox',
+    defaultProps: { label: 'Accept terms and conditions' },
     schema: {
       type: 'object',
       properties: {
-        fields: { type: 'array', default: ['name', 'email', 'message'] },
-        submitText: { type: 'string', default: 'Send Message' }
+        label: { type: 'string', default: 'Accept terms and conditions' }
       }
     },
-    previewComponent: () => null,
-    editComponent: () => null
+    previewComponent: CheckboxComponent,
+    editComponent: CheckboxComponent
   },
   {
-    id: 'interactive-map',
-    name: 'Map',
+    id: 'interactive-input',
+    name: 'Input',
     category: 'interactive',
-    icon: '🗺️',
-    description: 'Embed an interactive map',
-    defaultProps: { address: '', zoom: 15 },
+    icon: '⌨️',
+    description: 'Display an input field',
+    defaultProps: { placeholder: 'Enter text...' },
     schema: {
       type: 'object',
       properties: {
-        address: { type: 'string', default: '' },
-        zoom: { type: 'number', default: 15 }
+        placeholder: { type: 'string', default: 'Enter text...' }
       }
     },
-    previewComponent: () => null,
-    editComponent: () => null
-  }
+    previewComponent: InputComponent,
+    editComponent: InputComponent
+  },
 ];
 
 // Mock usage analytics
@@ -247,21 +296,41 @@ export function ComponentPalette({
   onDragEnd, 
   userId, 
   userName, 
-  className = '' 
+  className = '',
+  pageId
 }: ComponentPaletteProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'category' | 'usage'>('category');
+  const [isNewPageDialogOpen, setIsNewPageDialogOpen] = useState(false);
+  const router = useRouter();
+
+  const COMPONENT_DEFINITIONS = getComponentDefinitions(pageId);
+
+  const onCreatePage = async (title: string, slug: string) => {
+    const response = await fetch('/api/pages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title, slug }),
+    });
+
+    if (response.ok) {
+      const { slug: newSlug } = await response.json();
+      router.push(`/${newSlug}`);
+    }
+  };
 
   // Get unique categories
   const categories = useMemo(() => {
     const cats = Array.from(new Set(COMPONENT_DEFINITIONS.map(comp => comp.category)));
     return ['all', ...cats];
-  }, []);
+  }, [COMPONENT_DEFINITIONS]);
 
   // Filter and sort components
   const filteredComponents = useMemo(() => {
-    let filtered = COMPONENT_DEFINITIONS.filter(component => {
+    const filtered = COMPONENT_DEFINITIONS.filter(component => {
       const matchesSearch = component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            component.description?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || component.category === selectedCategory;
@@ -284,7 +353,7 @@ export function ComponentPalette({
     });
 
     return filtered;
-  }, [searchTerm, selectedCategory, sortBy]);
+  }, [searchTerm, selectedCategory, sortBy, COMPONENT_DEFINITIONS]);
 
   // Group components by category for display
   const groupedComponents = useMemo(() => {
@@ -307,7 +376,7 @@ export function ComponentPalette({
         return usageB - usageA;
       })
       .slice(0, 4);
-  }, []);
+  }, [COMPONENT_DEFINITIONS]);
 
   const createDragItem = (component: ComponentDefinition): DragItem => ({
     type: 'new_component',
@@ -376,10 +445,13 @@ export function ComponentPalette({
         <div className="text-sm text-gray-600">
           Showing {filteredComponents.length} of {COMPONENT_DEFINITIONS.length} components
         </div>
+        <div className="mt-4">
+          <Button onClick={() => setIsNewPageDialogOpen(true)} className="w-full">New Page</Button>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 max-h-96 overflow-y-auto">
+      <div className="p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
         {/* Recommended Components */}
         {searchTerm === '' && selectedCategory === 'all' && (
           <div className="mb-6">
@@ -408,8 +480,8 @@ export function ComponentPalette({
         {/* Component Groups */}
         {Object.entries(groupedComponents).map(([category, components]) => (
           <div key={category} className="mb-6 last:mb-0">
-            <h4 className="font-medium text-gray-700 mb-3 capitalize">
-              {category} Components ({components.length})
+            <h4 className="font-semibold text-lg text-gray-800 mb-3 capitalize">
+              {category}
             </h4>
             <div className="grid grid-cols-1 gap-2">
               {components.map(component => (
@@ -437,6 +509,7 @@ export function ComponentPalette({
           </div>
         )}
       </div>
+      <NewPageDialog open={isNewPageDialogOpen} onOpenChange={setIsNewPageDialogOpen} onCreatePage={onCreatePage} />
     </div>
   );
 }
@@ -454,9 +527,7 @@ interface ComponentPaletteItemProps {
 function ComponentPaletteItem({ 
   component, 
   onDragStart, 
-  onDragEnd, 
-  userId, 
-  userName, 
+  onDragEnd,
   showUsage = false, 
   usage = 0 
 }: ComponentPaletteItemProps) {

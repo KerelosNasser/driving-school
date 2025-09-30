@@ -5,25 +5,35 @@ export class DropZoneValidator {
    * Validates if a drag item can be dropped in a specific zone
    */
   static validateDrop(item: DragItem, zone: DropZone): DropValidationResult {
+    console.error('--- VALIDATING DROP ---', { item, zone });
+
     // Check basic type compatibility
     if (!zone.accepts.includes(item.type)) {
-      return {
+      const result = {
         canDrop: false,
         reason: `${item.type} cannot be dropped in ${zone.type} zone`,
         suggestions: [`Try dropping in zones that accept: ${zone.accepts.join(', ')}`]
       };
+      console.error('Validation result:', result);
+      return result;
     }
 
     // Validate component-specific rules
     if (item.type === 'new_component') {
-      return this.validateNewComponent(item, zone);
+      const result = this.validateNewComponent(item, zone);
+      console.error('Validation result:', result);
+      return result;
     }
 
     if (item.type === 'existing_component') {
-      return this.validateExistingComponent(item, zone);
+      const result = this.validateExistingComponent(item, zone);
+      console.error('Validation result:', result);
+      return result;
     }
 
-    return { canDrop: true };
+    const result = { canDrop: true };
+    console.error('Validation result:', result);
+    return result;
   }
 
   /**

@@ -1,39 +1,42 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ClerkProvider } from '@clerk/nextjs';
-import { Toaster } from 'sonner';
+import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { WebVitals } from "@/components/seo/WebVitals";
 import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
 import PostSignupWrapper from "@/components/PostSignupWrapper";
-import { Suspense } from 'react';
+import { Suspense } from "react";
 import { EditModeProvider } from "@/contexts/editModeContext";
 import { GlobalContentProvider } from "@/contexts/globalContentContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import EditModeHUD from '@/components/drag-drop/EditModeHUD';
+import { InPlaceEditor } from "@/components/drag-drop/InPlaceEditor";
 
 // Optimized font loading
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-  display: 'swap',
+  display: "swap",
   preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-  display: 'swap',
+  display: "swap",
   preload: false,
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://your-domain.vercel.app'),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://your-domain.vercel.app"
+  ),
   title: {
     default: "EG Driving School - Professional Driving Lessons & Training",
-    template: "%s | EG Driving School"
+    template: "%s | EG Driving School",
   },
-  description: "Learn to drive with EG Driving School - Australia's premier driving instruction service. Professional instructors, flexible scheduling, comprehensive packages, and excellent pass rates. Book your driving lessons today!",
+  description:
+    "Learn to drive with EG Driving School - Australia's premier driving instruction service. Professional instructors, flexible scheduling, comprehensive packages, and excellent pass rates. Book your driving lessons today!",
   keywords: [
     "driving lessons",
     "driving school",
@@ -44,7 +47,7 @@ export const metadata: Metadata = {
     "driving school near me",
     "beginner driving lessons",
     "defensive driving course",
-    "driving license training"
+    "driving license training",
   ],
   authors: [{ name: "EG Driving School" }],
   creator: "EG Driving School",
@@ -61,7 +64,8 @@ export const metadata: Metadata = {
     url: process.env.NEXT_PUBLIC_SITE_URL,
     siteName: "EG Driving School",
     title: "EG Driving School - Professional Driving Lessons & Training",
-    description: "Learn to drive with EG Driving School - Australia's premier driving instruction service. Professional instructors, flexible scheduling, and comprehensive packages.",
+    description:
+      "Learn to drive with EG Driving School - Australia's premier driving instruction service. Professional instructors, flexible scheduling, and comprehensive packages.",
     images: [
       {
         url: "/og-image.jpg",
@@ -75,7 +79,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "EG Driving School - Professional Driving Lessons & Training",
-    description: "Learn to drive with EG Driving School - Australia's premier driving instruction service.",
+    description:
+      "Learn to drive with EG Driving School - Australia's premier driving instruction service.",
     images: ["/twitter-image.jpg"],
     creator: "@egdrivingschool",
   },
@@ -85,9 +90,9 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
     },
   },
   category: "Education",
@@ -96,76 +101,84 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({
-                             children,
-                           }: Readonly<{
+  children,
+}: Readonly<{
   children: React.ReactNode;
 }>) {
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  
+
   if (!publishableKey) {
-    throw new Error('Missing Clerk Publishable Key');
+    throw new Error("Missing Clerk Publishable Key");
   }
-  
+
   return (
-      <ClerkProvider
-          publishableKey={publishableKey}
-          signInUrl="/sign-in"
-          signUpUrl="/sign-up"
-          afterSignInUrl="/"
-          afterSignUpUrl="/"
-      >
-        <html lang="en" suppressHydrationWarning>
+    <ClerkProvider
+      publishableKey={publishableKey}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignInUrl="/"
+      afterSignUpUrl="/"
+    >
+      <html lang="en" suppressHydrationWarning>
         <head>
           {/* Critical resource hints */}
-          <link rel="preconnect" href="https://fonts.googleapis.com"/>
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous"/>
-          <link rel="preconnect" href="https://images.unsplash.com"/>
-          <link rel="preconnect" href="https://api.stripe.com"/>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="anonymous"
+          />
+          <link rel="preconnect" href="https://images.unsplash.com" />
+          <link rel="preconnect" href="https://api.stripe.com" />
 
           {/* DNS prefetch for external resources */}
-          <link rel="dns-prefetch" href="https://widget.chatbot.com"/>
-          <link rel="dns-prefetch" href="https://clerk.accounts.dev"/>
+          <link rel="dns-prefetch" href="https://widget.chatbot.com" />
+          <link rel="dns-prefetch" href="https://clerk.accounts.dev" />
 
           {/* Favicon and app icons */}
-          <link rel="icon" href="/favicon.ico" sizes="any"/>
-          <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
-          <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+          <link rel="icon" href="/favicon.ico" sizes="any" />
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+          <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
           {/* Theme color for mobile browsers */}
-          <meta name="theme-color" content="#EDE513FF"/>
-          <meta name="msapplication-TileColor" content="#EDE513FF"/>
+          <meta name="theme-color" content="#EDE513FF" />
+          <meta name="msapplication-TileColor" content="#EDE513FF" />
 
           {/* Viewport optimization */}
-          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, viewport-fit=cover"
+          />
         </head>
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider>
-          <Suspense fallback={<div>Loading...</div>}>
-            <EditModeProvider>
-              <GlobalContentProvider>
-                <PostSignupWrapper>
-                  <LayoutWrapper>
-                    {children}
-                  </LayoutWrapper>
-                </PostSignupWrapper>
-              </GlobalContentProvider>
-              <EditModeHUD />
-            </EditModeProvider>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          <ThemeProvider>
+            <Suspense fallback={<div>Loading...</div>}>
+              <EditModeProvider>
+                <GlobalContentProvider>
+                  <PostSignupWrapper>
+                    <LayoutWrapper>
+                      <InPlaceEditor>{children}</InPlaceEditor>
+                    </LayoutWrapper>
+                  </PostSignupWrapper>
+                </GlobalContentProvider>
+              </EditModeProvider>
+            </Suspense>
+          </ThemeProvider>
+
+          {/* Performance monitoring */}
+          <Suspense fallback={null}>
+            <WebVitals />
           </Suspense>
-        </ThemeProvider>
 
-        {/* Performance monitoring */}
-        <Suspense fallback={null}>
-          <WebVitals/>
-        </Suspense>
+          <Toaster richColors position="top-right" />
 
-        <Toaster richColors position="top-right"/>
-
-        {/* Optimized chatbot loading */}
-        {process.env.NEXT_PUBLIC_CHATBOT_WIDGET_ID && (
+          {/* Optimized chatbot loading */}
+          {process.env.NEXT_PUBLIC_CHATBOT_WIDGET_ID && (
             <script
-                dangerouslySetInnerHTML={{
-                  __html: `
+              dangerouslySetInnerHTML={{
+                __html: `
                 (function() {
                   var chatbot = document.createElement('script');
                   chatbot.src = 'https://widget.chatbot.com/widget.js';
@@ -175,11 +188,11 @@ export default function RootLayout({
                   document.head.appendChild(chatbot);
                 })();
               `,
-                }}
+              }}
             />
-        )}
+          )}
         </body>
-        </html>
-      </ClerkProvider>
+      </html>
+    </ClerkProvider>
   );
 }

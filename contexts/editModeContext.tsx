@@ -324,11 +324,8 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        // Only allow edit mode for admins
-        if (!isAdmin && isEditMode) {
-            setIsEditMode(false);
-        }
-    }, [isAdmin, isEditMode]);
+        console.log('isEditMode changed:', isEditMode);
+    }, [isEditMode]);
 
     // Page subscription methods
     const subscribeToPage = useCallback(async (pageName: string): Promise<void> => {
