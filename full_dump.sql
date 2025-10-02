@@ -75,6 +75,18 @@ $$;
 ALTER FUNCTION "public"."check_rate_limit"("p_identifier" "text", "p_action" "text", "p_limit" integer, "p_window_minutes" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."cleanup_expired_realtime_events"() RETURNS "void"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  DELETE FROM realtime_events WHERE expires_at < NOW();
+END;
+$$;
+
+
+ALTER FUNCTION "public"."cleanup_expired_realtime_events"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."cleanup_old_versions"() RETURNS "void"
     LANGUAGE "plpgsql"
     AS $$
@@ -227,28 +239,90 @@ $$;
 ALTER FUNCTION "public"."create_content_version"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."create_user_invitation_code"("p_user_id" "uuid") RETURNS "text"
-    LANGUAGE "plpgsql"
+CREATE OR REPLACE FUNCTION "public"."create_manual_payment_session"("p_clerk_id" "text", "p_email" "text", "p_full_name" "text", "p_session_id" "text", "p_package_id" "uuid", "p_amount" numeric, "p_gateway" "text", "p_expires_at" timestamp with time zone, "p_currency" "text" DEFAULT 'AUD'::"text", "p_metadata" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 DECLARE
-    v_code TEXT;
+  v_user_id   uuid;
+  v_session_id uuid;
 BEGIN
-    -- Deactivate existing codes
-    UPDATE invitation_codes 
-    SET is_active = FALSE 
-    WHERE user_id = p_user_id AND is_active = TRUE;
+  INSERT INTO public.users (id, clerk_id, email, full_name, created_at, updated_at)
+  VALUES (gen_random_uuid(), p_clerk_id, p_email, p_full_name, now(), now())
+  ON CONFLICT (clerk_id) DO UPDATE
+    SET email     = COALESCE(NULLIF(EXCLUDED.email,''), public.users.email),
+        full_name = COALESCE(NULLIF(EXCLUDED.full_name,''), public.users.full_name),
+        updated_at = now()
+  RETURNING id INTO v_user_id;
+
+  IF v_user_id IS NULL THEN
+    SELECT id INTO v_user_id FROM public.users WHERE email = p_email LIMIT 1;
+  END IF;
+
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Failed to resolve user for clerk_id=% email=%', p_clerk_id, p_email;
+  END IF;
+
+  INSERT INTO public.manual_payment_sessions
+        (session_id, user_id, package_id, amount, currency,
+         gateway, status, metadata, expires_at, created_at, updated_at)
+  VALUES (p_session_id, v_user_id, p_package_id, p_amount, p_currency,
+          p_gateway, 'pending', p_metadata, p_expires_at, now(), now())
+  ON CONFLICT (session_id) DO UPDATE
+    SET user_id    = EXCLUDED.user_id,
+        package_id = EXCLUDED.package_id,
+        amount     = EXCLUDED.amount,
+        currency   = EXCLUDED.currency,
+        gateway    = EXCLUDED.gateway,
+        metadata   = EXCLUDED.metadata,
+        expires_at = EXCLUDED.expires_at,
+        updated_at = now()
+  RETURNING id INTO v_session_id;
+
+  RETURN v_session_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_manual_payment_session"("p_clerk_id" "text", "p_email" "text", "p_full_name" "text", "p_session_id" "text", "p_package_id" "uuid", "p_amount" numeric, "p_gateway" "text", "p_expires_at" timestamp with time zone, "p_currency" "text", "p_metadata" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."create_notification"("p_user_id" "uuid", "p_type" "text", "p_title" "text", "p_message" "text", "p_metadata" "jsonb" DEFAULT '{}'::"jsonb", "p_priority" "text" DEFAULT 'medium'::"text", "p_expires_at" timestamp with time zone DEFAULT NULL::timestamp with time zone) RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_notification_id uuid;
+BEGIN
+    INSERT INTO public.user_notifications (
+        user_id, type, title, message, data, is_read, created_at
+    ) VALUES (
+        p_user_id, p_type, p_title, p_message, COALESCE(p_metadata, '{}'::jsonb), false, now()
+    ) RETURNING id INTO v_notification_id;
+    RETURN v_notification_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_notification"("p_user_id" "uuid", "p_type" "text", "p_title" "text", "p_message" "text", "p_metadata" "jsonb", "p_priority" "text", "p_expires_at" timestamp with time zone) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."create_user_invitation_code"("p_user_id" "uuid") RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    invitation_code text;
+BEGIN
+    -- Generate a simple invitation code
+    invitation_code := 'DRV' || upper(substring(md5(random()::text) from 1 for 5));
     
-    -- Generate new code
-    v_code := generate_invitation_code();
+    -- Insert into invitation_codes table
+    INSERT INTO public.invitation_codes (user_id, code, is_active, current_uses, max_uses)
+    VALUES (p_user_id, invitation_code, true, 0, null);
     
-    -- Insert new invitation code
-    INSERT INTO invitation_codes (user_id, code, is_active)
-    VALUES (p_user_id, v_code, TRUE);
-    
-    -- Update user's invitation code
-    UPDATE users SET invitation_code = v_code WHERE id = p_user_id;
-    
-    RETURN v_code;
+    RETURN invitation_code;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Return a fallback code if insertion fails
+        RETURN 'DRV' || upper(substring(md5(random()::text) from 1 for 5));
 END;
 $$;
 
@@ -419,6 +493,44 @@ $$;
 ALTER FUNCTION "public"."detect_referral_fraud"("p_referred_user_id" "uuid", "p_invitation_code" "text", "p_device_fingerprint" "text", "p_ip_address" "inet", "p_user_agent" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."fix_component_position_gaps"("p_page_name" character varying, "p_section_id" character varying, "p_user_id" "text" DEFAULT NULL::"text") RETURNS integer
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  v_fixed_count INTEGER := 0;
+  v_component RECORD;
+  v_new_order INTEGER := 0;
+BEGIN
+  -- Update positions to remove gaps
+  FOR v_component IN
+    SELECT component_id, position_order
+    FROM page_components
+    WHERE page_name = p_page_name
+      AND position_section = p_section_id
+      AND is_active = true
+    ORDER BY position_order
+  LOOP
+    IF v_component.position_order != v_new_order THEN
+      UPDATE page_components
+      SET position_order = v_new_order,
+          last_modified_at = NOW(),
+          last_modified_by = COALESCE(p_user_id, last_modified_by)
+      WHERE component_id = v_component.component_id;
+      
+      v_fixed_count := v_fixed_count + 1;
+    END IF;
+    
+    v_new_order := v_new_order + 1;
+  END LOOP;
+  
+  RETURN v_fixed_count;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."fix_component_position_gaps"("p_page_name" character varying, "p_section_id" character varying, "p_user_id" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."generate_invitation_code"() RETURNS "text"
     LANGUAGE "plpgsql"
     AS $$
@@ -443,6 +555,30 @@ $$;
 
 
 ALTER FUNCTION "public"."generate_invitation_code"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."generate_invite_on_user_insert"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+BEGIN
+  INSERT INTO public.invitation_codes (user_id, code, current_uses, max_uses, is_active, created_at)
+  VALUES (
+    NEW.id,
+    -- Example code: INVITE-<first8chars of uuid>-YYYYMMDD
+    'INVITE-' || substr(replace(NEW.id::text, '-', ''), 1, 8) || '-' || to_char(NOW(), 'YYYYMMDD'),
+    0,
+    NULL,
+    TRUE,
+    NOW()
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."generate_invite_on_user_insert"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."generate_storage_path"("file_type" "text", "file_extension" "text" DEFAULT 'jpg'::"text", "subfolder" "text" DEFAULT NULL::"text") RETURNS "text"
@@ -485,6 +621,59 @@ $$;
 
 
 ALTER FUNCTION "public"."generate_storage_path"("file_type" "text", "file_extension" "text", "subfolder" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_component_hierarchy"("p_page_name" character varying) RETURNS TABLE("component_id" character varying, "component_type" character varying, "parent_component_id" character varying, "position_section" character varying, "position_order" integer, "level" integer, "path" "text"[])
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  RETURN QUERY
+  WITH RECURSIVE component_tree AS (
+    -- Base case: root components (no parent)
+    SELECT 
+      pc.component_id,
+      pc.component_type,
+      pc.parent_component_id,
+      pc.position_section,
+      pc.position_order,
+      0 as level,
+      ARRAY[pc.component_id] as path
+    FROM page_components pc
+    WHERE pc.page_name = p_page_name
+      AND pc.is_active = true
+      AND pc.parent_component_id IS NULL
+    
+    UNION ALL
+    
+    -- Recursive case: child components
+    SELECT 
+      pc.component_id,
+      pc.component_type,
+      pc.parent_component_id,
+      pc.position_section,
+      pc.position_order,
+      ct.level + 1,
+      ct.path || pc.component_id
+    FROM page_components pc
+    INNER JOIN component_tree ct ON pc.parent_component_id = ct.component_id
+    WHERE pc.page_name = p_page_name
+      AND pc.is_active = true
+  )
+  SELECT 
+    ct.component_id,
+    ct.component_type,
+    ct.parent_component_id,
+    ct.position_section,
+    ct.position_order,
+    ct.level,
+    ct.path
+  FROM component_tree ct
+  ORDER BY ct.position_section, ct.position_order, ct.level;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_component_hierarchy"("p_page_name" character varying) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_content_by_section"("section_name" "text") RETURNS TABLE("id" "uuid", "content_key" "text", "content_type" "text", "content_value" "text", "content_json" "jsonb", "file_path" "text", "alt_text" "text", "title" "text", "display_order" integer)
@@ -609,6 +798,74 @@ $$;
 ALTER FUNCTION "public"."get_unread_notification_count"("user_clerk_id" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."gift_reward_to_user"("p_user_id" "uuid", "p_reward_type" "text", "p_reward_value" numeric, "p_gifted_by" "uuid", "p_reason" "text" DEFAULT NULL::"text", "p_metadata" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_reward_id uuid;
+    v_notification_id uuid;
+BEGIN
+    INSERT INTO public.referral_rewards (
+        user_id, reward_type, reward_value, is_gifted, gifted_by, gift_reason, metadata
+    ) VALUES (
+        p_user_id, p_reward_type, p_reward_value, true, p_gifted_by, p_reason, p_metadata
+    ) RETURNING id INTO v_reward_id;
+
+    INSERT INTO public.reward_audit_log (
+        reward_id, user_id, action, performed_by, reason, metadata
+    ) VALUES (
+        v_reward_id, p_user_id, 'gifted', p_gifted_by, p_reason, p_metadata
+    );
+
+    v_notification_id := public.create_notification(
+        p_user_id,
+        'reward_gifted',
+        'You received a reward!',
+        COALESCE(p_reason, 'An admin gifted you a reward.'),
+        jsonb_build_object('reward_id', v_reward_id, 'reward_type', p_reward_type, 'reward_value', p_reward_value),
+        'high'
+    );
+
+    UPDATE public.referral_rewards SET notification_sent = true WHERE id = v_reward_id;
+
+    PERFORM public.refresh_referral_progress();
+    RETURN v_reward_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."gift_reward_to_user"("p_user_id" "uuid", "p_reward_type" "text", "p_reward_value" numeric, "p_gifted_by" "uuid", "p_reason" "text", "p_metadata" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."handle_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    -- Check if the updated_at column exists in the NEW record
+    IF TG_OP = 'UPDATE' AND to_jsonb(NEW) ? 'updated_at' THEN
+        NEW.updated_at = timezone('utc'::text, now());
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."handle_updated_at"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."invitation_codes_set_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."invitation_codes_set_updated_at"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."log_content_changes"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -665,6 +922,137 @@ $$;
 
 
 ALTER FUNCTION "public"."mark_notification_read"("notification_id" "uuid", "user_clerk_id" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."move_component_position"("p_component_id" character varying, "p_old_page" character varying, "p_old_section" character varying, "p_old_order" integer, "p_new_page" character varying, "p_new_section" character varying, "p_new_order" integer, "p_new_parent" character varying DEFAULT NULL::character varying, "p_user_id" "text" DEFAULT NULL::"text") RETURNS "void"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  v_new_version VARCHAR(50);
+  v_current_version VARCHAR(50);
+BEGIN
+  -- Get current version for optimistic locking
+  SELECT version INTO v_current_version
+  FROM page_components
+  WHERE component_id = p_component_id AND is_active = true;
+  
+  -- Calculate new version
+  v_new_version := (COALESCE(v_current_version::INTEGER, 0) + 1)::VARCHAR;
+  
+  -- If moving within the same section
+  IF p_old_page = p_new_page AND p_old_section = p_new_section THEN
+    IF p_old_order < p_new_order THEN
+      -- Moving down: shift components between old and new position up
+      UPDATE page_components
+      SET position_order = position_order - 1,
+          last_modified_at = NOW(),
+          last_modified_by = COALESCE(p_user_id, last_modified_by)
+      WHERE page_name = p_new_page
+        AND position_section = p_new_section
+        AND position_order > p_old_order
+        AND position_order <= p_new_order
+        AND is_active = true
+        AND component_id != p_component_id;
+        
+    ELSIF p_old_order > p_new_order THEN
+      -- Moving up: shift components between new and old position down
+      UPDATE page_components
+      SET position_order = position_order + 1,
+          last_modified_at = NOW(),
+          last_modified_by = COALESCE(p_user_id, last_modified_by)
+      WHERE page_name = p_new_page
+        AND position_section = p_new_section
+        AND position_order >= p_new_order
+        AND position_order < p_old_order
+        AND is_active = true
+        AND component_id != p_component_id;
+    END IF;
+  ELSE
+    -- Moving to different section: shift components in both sections
+    
+    -- Shift components in old section up
+    UPDATE page_components
+    SET position_order = position_order - 1,
+        last_modified_at = NOW(),
+        last_modified_by = COALESCE(p_user_id, last_modified_by)
+    WHERE page_name = p_old_page
+      AND position_section = p_old_section
+      AND position_order > p_old_order
+      AND is_active = true;
+
+    -- Shift components in new section down
+    UPDATE page_components
+    SET position_order = position_order + 1,
+        last_modified_at = NOW(),
+        last_modified_by = COALESCE(p_user_id, last_modified_by)
+    WHERE page_name = p_new_page
+      AND position_section = p_new_section
+      AND position_order >= p_new_order
+      AND is_active = true;
+  END IF;
+
+  -- Update the component's position
+  UPDATE page_components
+  SET page_name = p_new_page,
+      position_section = p_new_section,
+      position_order = p_new_order,
+      parent_component_id = p_new_parent,
+      version = v_new_version,
+      last_modified_by = COALESCE(p_user_id, last_modified_by),
+      last_modified_at = NOW()
+  WHERE component_id = p_component_id
+    AND is_active = true;
+
+  -- Verify the update was successful
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Component not found or update failed: %', p_component_id;
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."move_component_position"("p_component_id" character varying, "p_old_page" character varying, "p_old_section" character varying, "p_old_order" integer, "p_new_page" character varying, "p_new_section" character varying, "p_new_order" integer, "p_new_parent" character varying, "p_user_id" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."process_referral"("p_referrer_code" "text", "p_referred_user_id" "uuid") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    referrer_user_id uuid;
+    referral_id uuid;
+BEGIN
+    -- Find the referrer by invitation code
+    SELECT user_id INTO referrer_user_id
+    FROM public.invitation_codes
+    WHERE code = p_referrer_code AND is_active = true;
+    
+    IF referrer_user_id IS NULL THEN
+        RETURN false;
+    END IF;
+    
+    -- Create referral record
+    INSERT INTO public.referrals (referrer_id, referred_id, invitation_code, status)
+    VALUES (referrer_user_id, p_referred_user_id, p_referrer_code, 'completed')
+    RETURNING id INTO referral_id;
+    
+    -- Update invitation code usage
+    UPDATE public.invitation_codes
+    SET current_uses = current_uses + 1,
+        updated_at = timezone('utc'::text, now())
+    WHERE code = p_referrer_code;
+    
+    -- Create rewards based on referral count
+    -- This would be expanded based on business logic
+    
+    RETURN true;
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN false;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."process_referral"("p_referrer_code" "text", "p_referred_user_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."process_referral"("p_referred_user_id" "uuid", "p_invitation_code" "text", "p_device_fingerprint" "text" DEFAULT NULL::"text", "p_ip_address" "inet" DEFAULT NULL::"inet") RETURNS "uuid"
@@ -880,6 +1268,110 @@ $$;
 ALTER FUNCTION "public"."process_referral_secure"("p_referred_user_id" "uuid", "p_invitation_code" "text", "p_device_fingerprint" "text", "p_ip_address" "inet", "p_user_agent" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."process_referral_with_tiers"("p_invitation_code" "text", "p_referred_user_id" "uuid", "p_device_fingerprint" "text" DEFAULT NULL::"text", "p_ip_address" "inet" DEFAULT NULL::"inet") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_referral_id uuid;
+    v_referrer_user_id uuid;
+    v_invitation_code_id uuid;
+    v_referral_count integer;
+    v_tier public.reward_tiers%ROWTYPE;
+    v_reward_id uuid;
+    v_notification_id uuid;
+    v_result jsonb;
+BEGIN
+    SELECT id, user_id INTO v_invitation_code_id, v_referrer_user_id
+    FROM public.invitation_codes
+    WHERE code = p_invitation_code
+      AND is_active = TRUE
+      AND (expires_at IS NULL OR expires_at > NOW())
+      AND (max_uses IS NULL OR current_uses < max_uses)
+    LIMIT 1;
+
+    IF v_referrer_user_id IS NULL THEN
+        RAISE EXCEPTION 'Invalid or expired invitation code';
+    END IF;
+
+    IF v_referrer_user_id = p_referred_user_id THEN
+        RAISE EXCEPTION 'Cannot use your own invitation code';
+    END IF;
+
+    INSERT INTO public.referrals (
+        referrer_user_id, referred_user_id, invitation_code_id, device_fingerprint, ip_address, status, completed_at
+    ) VALUES (
+        v_referrer_user_id, p_referred_user_id, v_invitation_code_id, p_device_fingerprint, p_ip_address, 'completed', timezone('utc', now())
+    ) RETURNING id INTO v_referral_id;
+
+    UPDATE public.invitation_codes SET current_uses = current_uses + 1 WHERE id = v_invitation_code_id;
+
+    SELECT COUNT(*) INTO v_referral_count FROM public.referrals WHERE referrer_user_id = v_referrer_user_id AND status = 'completed';
+
+    SELECT * INTO v_tier FROM public.reward_tiers WHERE required_referrals = v_referral_count AND is_active = true LIMIT 1;
+
+    IF FOUND THEN
+        INSERT INTO public.referral_rewards (
+            user_id, referral_id, tier_id, reward_type, reward_value, metadata
+        ) VALUES (
+            v_referrer_user_id, v_referral_id, v_tier.id, v_tier.reward_type, v_tier.reward_value, v_tier.reward_metadata
+        ) RETURNING id INTO v_reward_id;
+
+        INSERT INTO public.reward_audit_log (
+            reward_id, user_id, action, reason, metadata
+        ) VALUES (
+            v_reward_id, v_referrer_user_id, 'earned', 'Earned reward for reaching ' || v_referral_count || ' referrals', jsonb_build_object('referral_count', v_referral_count, 'tier_id', v_tier.id)
+        );
+
+        v_notification_id := public.create_notification(
+            v_referrer_user_id,
+            'reward_earned',
+            'Congratulations! You earned a reward!',
+            'You reached ' || v_referral_count || ' referrals and earned: ' || v_tier.name,
+            jsonb_build_object('reward_id', v_reward_id, 'tier_id', v_tier.id, 'referral_count', v_referral_count),
+            'high'
+        );
+
+        UPDATE public.referral_rewards SET notification_sent = true WHERE id = v_reward_id;
+
+        IF v_tier.reward_type = 'free_hours' OR v_tier.reward_type='free_credit' THEN
+            PERFORM public.update_user_quota(v_referrer_user_id, v_tier.reward_value, 'free_credit', 'Referral reward: ' || v_tier.name, NULL, NULL, NULL, NULL, jsonb_build_object('referral_id', v_referral_id, 'reward_id', v_reward_id, 'tier_id', v_tier.id));
+        END IF;
+    END IF;
+
+    PERFORM public.refresh_referral_progress();
+
+    v_result := jsonb_build_object(
+        'referral_id', v_referral_id,
+        'referral_count', v_referral_count,
+        'reward_earned', (v_tier.id IS NOT NULL),
+        'reward_id', v_reward_id,
+        'tier_name', v_tier.name,
+        'notification_id', v_notification_id
+    );
+
+    RETURN v_result;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."process_referral_with_tiers"("p_invitation_code" "text", "p_referred_user_id" "uuid", "p_device_fingerprint" "text", "p_ip_address" "inet") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."refresh_referral_progress"() RETURNS "void"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+BEGIN
+  -- Placeholder: recompute derived referral metrics or trigger async jobs.
+  -- Implement full logic later. This prevents runtime errors when other functions call it.
+  RETURN;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."refresh_referral_progress"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."search_media_files"("search_term" "text" DEFAULT ''::"text", "file_types" "text"[] DEFAULT ARRAY['image'::"text", 'video'::"text", 'audio'::"text", 'document'::"text", 'other'::"text"], "folder_uuid" "uuid" DEFAULT NULL::"uuid", "include_subfolders" boolean DEFAULT false, "limit_count" integer DEFAULT 50, "offset_count" integer DEFAULT 0) RETURNS TABLE("id" "uuid", "original_name" character varying, "file_name" character varying, "storage_path" character varying, "public_url" "text", "file_type" character varying, "mime_type" character varying, "file_size" bigint, "width" integer, "height" integer, "duration" double precision, "alt_text" "text", "caption" "text", "description" "text", "folder_id" "uuid", "folder_name" "text", "folder_path" "text", "tags" "text"[], "uploaded_by" character varying, "created_at" timestamp with time zone, "updated_at" timestamp with time zone)
     LANGUAGE "plpgsql" STABLE
     AS $$
@@ -941,6 +1433,19 @@ $$;
 ALTER FUNCTION "public"."search_media_files"("search_term" "text", "file_types" "text"[], "folder_uuid" "uuid", "include_subfolders" boolean, "limit_count" integer, "offset_count" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."set_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."set_updated_at"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."simple_upsert_content"("p_page_name" character varying, "p_content_key" character varying, "p_content_type" character varying, "p_version" character varying, "p_updated_by" character varying, "p_content_value" "text", "p_content_json" "jsonb", "p_file_url" "text") RETURNS boolean
     LANGUAGE "plpgsql"
     AS $$
@@ -987,6 +1492,22 @@ $$;
 
 
 ALTER FUNCTION "public"."simple_upsert_content"("p_page_name" character varying, "p_content_key" character varying, "p_content_type" character varying, "p_version" character varying, "p_updated_by" character varying, "p_content_value" "text", "p_content_json" "jsonb", "p_file_url" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."trigger_cleanup_realtime_events"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  -- Clean up events older than 1 hour on every 100th insert (to avoid too frequent cleanup)
+  IF random() < 0.01 THEN
+    DELETE FROM realtime_events WHERE expires_at < NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."trigger_cleanup_realtime_events"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_media_updated_at"() RETURNS "trigger"
@@ -1045,8 +1566,8 @@ CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigge
     LANGUAGE "plpgsql"
     AS $$
 BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
+  NEW.updated_at = now();
+  RETURN NEW;
 END;
 $$;
 
@@ -1105,6 +1626,48 @@ $$;
 
 
 ALTER FUNCTION "public"."update_user_quota"("p_user_id" "uuid", "p_hours_change" numeric, "p_transaction_type" character varying, "p_description" "text", "p_amount_paid" numeric, "p_package_id" "uuid", "p_booking_id" "uuid", "p_payment_id" "text", "p_metadata" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."users_set_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."users_set_updated_at"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."validate_component_positions"("p_page_name" character varying, "p_section_id" character varying) RETURNS TABLE("component_id" character varying, "expected_order" integer, "actual_order" integer, "is_valid" boolean)
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  RETURN QUERY
+  WITH ordered_components AS (
+    SELECT 
+      pc.component_id,
+      pc.position_order,
+      ROW_NUMBER() OVER (ORDER BY pc.position_order) - 1 AS expected_order
+    FROM page_components pc
+    WHERE pc.page_name = p_page_name
+      AND pc.position_section = p_section_id
+      AND pc.is_active = true
+    ORDER BY pc.position_order
+  )
+  SELECT 
+    oc.component_id,
+    oc.expected_order::INTEGER,
+    oc.position_order::INTEGER,
+    (oc.expected_order = oc.position_order) AS is_valid
+  FROM ordered_components oc;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."validate_component_positions"("p_page_name" character varying, "p_section_id" character varying) OWNER TO "postgres";
 
 SET default_tablespace = '';
 
@@ -1184,7 +1747,7 @@ CREATE TABLE IF NOT EXISTS "public"."page_content" (
     "created_by" "text",
     "updated_by" "text",
     "version" character varying(50),
-    "last_conflict_at" timestamp with time zone,
+    "is_active" boolean DEFAULT true,
     CONSTRAINT "page_content_content_type_check" CHECK ((("content_type")::"text" = ANY ((ARRAY['text'::character varying, 'json'::character varying, 'file'::character varying])::"text"[])))
 );
 
@@ -1259,11 +1822,35 @@ CREATE TABLE IF NOT EXISTS "public"."invitation_codes" (
     "max_uses" integer,
     "current_uses" integer DEFAULT 0,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "expires_at" timestamp with time zone
+    "expires_at" timestamp with time zone,
+    "updated_at" timestamp with time zone DEFAULT "now"()
 );
 
 
 ALTER TABLE "public"."invitation_codes" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."manual_payment_sessions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "session_id" "text" NOT NULL,
+    "user_id" "uuid",
+    "package_id" "uuid",
+    "amount" numeric(10,2) NOT NULL,
+    "currency" "text" DEFAULT 'AUD'::"text" NOT NULL,
+    "gateway" "text" NOT NULL,
+    "status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "payment_reference" "text",
+    "metadata" "jsonb" DEFAULT '{}'::"jsonb",
+    "expires_at" timestamp with time zone NOT NULL,
+    "completed_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "manual_payment_sessions_gateway_check" CHECK (("gateway" = ANY (ARRAY['tyro'::"text", 'bpay'::"text", 'payid'::"text"]))),
+    CONSTRAINT "manual_payment_sessions_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'completed'::"text", 'cancelled'::"text", 'expired'::"text"])))
+);
+
+
+ALTER TABLE "public"."manual_payment_sessions" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."media_files" (
@@ -1369,14 +1956,17 @@ ALTER VIEW "public"."media_folder_stats" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."packages" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
     "description" "text" NOT NULL,
     "price" numeric(10,2) NOT NULL,
     "hours" integer NOT NULL,
     "features" "jsonb" NOT NULL,
     "popular" boolean DEFAULT false,
-    "created_at" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "active" boolean DEFAULT true,
+    "sort_order" integer DEFAULT 0
 );
 
 
@@ -1436,6 +2026,20 @@ CREATE TABLE IF NOT EXISTS "public"."quota_transactions" (
 
 
 ALTER TABLE "public"."quota_transactions" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."realtime_events" (
+    "id" "uuid" NOT NULL,
+    "event_type" character varying(50) NOT NULL,
+    "page_name" character varying(100) NOT NULL,
+    "user_id" "text" NOT NULL,
+    "event_data" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "expires_at" timestamp with time zone DEFAULT ("now"() + '01:00:00'::interval)
+);
+
+
+ALTER TABLE "public"."realtime_events" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."referral_attempts" (
@@ -1507,6 +2111,26 @@ CREATE TABLE IF NOT EXISTS "public"."reviews" (
 
 
 ALTER TABLE "public"."reviews" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."reward_tiers" (
+    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "name" "text" NOT NULL,
+    "description" "text",
+    "required_referrals" integer NOT NULL,
+    "reward_type" "text" NOT NULL,
+    "reward_value" numeric,
+    "reward_metadata" "jsonb" DEFAULT '{}'::"jsonb",
+    "package_id" "uuid",
+    "is_active" boolean DEFAULT true,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "created_by" "uuid",
+    CONSTRAINT "reward_tiers_required_referrals_check" CHECK (("required_referrals" > 0)),
+    CONSTRAINT "reward_tiers_reward_type_check" CHECK (("reward_type" = ANY (ARRAY['free_hours'::"text", 'discount'::"text", 'bonus'::"text", 'free_credit'::"text", 'custom'::"text"])))
+);
+
+
+ALTER TABLE "public"."reward_tiers" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."seo_pages" (
@@ -1610,7 +2234,8 @@ CREATE TABLE IF NOT EXISTS "public"."users" (
     "address" "text",
     "invitation_code" "text",
     "location" "text",
-    "completed_onboarding" boolean DEFAULT false
+    "completed_onboarding" boolean DEFAULT false,
+    "updated_at" timestamp with time zone DEFAULT "now"()
 );
 
 
@@ -1649,6 +2274,16 @@ ALTER TABLE ONLY "public"."invitation_codes"
 
 ALTER TABLE ONLY "public"."invitation_codes"
     ADD CONSTRAINT "invitation_codes_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."manual_payment_sessions"
+    ADD CONSTRAINT "manual_payment_sessions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."manual_payment_sessions"
+    ADD CONSTRAINT "manual_payment_sessions_session_id_key" UNIQUE ("session_id");
 
 
 
@@ -1712,6 +2347,11 @@ ALTER TABLE ONLY "public"."quota_transactions"
 
 
 
+ALTER TABLE ONLY "public"."realtime_events"
+    ADD CONSTRAINT "realtime_events_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."referral_attempts"
     ADD CONSTRAINT "referral_attempts_pkey" PRIMARY KEY ("id");
 
@@ -1729,6 +2369,11 @@ ALTER TABLE ONLY "public"."referrals"
 
 ALTER TABLE ONLY "public"."reviews"
     ADD CONSTRAINT "reviews_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."reward_tiers"
+    ADD CONSTRAINT "reward_tiers_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1915,11 +2560,43 @@ CREATE INDEX "idx_media_folders_slug" ON "public"."media_folders" USING "btree" 
 
 
 
+CREATE INDEX "idx_mps_expires_at" ON "public"."manual_payment_sessions" USING "btree" ("expires_at");
+
+
+
+CREATE INDEX "idx_mps_session_id" ON "public"."manual_payment_sessions" USING "btree" ("session_id");
+
+
+
+CREATE INDEX "idx_mps_status" ON "public"."manual_payment_sessions" USING "btree" ("status");
+
+
+
+CREATE INDEX "idx_mps_user_id" ON "public"."manual_payment_sessions" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_packages_active" ON "public"."packages" USING "btree" ("active");
+
+
+
+CREATE INDEX "idx_packages_sort_order" ON "public"."packages" USING "btree" ("sort_order");
+
+
+
+CREATE INDEX "idx_page_content_is_active" ON "public"."page_content" USING "btree" ("is_active");
+
+
+
 CREATE INDEX "idx_page_content_key" ON "public"."page_content" USING "btree" ("content_key");
 
 
 
 CREATE INDEX "idx_page_content_page" ON "public"."page_content" USING "btree" ("page_name");
+
+
+
+CREATE INDEX "idx_page_content_page_key" ON "public"."page_content" USING "btree" ("page_name", "content_key");
 
 
 
@@ -1963,6 +2640,18 @@ CREATE INDEX "idx_quota_transactions_user_id" ON "public"."quota_transactions" U
 
 
 
+CREATE INDEX "idx_realtime_events_created_at" ON "public"."realtime_events" USING "btree" ("created_at");
+
+
+
+CREATE INDEX "idx_realtime_events_expires_at" ON "public"."realtime_events" USING "btree" ("expires_at");
+
+
+
+CREATE INDEX "idx_realtime_events_page_type" ON "public"."realtime_events" USING "btree" ("page_name", "event_type");
+
+
+
 CREATE INDEX "idx_referral_attempts_code" ON "public"."referral_attempts" USING "btree" ("invitation_code", "created_at");
 
 
@@ -2000,6 +2689,18 @@ CREATE INDEX "idx_reviews_approved" ON "public"."reviews" USING "btree" ("approv
 
 
 CREATE INDEX "idx_reviews_user_id" ON "public"."reviews" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_reward_tiers_created_by" ON "public"."reward_tiers" USING "btree" ("created_by");
+
+
+
+CREATE INDEX "idx_reward_tiers_package_id" ON "public"."reward_tiers" USING "btree" ("package_id");
+
+
+
+CREATE INDEX "idx_reward_tiers_required_referrals" ON "public"."reward_tiers" USING "btree" ("required_referrals");
 
 
 
@@ -2047,6 +2748,30 @@ CREATE INDEX "idx_users_email" ON "public"."users" USING "btree" ("email");
 
 
 
+CREATE UNIQUE INDEX "ux_invitation_codes_user_active" ON "public"."invitation_codes" USING "btree" ("user_id") WHERE ("is_active" = true);
+
+
+
+CREATE OR REPLACE TRIGGER "cleanup_realtime_events_trigger" AFTER INSERT ON "public"."realtime_events" FOR EACH ROW EXECUTE FUNCTION "public"."trigger_cleanup_realtime_events"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_generate_invite_on_user_insert" AFTER INSERT ON "public"."users" FOR EACH ROW EXECUTE FUNCTION "public"."generate_invite_on_user_insert"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_mps_set_updated_at" BEFORE UPDATE ON "public"."manual_payment_sessions" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_set_updated_at" BEFORE UPDATE ON "public"."invitation_codes" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_users_set_updated_at" BEFORE UPDATE ON "public"."users" FOR EACH ROW EXECUTE FUNCTION "public"."users_set_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "trigger_create_content_version" BEFORE UPDATE ON "public"."page_content" FOR EACH ROW EXECUTE FUNCTION "public"."create_content_version"();
 
 
@@ -2064,10 +2789,6 @@ CREATE OR REPLACE TRIGGER "update_media_folders_updated_at" BEFORE UPDATE ON "pu
 
 
 CREATE OR REPLACE TRIGGER "update_packages_updated_at" BEFORE UPDATE ON "public"."packages" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
-
-
-
-CREATE OR REPLACE TRIGGER "update_page_content_updated_at" BEFORE UPDATE ON "public"."page_content" FOR EACH ROW EXECUTE FUNCTION "public"."update_page_content_updated_at"();
 
 
 
@@ -2118,6 +2839,16 @@ ALTER TABLE ONLY "public"."instructor_messages"
 
 ALTER TABLE ONLY "public"."invitation_codes"
     ADD CONSTRAINT "invitation_codes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."manual_payment_sessions"
+    ADD CONSTRAINT "manual_payment_sessions_package_id_fkey" FOREIGN KEY ("package_id") REFERENCES "public"."packages"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."manual_payment_sessions"
+    ADD CONSTRAINT "manual_payment_sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -2196,6 +2927,16 @@ ALTER TABLE ONLY "public"."referrals"
 
 
 
+ALTER TABLE ONLY "public"."reward_tiers"
+    ADD CONSTRAINT "reward_tiers_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."reward_tiers"
+    ADD CONSTRAINT "reward_tiers_package_id_fkey" FOREIGN KEY ("package_id") REFERENCES "public"."packages"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."suspicious_activities"
     ADD CONSTRAINT "suspicious_activities_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE SET NULL;
 
@@ -2247,6 +2988,34 @@ CREATE POLICY "Admins can view suspicious activities" ON "public"."suspicious_ac
 
 
 
+CREATE POLICY "Allow anyone delete packages" ON "public"."packages" FOR DELETE TO "authenticated", "anon" USING (true);
+
+
+
+CREATE POLICY "Allow anyone insert packages" ON "public"."packages" FOR INSERT TO "authenticated", "anon" WITH CHECK (true);
+
+
+
+CREATE POLICY "Allow anyone select packages" ON "public"."packages" FOR SELECT TO "authenticated", "anon" USING (true);
+
+
+
+CREATE POLICY "Allow anyone update packages" ON "public"."packages" FOR UPDATE TO "authenticated", "anon" USING (true) WITH CHECK (true);
+
+
+
+CREATE POLICY "Allow authenticated users to read content_versions" ON "public"."content_versions" FOR SELECT USING (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Allow authenticated users to read page_content" ON "public"."page_content" FOR SELECT USING (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Allow service role full access" ON "public"."users" USING (("auth"."role"() = 'service_role'::"text")) WITH CHECK (("auth"."role"() = 'service_role'::"text"));
+
+
+
 CREATE POLICY "Allow service role to manage content_versions" ON "public"."content_versions" USING (("auth"."role"() = 'service_role'::"text"));
 
 
@@ -2272,6 +3041,10 @@ CREATE POLICY "Service role can manage packages" ON "public"."packages" USING ((
 
 
 CREATE POLICY "Service role can manage users" ON "public"."users" USING (("auth"."role"() = 'service_role'::"text"));
+
+
+
+CREATE POLICY "Users can create own account" ON "public"."users" FOR INSERT TO "authenticated" WITH CHECK (((( SELECT "auth"."uid"() AS "uid"))::"text" = "clerk_id"));
 
 
 
@@ -2366,9 +3139,6 @@ CREATE POLICY "Users can view own transactions" ON "public"."quota_transactions"
 ALTER TABLE "public"."bookings" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."content_versions" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."device_fingerprints" ENABLE ROW LEVEL SECURITY;
 
 
@@ -2379,9 +3149,6 @@ ALTER TABLE "public"."invitation_codes" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."packages" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."page_content" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."quota_transactions" ENABLE ROW LEVEL SECURITY;
@@ -2411,6 +3178,18 @@ ALTER TABLE "public"."users" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+
+
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."page_content";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."realtime_events";
+
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
@@ -2576,6 +3355,12 @@ GRANT ALL ON FUNCTION "public"."check_rate_limit"("p_identifier" "text", "p_acti
 
 
 
+GRANT ALL ON FUNCTION "public"."cleanup_expired_realtime_events"() TO "anon";
+GRANT ALL ON FUNCTION "public"."cleanup_expired_realtime_events"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cleanup_expired_realtime_events"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."cleanup_old_versions"() TO "anon";
 GRANT ALL ON FUNCTION "public"."cleanup_old_versions"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."cleanup_old_versions"() TO "service_role";
@@ -2600,6 +3385,19 @@ GRANT ALL ON FUNCTION "public"."create_content_version"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."create_manual_payment_session"("p_clerk_id" "text", "p_email" "text", "p_full_name" "text", "p_session_id" "text", "p_package_id" "uuid", "p_amount" numeric, "p_gateway" "text", "p_expires_at" timestamp with time zone, "p_currency" "text", "p_metadata" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_manual_payment_session"("p_clerk_id" "text", "p_email" "text", "p_full_name" "text", "p_session_id" "text", "p_package_id" "uuid", "p_amount" numeric, "p_gateway" "text", "p_expires_at" timestamp with time zone, "p_currency" "text", "p_metadata" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."create_manual_payment_session"("p_clerk_id" "text", "p_email" "text", "p_full_name" "text", "p_session_id" "text", "p_package_id" "uuid", "p_amount" numeric, "p_gateway" "text", "p_expires_at" timestamp with time zone, "p_currency" "text", "p_metadata" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_manual_payment_session"("p_clerk_id" "text", "p_email" "text", "p_full_name" "text", "p_session_id" "text", "p_package_id" "uuid", "p_amount" numeric, "p_gateway" "text", "p_expires_at" timestamp with time zone, "p_currency" "text", "p_metadata" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."create_notification"("p_user_id" "uuid", "p_type" "text", "p_title" "text", "p_message" "text", "p_metadata" "jsonb", "p_priority" "text", "p_expires_at" timestamp with time zone) TO "anon";
+GRANT ALL ON FUNCTION "public"."create_notification"("p_user_id" "uuid", "p_type" "text", "p_title" "text", "p_message" "text", "p_metadata" "jsonb", "p_priority" "text", "p_expires_at" timestamp with time zone) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_notification"("p_user_id" "uuid", "p_type" "text", "p_title" "text", "p_message" "text", "p_metadata" "jsonb", "p_priority" "text", "p_expires_at" timestamp with time zone) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."create_user_invitation_code"("p_user_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_user_invitation_code"("p_user_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_user_invitation_code"("p_user_id" "uuid") TO "service_role";
@@ -2618,15 +3416,33 @@ GRANT ALL ON FUNCTION "public"."detect_referral_fraud"("p_referred_user_id" "uui
 
 
 
+GRANT ALL ON FUNCTION "public"."fix_component_position_gaps"("p_page_name" character varying, "p_section_id" character varying, "p_user_id" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."fix_component_position_gaps"("p_page_name" character varying, "p_section_id" character varying, "p_user_id" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fix_component_position_gaps"("p_page_name" character varying, "p_section_id" character varying, "p_user_id" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."generate_invitation_code"() TO "anon";
 GRANT ALL ON FUNCTION "public"."generate_invitation_code"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."generate_invitation_code"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."generate_invite_on_user_insert"() TO "anon";
+GRANT ALL ON FUNCTION "public"."generate_invite_on_user_insert"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."generate_invite_on_user_insert"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."generate_storage_path"("file_type" "text", "file_extension" "text", "subfolder" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."generate_storage_path"("file_type" "text", "file_extension" "text", "subfolder" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."generate_storage_path"("file_type" "text", "file_extension" "text", "subfolder" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_component_hierarchy"("p_page_name" character varying) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_component_hierarchy"("p_page_name" character varying) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_component_hierarchy"("p_page_name" character varying) TO "service_role";
 
 
 
@@ -2654,6 +3470,24 @@ GRANT ALL ON FUNCTION "public"."get_unread_notification_count"("user_clerk_id" "
 
 
 
+GRANT ALL ON FUNCTION "public"."gift_reward_to_user"("p_user_id" "uuid", "p_reward_type" "text", "p_reward_value" numeric, "p_gifted_by" "uuid", "p_reason" "text", "p_metadata" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."gift_reward_to_user"("p_user_id" "uuid", "p_reward_type" "text", "p_reward_value" numeric, "p_gifted_by" "uuid", "p_reason" "text", "p_metadata" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."gift_reward_to_user"("p_user_id" "uuid", "p_reward_type" "text", "p_reward_value" numeric, "p_gifted_by" "uuid", "p_reason" "text", "p_metadata" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."invitation_codes_set_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."invitation_codes_set_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."invitation_codes_set_updated_at"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."log_content_changes"() TO "anon";
 GRANT ALL ON FUNCTION "public"."log_content_changes"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."log_content_changes"() TO "service_role";
@@ -2663,6 +3497,18 @@ GRANT ALL ON FUNCTION "public"."log_content_changes"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."mark_notification_read"("notification_id" "uuid", "user_clerk_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."mark_notification_read"("notification_id" "uuid", "user_clerk_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."mark_notification_read"("notification_id" "uuid", "user_clerk_id" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."move_component_position"("p_component_id" character varying, "p_old_page" character varying, "p_old_section" character varying, "p_old_order" integer, "p_new_page" character varying, "p_new_section" character varying, "p_new_order" integer, "p_new_parent" character varying, "p_user_id" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."move_component_position"("p_component_id" character varying, "p_old_page" character varying, "p_old_section" character varying, "p_old_order" integer, "p_new_page" character varying, "p_new_section" character varying, "p_new_order" integer, "p_new_parent" character varying, "p_user_id" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."move_component_position"("p_component_id" character varying, "p_old_page" character varying, "p_old_section" character varying, "p_old_order" integer, "p_new_page" character varying, "p_new_section" character varying, "p_new_order" integer, "p_new_parent" character varying, "p_user_id" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."process_referral"("p_referrer_code" "text", "p_referred_user_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."process_referral"("p_referrer_code" "text", "p_referred_user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."process_referral"("p_referrer_code" "text", "p_referred_user_id" "uuid") TO "service_role";
 
 
 
@@ -2678,15 +3524,39 @@ GRANT ALL ON FUNCTION "public"."process_referral_secure"("p_referred_user_id" "u
 
 
 
+GRANT ALL ON FUNCTION "public"."process_referral_with_tiers"("p_invitation_code" "text", "p_referred_user_id" "uuid", "p_device_fingerprint" "text", "p_ip_address" "inet") TO "anon";
+GRANT ALL ON FUNCTION "public"."process_referral_with_tiers"("p_invitation_code" "text", "p_referred_user_id" "uuid", "p_device_fingerprint" "text", "p_ip_address" "inet") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."process_referral_with_tiers"("p_invitation_code" "text", "p_referred_user_id" "uuid", "p_device_fingerprint" "text", "p_ip_address" "inet") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."refresh_referral_progress"() TO "anon";
+GRANT ALL ON FUNCTION "public"."refresh_referral_progress"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."refresh_referral_progress"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."search_media_files"("search_term" "text", "file_types" "text"[], "folder_uuid" "uuid", "include_subfolders" boolean, "limit_count" integer, "offset_count" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."search_media_files"("search_term" "text", "file_types" "text"[], "folder_uuid" "uuid", "include_subfolders" boolean, "limit_count" integer, "offset_count" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."search_media_files"("search_term" "text", "file_types" "text"[], "folder_uuid" "uuid", "include_subfolders" boolean, "limit_count" integer, "offset_count" integer) TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."simple_upsert_content"("p_page_name" character varying, "p_content_key" character varying, "p_content_type" character varying, "p_version" character varying, "p_updated_by" character varying, "p_content_value" "text", "p_content_json" "jsonb", "p_file_url" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."simple_upsert_content"("p_page_name" character varying, "p_content_key" character varying, "p_content_type" character varying, "p_version" character varying, "p_updated_by" character varying, "p_content_value" "text", "p_content_json" "jsonb", "p_file_url" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."simple_upsert_content"("p_page_name" character varying, "p_content_key" character varying, "p_content_type" character varying, "p_version" character varying, "p_updated_by" character varying, "p_content_value" "text", "p_content_json" "jsonb", "p_file_url" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."trigger_cleanup_realtime_events"() TO "anon";
+GRANT ALL ON FUNCTION "public"."trigger_cleanup_realtime_events"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."trigger_cleanup_realtime_events"() TO "service_role";
 
 
 
@@ -2723,6 +3593,18 @@ GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."update_user_quota"("p_user_id" "uuid", "p_hours_change" numeric, "p_transaction_type" character varying, "p_description" "text", "p_amount_paid" numeric, "p_package_id" "uuid", "p_booking_id" "uuid", "p_payment_id" "text", "p_metadata" "jsonb") TO "anon";
 GRANT ALL ON FUNCTION "public"."update_user_quota"("p_user_id" "uuid", "p_hours_change" numeric, "p_transaction_type" character varying, "p_description" "text", "p_amount_paid" numeric, "p_package_id" "uuid", "p_booking_id" "uuid", "p_payment_id" "text", "p_metadata" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_user_quota"("p_user_id" "uuid", "p_hours_change" numeric, "p_transaction_type" character varying, "p_description" "text", "p_amount_paid" numeric, "p_package_id" "uuid", "p_booking_id" "uuid", "p_payment_id" "text", "p_metadata" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."users_set_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."users_set_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."users_set_updated_at"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."validate_component_positions"("p_page_name" character varying, "p_section_id" character varying) TO "anon";
+GRANT ALL ON FUNCTION "public"."validate_component_positions"("p_page_name" character varying, "p_section_id" character varying) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."validate_component_positions"("p_page_name" character varying, "p_section_id" character varying) TO "service_role";
 
 
 
@@ -2789,6 +3671,12 @@ GRANT ALL ON TABLE "public"."invitation_codes" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."manual_payment_sessions" TO "anon";
+GRANT ALL ON TABLE "public"."manual_payment_sessions" TO "authenticated";
+GRANT ALL ON TABLE "public"."manual_payment_sessions" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."media_files" TO "anon";
 GRANT ALL ON TABLE "public"."media_files" TO "authenticated";
 GRANT ALL ON TABLE "public"."media_files" TO "service_role";
@@ -2837,6 +3725,12 @@ GRANT ALL ON TABLE "public"."quota_transactions" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."realtime_events" TO "anon";
+GRANT ALL ON TABLE "public"."realtime_events" TO "authenticated";
+GRANT ALL ON TABLE "public"."realtime_events" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."referral_attempts" TO "anon";
 GRANT ALL ON TABLE "public"."referral_attempts" TO "authenticated";
 GRANT ALL ON TABLE "public"."referral_attempts" TO "service_role";
@@ -2858,6 +3752,12 @@ GRANT ALL ON TABLE "public"."referrals" TO "service_role";
 GRANT ALL ON TABLE "public"."reviews" TO "anon";
 GRANT ALL ON TABLE "public"."reviews" TO "authenticated";
 GRANT ALL ON TABLE "public"."reviews" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."reward_tiers" TO "anon";
+GRANT ALL ON TABLE "public"."reward_tiers" TO "authenticated";
+GRANT ALL ON TABLE "public"."reward_tiers" TO "service_role";
 
 
 

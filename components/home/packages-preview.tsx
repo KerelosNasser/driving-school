@@ -7,6 +7,9 @@ import { Check, ArrowRight, Star, Calendar, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import type { Package } from '@/lib/types';
+import { EditableWrapper } from '@/components/drag-drop/EditableWrapper';
+import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
+import { EditableText } from '@/components/ui/editable-text';
 
 // Fallback package data in case the Supabase fetch fails
 const fallbackPackages: Package[] = [
@@ -95,7 +98,8 @@ export function PackagesPreview() {
   }, []);
 
   return (
-    <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
+    <EditableWrapper componentId="packages-section" componentType="packages">
+      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-20 left-10 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
@@ -110,12 +114,23 @@ export function PackagesPreview() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12 sm:mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 via-emerald-800 to-teal-700 bg-clip-text text-transparent">
+          <EditableText
+            contentKey="packages_title"
+            tagName="h2"
+            className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 via-emerald-800 to-teal-700 bg-clip-text text-transparent"
+            placeholder="Enter packages title..."
+          >
             Choose Your Package
-          </h2>
-          <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto px-4 leading-relaxed">
+          </EditableText>
+          <EditableText
+            contentKey="packages_subtitle"
+            tagName="p"
+            className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto px-4 leading-relaxed"
+            placeholder="Enter packages subtitle..."
+            multiline={true}
+          >
             Flexible packages designed to fit your learning style and budget
-          </p>
+          </EditableText>
         </motion.div>
 
         {loading ? (
@@ -237,12 +252,23 @@ export function PackagesPreview() {
             </div>
             
             <div className="relative z-10">
-              <h3 className="text-2xl sm:text-3xl font-bold mb-4">
+              <EditableText
+                contentKey="packages_cta_title"
+                tagName="h3"
+                className="text-2xl sm:text-3xl font-bold mb-4"
+                placeholder="Enter CTA title..."
+              >
                 Need Help Choosing?
-              </h3>
-              <p className="text-lg sm:text-xl text-emerald-100 mb-8 max-w-2xl mx-auto">
+              </EditableText>
+              <EditableText
+                contentKey="packages_cta_subtitle"
+                tagName="p"
+                className="text-lg sm:text-xl text-emerald-100 mb-8 max-w-2xl mx-auto"
+                placeholder="Enter CTA subtitle..."
+                multiline={true}
+              >
                 Compare all packages and find the perfect fit for your learning journey.
-              </p>
+              </EditableText>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
                   size="lg"
@@ -270,6 +296,9 @@ export function PackagesPreview() {
           </div>
         </motion.div>
       </div>
-    </section>
+      </section>
+      
+      <DropZoneArea id="after-packages" className="my-4" placeholder="Add components after packages" />
+    </EditableWrapper>
   );
 }

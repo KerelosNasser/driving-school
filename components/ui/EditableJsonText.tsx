@@ -2,11 +2,14 @@
 
 import { useState, useRef, useEffect, ReactNode, KeyboardEvent } from 'react';
 import { cn } from '@/lib/utils';
-import {useEditMode} from "@/contexts/editModeContext";
+import { useEditMode } from "@/contexts/editModeContext";
+import { PageContent } from '@/lib/content';
 
-interface EditableTextProps {
+interface EditableJsonTextProps {
     children: ReactNode;
     contentKey: string;
+    jsonPath: string; // e.g., '[0].text'
+    pageContent: PageContent;
     tagName?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span' | 'div';
     className?: string;
     placeholder?: string;
@@ -14,15 +17,17 @@ interface EditableTextProps {
     maxLength?: number;
 }
 
-export function EditableText({
+export function EditableJsonText({
                                  children,
                                  contentKey,
+                                 jsonPath,
+                                 pageContent,
                                  tagName = 'div',
                                  className = '',
                                  placeholder = 'Click to edit...',
                                  multiline = false,
                                  maxLength = 500
-                             }: EditableTextProps) {
+                             }: EditableJsonTextProps) {
     const { isEditMode, saveContent, isSaving } = useEditMode();
     const [isEditing, setIsEditing] = useState(false);
     const [text, setText] = useState(children?.toString() || '');
@@ -34,20 +39,6 @@ export function EditableText({
         }
     }, [children, isEditing]);
 
-    useEffect(() => {
-        const handleContentChanged = (e: CustomEvent) => {
-            if (e.detail.contentKey === contentKey) {
-                setText(e.detail.newValue);
-            }
-        };
-
-        window.addEventListener('content-changed' as any, handleContentChanged);
-
-        return () => {
-            window.removeEventListener('content-changed' as any, handleContentChanged);
-        };
-    }, [contentKey]);
-
     const handleClick = () => {
         if (!isEditMode || isSaving) return;
         setIsEditing(true);
@@ -55,7 +46,6 @@ export function EditableText({
             if (editRef.current) {
                 editRef.current.innerText = text;
                 editRef.current.focus();
-                // Select all text
                 const range = document.createRange();
                 const selection = window.getSelection();
                 range.selectNodeContents(editRef.current);
@@ -72,9 +62,21 @@ export function EditableText({
 
         if (finalValue !== '' && finalValue !== text) {
             setText(finalValue);
-            await saveContent(contentKey, finalValue, 'text');
-        } else if (finalValue === '') {
-            // Revert to previous text on re-render
+
+            const updatedContent = { ...pageContent };
+            const jsonContent = updatedContent[contentKey]?.content_json;
+
+            if (jsonContent) {
+                // This is a simplified way to update a nested property. A more robust solution would use a library like lodash.set
+                const pathParts = jsonPath.replace(/[\[\]]/g, '.').split('.').filter(p => p);
+                let current = jsonContent;
+                for (let i = 0; i < pathParts.length - 1; i++) {
+                    current = current[pathParts[i]];
+                }
+                current[pathParts[pathParts.length - 1]] = finalValue;
+
+                await saveContent(contentKey, jsonContent, 'json');
+            }
         }
     };
 
@@ -96,7 +98,6 @@ export function EditableText({
             if (newValue.length > maxLength) {
                 const truncated = newValue.substring(0, maxLength);
                 editRef.current.innerText = truncated;
-                // Move cursor to end
                 const range = document.createRange();
                 const selection = window.getSelection();
                 range.selectNodeContents(editRef.current);
@@ -110,7 +111,7 @@ export function EditableText({
     const Tag = tagName;
 
     if (!isEditMode) {
-        return <Tag className={className}>{children}</Tag>;
+        return <Tag className={className}>{text}</Tag>;
     }
 
     return (
@@ -139,10 +140,6 @@ export function EditableText({
             }}
         >
             {isEditing ? null : text}
-            {isEditing && (
-                <style jsx>{`
-                `}</style>
-            )}
         </Tag>
     );
 }

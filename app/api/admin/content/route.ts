@@ -1,5 +1,6 @@
 // app/api/admin/content/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -159,6 +160,14 @@ export async function PUT(request: NextRequest) {
             }
             
             return NextResponse.json({ error: 'Failed to save content' }, { status: 500 });
+        }
+
+        // Revalidate the cache for the updated page
+        console.log(`Revalidating path: /`);
+        revalidatePath('/'); // Revalidate home page
+        if (page && page !== 'home') {
+            console.log(`Revalidating path: /${page}`);
+            revalidatePath(`/${page}`);
         }
 
         return NextResponse.json({

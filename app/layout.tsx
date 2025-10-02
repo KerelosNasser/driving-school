@@ -10,7 +10,7 @@ import { Suspense } from "react";
 import { EditModeProvider } from "@/contexts/editModeContext";
 import { GlobalContentProvider } from "@/contexts/globalContentContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { InPlaceEditor } from "@/components/drag-drop/InPlaceEditor";
+import { AndroidStyleEditor } from "@/components/drag-drop/AndroidStyleEditor";
 
 // Optimized font loading
 const geistSans = Geist({
@@ -159,7 +159,7 @@ export default function RootLayout({
                 <GlobalContentProvider>
                   <PostSignupWrapper>
                     <LayoutWrapper>
-                      <InPlaceEditor>{children}</InPlaceEditor>
+                      <AndroidStyleEditor>{children}</AndroidStyleEditor>
                     </LayoutWrapper>
                   </PostSignupWrapper>
                 </GlobalContentProvider>

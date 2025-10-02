@@ -10,6 +10,8 @@ import { Mail, Phone, MapPin, Clock, Send, MessageCircle, Shield } from "lucide-
 import { BusinessPhone, BusinessEmail, BusinessAddress } from "@/components/ui/global-editable-text";
 import { EditableText } from "@/components/ui/editable-text";
 import { useGlobalContent } from '@/contexts/globalContentContext';
+import { EditableWrapper } from '@/components/drag-drop/EditableWrapper';
+import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
 
 export default function ContactPage() {
   const { content } = useGlobalContent();
@@ -22,7 +24,8 @@ export default function ContactPage() {
       </div>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 text-white overflow-hidden">
+      <EditableWrapper componentId="contact-hero" componentType="hero">
+        <section className="relative bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 text-white overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 via-teal-800/90 to-blue-900/95" />
           <div className="absolute top-20 left-10 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl animate-pulse" />
@@ -67,18 +70,22 @@ export default function ContactPage() {
             </EditableText>
           </motion.div>
         </div>
-      </section>
+        </section>
+      </EditableWrapper>
+      
+      <DropZoneArea id="after-contact-hero" className="my-6" placeholder="Add components after hero" />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
-          {/* Contact Information */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="space-y-8"
-          >
+        <EditableWrapper componentId="contact-form-section" componentType="form">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
+            {/* Contact Information */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="space-y-8"
+            >
             {/* Contact Methods */}
             <div className="space-y-6">
               {/* Phone Contact */}
@@ -316,16 +323,20 @@ export default function ContactPage() {
               </CardContent>
             </Card>
           </motion.div>
-        </div>
+          </div>
+        </EditableWrapper>
+        
+        <DropZoneArea id="after-contact-form" className="my-8" placeholder="Add components after contact form" />
 
         {/* CTA Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-20"
-        >
+        <EditableWrapper componentId="contact-cta" componentType="cta">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mt-20"
+          >
           <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden">
             {/* Background pattern */}
             <div className="absolute inset-0 opacity-10">
@@ -429,7 +440,10 @@ export default function ContactPage() {
               </div>
             </div>
           </div>
-        </motion.div>
+          </motion.div>
+        </EditableWrapper>
+        
+        <DropZoneArea id="contact-page-bottom" className="my-8" placeholder="Add components at bottom of page" />
       </main>
     </div>
   );

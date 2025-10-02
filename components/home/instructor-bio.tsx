@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { EditableText } from '@/components/ui/editable-text';
 import { EditableImage } from '@/components/ui/editable-image';
 import { useGlobalContent } from '@/contexts/globalContentContext';
+import { EditableWrapper } from '@/components/drag-drop/EditableWrapper';
+import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
 
 interface InstructorBioProps {
     title?: string;
@@ -57,7 +59,8 @@ features = [],
     const displayImageAlt = imageAlt || 'Professional driving instructor portrait';
 
     return (
-        <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-emerald-50 to-teal-50/30 relative overflow-hidden">
+        <EditableWrapper componentId="instructor-section" componentType="instructor">
+            <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-emerald-50 to-teal-50/30 relative overflow-hidden">
             {/* Background decoration */}
             <div className="absolute inset-0 opacity-5">
                 <div className="absolute top-20 left-10 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
@@ -312,6 +315,9 @@ features = [],
                     </motion.div>
                 </div>
             </div>
-        </section>
+            </section>
+            
+            <DropZoneArea id="after-instructor" className="my-4" placeholder="Add components after instructor" />
+        </EditableWrapper>
     );
 }

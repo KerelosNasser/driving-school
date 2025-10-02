@@ -8,6 +8,8 @@ import { Gallery } from "@/components/home/gallery";
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import type { Metadata } from 'next'
 import { OrganizationSchema, LocalBusinessSchema } from '@/components/seo/StructuredData'
+import { EditableWrapper } from '@/components/drag-drop/EditableWrapper';
+import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
 import {
     getPageContent,
     getContentValue,
@@ -50,7 +52,9 @@ export default async function Home() {
     const content = await getPageContent('home');
 
     // Extract content with fallbacks
-    const heroTitle = getContentValue(content, 'hero_title', 'Learn to Drive with Confidence');
+    const heroTitleLine1 = getContentValue(content, 'hero_title_line_1', 'Learn to Drive');
+    const heroTitleLine2 = getContentValue(content, 'hero_title_line_2', 'with Confidence');
+    const heroTitleLine3 = getContentValue(content, 'hero_title_line_3', 'in Australia');
     const heroSubtitle = getContentValue(content, 'hero_subtitle', 'Professional driving lessons with experienced instructors at EG Driving School - tailored to your needs.');
 
     const heroFeatures = [
@@ -108,9 +112,9 @@ export default async function Home() {
             <div className="min-h-screen">
                 <main>
                     <Hero
-                        title={heroTitle}
                         subtitle={heroSubtitle}
                         features={heroFeatures}
+                        content={content}
                     />
 
                     <Features
@@ -144,6 +148,8 @@ export default async function Home() {
                     <ServiceAreaMap />
 
                     <ReviewsPreview />
+
+                    <DropZoneArea id="page-bottom" className="my-8" placeholder="Add components at bottom of page" />
 
                 </main>
 

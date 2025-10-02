@@ -15,12 +15,16 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
+import { EditableWrapper } from '../drag-drop/EditableWrapper';
+import { DropZoneArea } from '../drag-drop/DropZoneArea';
+import { EditableJsonText } from '../ui/EditableJsonText';
+import { PageContent } from '@/lib/content';
 
 interface HeroProps {
-  title?: string | null;
   subtitle?: string | null;
   features?: { text?: string | null }[];
   backgroundImage?: string;
+  content: PageContent;
 }
 
 const featureIcons = [Award, Car, Calendar, Clock];
@@ -28,6 +32,7 @@ const featureIcons = [Award, Car, Calendar, Clock];
 export function Hero({
   subtitle = "Certified instructors, modern vehicles, and lessons tailored for your success on the road. Join thousands who passed their test with us.",
   features = [],
+  content
 }: HeroProps) {
   const [showFeatures, setShowFeatures] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -137,7 +142,8 @@ export function Hero({
   };
 
   return (
-    <section className="relative min-h-screen theme-gradient-hero text-white overflow-hidden">
+    <EditableWrapper componentId="hero-section" componentType="hero">
+      <section className="relative min-h-screen theme-gradient-hero text-white overflow-hidden">
       {/* ================= Background Layers ================= */}
       <div className="absolute inset-0">
         {/* Gradient Overlay */}
@@ -172,20 +178,38 @@ export function Hero({
               transition={{ duration: 0.7, delay: 0.1 }}
             >
               <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3">
-                <span className="block bg-gradient-to-r from-white via-emerald-100 to-teal-200 bg-clip-text text-transparent mb-1">
+                <EditableText
+                  contentKey="hero_title_line_1"
+                  tagName="span"
+                  className="block bg-gradient-to-r from-white via-emerald-100 to-teal-200 bg-clip-text text-transparent mb-1"
+                >
                   Learn to Drive
-                </span>
-                <span className="block theme-text-primary mb-1">
+                </EditableText>
+                <EditableText
+                  contentKey="hero_title_line_2"
+                  tagName="span"
+                  className="block theme-text-primary mb-1"
+                >
                   with Confidence
-                </span>
-                <span className="block text-2xl sm:text-3xl lg:text-4xl text-blue-200">
+                </EditableText>
+                <EditableText
+                  contentKey="hero_title_line_3"
+                  tagName="span"
+                  className="block text-2xl sm:text-3xl lg:text-4xl text-blue-200"
+                >
                   in Australia
-                </span>
+                </EditableText>
               </h1>
 
-              <p className="text-lg sm:text-xl text-blue-100 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+              <EditableText
+                contentKey="hero_subtitle"
+                tagName="p"
+                className="text-lg sm:text-xl text-blue-100 max-w-2xl mx-auto lg:mx-0 leading-relaxed"
+                placeholder="Enter hero subtitle..."
+                multiline={true}
+              >
                 {subtitle}
-              </p>
+              </EditableText>
             </motion.div>
 
             {/* Stats */}
@@ -232,12 +256,24 @@ export function Hero({
             >
               <button className="theme-gradient-button text-white font-bold px-8 py-1 text-lg theme-shadow-button hover:shadow-emerald-500/25 transition-all duration-300 transform hover:scale-105 theme-rounded-lg">
                 <Calendar className="h-5 w-5 mr-2 inline" />
-                Book Your Lesson Now
+                <EditableText
+                  contentKey="hero_cta_primary"
+                  tagName="span"
+                  placeholder="Book Your Lesson Now"
+                >
+                  Book Your Lesson Now
+                </EditableText>
               </button>
 
               <button className="border-2 theme-border-primary theme-text-primary bg-white/10 hover:theme-bg-primary hover:text-teal-900 font-bold px-8 py-4 text-lg theme-backdrop-blur-sm transition-all duration-300 theme-rounded-lg">
                 <Phone className="h-5 w-5 mr-2 inline" />
-                Call (04) 1234 5678
+                <EditableText
+                  contentKey="hero_cta_secondary"
+                  tagName="span"
+                  placeholder="Call (04) 1234 5678"
+                >
+                  Call (04) 1234 5678
+                </EditableText>
               </button>
             </motion.div>
 
@@ -279,17 +315,23 @@ export function Hero({
               transition={!isMobile ? { duration: 0.6, delay: 0.5 } : {}}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {displayFeatures.map((feature, index) => (
+                {['Licensed Instructors', 'Modern Vehicles', 'Flexible Scheduling', 'Personalized Pace'].map((feature, index) => (
                   <div
                     key={index}
                     className="flex items-center space-x-3 bg-white/10 theme-backdrop-blur-sm theme-rounded-lg hover:bg-white/15 transition-all duration-200"
                   >
                     <div className="theme-bg-primary/20 theme-rounded-lg p-2">
-                      <feature.icon className="h-5 w-5 theme-text-primary" />
+                      <Award className="h-5 w-5 theme-text-primary" />
                     </div>
-                    <span className="text-sm font-medium text-blue-100">
+                    <EditableJsonText
+                      contentKey="hero_features"
+                      jsonPath={`[${index}].text`}
+                      pageContent={content}
+                      tagName="span"
+                      className="text-sm font-medium text-blue-100"
+                    >
                       {feature.text}
-                    </span>
+                    </EditableJsonText>
                   </div>
                 ))}
               </div>
@@ -303,7 +345,13 @@ export function Hero({
               className="flex items-center justify-center lg:justify-start text-sm text-emerald-300 pt-4"
             >
               <MapPin className="h-4 w-4 mr-2" />
-              <span>Serving Sydney, Melbourne, Brisbane & Perth</span>
+              <EditableText
+                contentKey="hero_locations"
+                tagName="span"
+                placeholder="Serving Sydney, Melbourne, Brisbane & Perth"
+              >
+                Serving Sydney, Melbourne, Brisbane & Perth
+              </EditableText>
             </motion.div>
           </div>
 
@@ -416,6 +464,14 @@ export function Hero({
           </motion.div>
         </div>
       </div>
-    </section>
+      </section>
+      
+      {/* Drop zone for adding components after hero */}
+      <DropZoneArea 
+        id="after-hero" 
+        className="my-4" 
+        placeholder="Drop components after hero section"
+      />
+    </EditableWrapper>
   );
 }

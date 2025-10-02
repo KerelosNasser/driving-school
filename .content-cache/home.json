@@ -1,40 +1,8 @@
 {
   "content": {
-    "hero_title": {
-      "content_key": "hero_title",
-      "content_value": "Learn to Drive with Confidence",
-      "content_json": null,
-      "file_url": null,
-      "alt_text": null,
-      "content_type": "text"
-    },
     "hero_subtitle": {
       "content_key": "hero_subtitle",
       "content_value": "Professional driving lessons with experienced instructors at EG Driving School - tailored to your needs.",
-      "content_json": null,
-      "file_url": null,
-      "alt_text": null,
-      "content_type": "text"
-    },
-    "hero_feature_1": {
-      "content_key": "hero_feature_1",
-      "content_value": "Licensed Instructors",
-      "content_json": null,
-      "file_url": null,
-      "alt_text": null,
-      "content_type": "text"
-    },
-    "hero_feature_3": {
-      "content_key": "hero_feature_3",
-      "content_value": "Flexible Scheduling",
-      "content_json": null,
-      "file_url": null,
-      "alt_text": null,
-      "content_type": "text"
-    },
-    "hero_feature_4": {
-      "content_key": "hero_feature_4",
-      "content_value": "Personalized Pace",
       "content_json": null,
       "file_url": null,
       "alt_text": null,
@@ -312,14 +280,6 @@
       "alt_text": null,
       "content_type": "text"
     },
-    "hero_feature_2": {
-      "content_key": "hero_feature_2",
-      "content_value": "Modern Vehicle",
-      "content_json": null,
-      "file_url": null,
-      "alt_text": null,
-      "content_type": "text"
-    },
     "features_item_2_title": {
       "content_key": "features_item_2_title",
       "content_value": "Flexible Hours",
@@ -352,17 +312,17 @@
       "alt_text": null,
       "content_type": "text"
     },
-    "instructor_name": {
-      "content_key": "instructor_name",
-      "content_value": "Emael Ghobrial",
+    "instructor_bio_p1": {
+      "content_key": "instructor_bio_p1",
+      "content_value": "Hi, my name is Emeal and I have been a driving instructor since 2017 and am qualified to instruct in both manual and automatic vehicles.",
       "content_json": null,
       "file_url": null,
       "alt_text": null,
       "content_type": "text"
     },
-    "instructor_bio_p1": {
-      "content_key": "instructor_bio_p1",
-      "content_value": "Hi, my name is Emeal and I have been a driving instructor since 2017 and am qualified to instruct in both manual and automatic vehicles.",
+    "instructor_name": {
+      "content_key": "instructor_name",
+      "content_value": "Emael Ghobrial",
       "content_json": null,
       "file_url": null,
       "alt_text": null,
@@ -1267,8 +1227,69 @@
       "file_url": null,
       "alt_text": null,
       "content_type": "json"
+    },
+    "hero_cta_primary": {
+      "content_key": "hero_cta_primary",
+      "content_value": "BookNow",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_title_line_1": {
+      "content_key": "hero_title_line_1",
+      "content_value": "Learn to Drive",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_title_line_2": {
+      "content_key": "hero_title_line_2",
+      "content_value": "with Confidence",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_features": {
+      "content_key": "hero_features",
+      "content_value": null,
+      "content_json": [
+        {
+          "text": "Licensed Instructors"
+        },
+        {
+          "text": "Modern Vehicles"
+        },
+        {
+          "text": "Flexible Scheduling"
+        },
+        {
+          "text": "Personalized Pace"
+        }
+      ],
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "json"
+    },
+    "hero_title_line_3": {
+      "content_key": "hero_title_line_3",
+      "content_value": "in Alex",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "business_email": {
+      "content_key": "business_email",
+      "content_value": "keronaser2030@gmail.com",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
     }
   },
-  "timestamp": 1759224936623,
-  "version": "v1759224936623-u8a6a5jsg"
+  "timestamp": 1759311672948,
+  "version": "v1759311672948-aigr8cyio"
 }

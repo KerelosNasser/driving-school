@@ -655,6 +655,14 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
             }
 
             toast.success(successMessage);
+
+            const event = new CustomEvent('content-changed', {
+                detail: {
+                    contentKey: key,
+                    newValue: value,
+                },
+            });
+            window.dispatchEvent(event);
             
             // Reset save state after a delay
             setTimeout(() => setSaveState('idle'), 2000);

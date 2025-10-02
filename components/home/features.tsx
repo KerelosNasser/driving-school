@@ -17,6 +17,9 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { EditableWrapper } from '../drag-drop/EditableWrapper';
+import { DropZoneArea } from '../drag-drop/DropZoneArea';
+import { EditableText } from '../ui/editable-text';
 // Using built-in button and card components
 
 interface Feature {
@@ -140,7 +143,8 @@ export function Features({
   }, []);
 
   return (
-    <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
+    <EditableWrapper componentId="features-section" componentType="features">
+      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-20 left-10 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
@@ -155,12 +159,23 @@ export function Features({
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 via-emerald-800 to-teal-700 bg-clip-text text-transparent">
+            <EditableText
+              contentKey="features_title"
+              tagName="h2"
+              className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 via-emerald-800 to-teal-700 bg-clip-text text-transparent"
+              placeholder="Enter features title..."
+            >
               {title}
-            </h2>
-            <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto px-4 leading-relaxed">
+            </EditableText>
+            <EditableText
+              contentKey="features_subtitle"
+              tagName="p"
+              className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto px-4 leading-relaxed"
+              placeholder="Enter features subtitle..."
+              multiline={true}
+            >
               {subtitle}
-            </p>
+            </EditableText>
           </motion.div>
         </div>
 
@@ -226,12 +241,23 @@ export function Features({
             </div>
             
             <div className="relative z-10">
-              <h3 className="text-2xl sm:text-3xl font-bold mb-4">
+              <EditableText
+                contentKey="features_cta_title"
+                tagName="h3"
+                className="text-2xl sm:text-3xl font-bold mb-4"
+                placeholder="Enter CTA title..."
+              >
                 Ready to Start Your Driving Journey?
-              </h3>
-              <p className="text-lg sm:text-xl text-emerald-100 mb-8 max-w-2xl mx-auto">
+              </EditableText>
+              <EditableText
+                contentKey="features_cta_subtitle"
+                tagName="p"
+                className="text-lg sm:text-xl text-emerald-100 mb-8 max-w-2xl mx-auto"
+                placeholder="Enter CTA subtitle..."
+                multiline={true}
+              >
                 Join thousands of successful drivers who learned with Australia's most trusted driving school.
-              </p>
+              </EditableText>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
                   size="lg"
@@ -253,6 +279,9 @@ export function Features({
           </div>
         </motion.div>
       </div>
-    </section>
+      </section>
+      
+      <DropZoneArea id="after-features" className="my-4" placeholder="Add components after features" />
+    </EditableWrapper>
   );
 }

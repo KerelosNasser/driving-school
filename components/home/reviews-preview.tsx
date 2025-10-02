@@ -6,6 +6,9 @@ import { Star, ArrowRight, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {Review} from "@/lib/types";
 import { motion } from 'framer-motion';
+import { EditableWrapper } from '@/components/drag-drop/EditableWrapper';
+import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
+import { EditableText } from '@/components/ui/editable-text';
 
 // Fallback review data in case the Supabase fetch fails
 const fallbackReviews: Review[] = [
@@ -109,7 +112,8 @@ export function ReviewsPreview() {
   }, []);
 
   return (
-    <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
+    <EditableWrapper componentId="reviews-section" componentType="reviews">
+      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
       <style jsx>{scrollStyle}</style>
       
       {/* Background decoration */}
@@ -126,12 +130,23 @@ export function ReviewsPreview() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12 sm:mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 via-emerald-800 to-teal-700 bg-clip-text text-transparent">
+          <EditableText
+            contentKey="reviews_title"
+            tagName="h2"
+            className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 via-emerald-800 to-teal-700 bg-clip-text text-transparent"
+            placeholder="Enter reviews title..."
+          >
             Student Success Stories
-          </h2>
-          <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto px-4 leading-relaxed">
+          </EditableText>
+          <EditableText
+            contentKey="reviews_subtitle"
+            tagName="p"
+            className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto px-4 leading-relaxed"
+            placeholder="Enter reviews subtitle..."
+            multiline={true}
+          >
             Real feedback from students who achieved their driving goals with us
-          </p>
+          </EditableText>
         </motion.div>
 
         {loading ? (
@@ -223,9 +238,14 @@ export function ReviewsPreview() {
             </div>
             
             <div className="relative z-10">
-              <h3 className="text-2xl sm:text-3xl font-bold mb-8 text-center">
+              <EditableText
+                contentKey="reviews_cta_title"
+                tagName="h3"
+                className="text-2xl sm:text-3xl font-bold mb-8 text-center"
+                placeholder="Enter CTA title..."
+              >
                 Trusted by Students Across Australia
-              </h3>
+              </EditableText>
               
               <div className="grid grid-cols-3 gap-6 text-center">
                 <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6">
@@ -258,6 +278,9 @@ export function ReviewsPreview() {
           </div>
         </motion.div>
       </div>
-    </section>
+      </section>
+      
+      <DropZoneArea id="after-reviews" className="my-4" placeholder="Add components after reviews" />
+    </EditableWrapper>
   );
 }
