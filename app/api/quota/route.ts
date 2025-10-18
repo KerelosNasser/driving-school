@@ -74,11 +74,10 @@ async function handleQuotaGetRequest(_request: NextRequest) {
 // POST - Add hours to user's quota (for package purchases)
 async function handleQuotaPostRequest(request: NextRequest) {
   try {
-    // Get authenticated user (Clerk) - TEMPORARILY DISABLED FOR TESTING
-    // const { userId: clerkUserId } = await auth();
-    // if (!clerkUserId) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+     }
 
     // Map or provision user in Supabase - USING TEST USER
     const supabaseUserId = '550e8400-e29b-41d4-a716-446655440000'; // await getOrCreateSupabaseUserId(clerkUserId);
@@ -88,7 +87,7 @@ async function handleQuotaPostRequest(request: NextRequest) {
     try {
       requestBody = await request.json();
     } catch (error) {
-      return NextResponse.json({ error: 'Invalid or empty request body', details: error.message }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid or empty request body', details: error }, { status: 400 });
     }
     
     const { hours, transaction_type, description, package_id, payment_id } = requestBody;
@@ -196,11 +195,11 @@ async function handleQuotaPostRequest(request: NextRequest) {
 export const GET = withCentralizedStateManagement(handleQuotaGetRequest, '/api/quota', {
   priority: 'medium',
   maxRetries: 2,
-  requireAuth: false
+  requireAuth: true
 });
 
 export const POST = withCentralizedStateManagement(handleQuotaPostRequest, '/api/quota', {
   priority: 'high',
   maxRetries: 1,
-  requireAuth: false
+  requireAuth: true
 });
