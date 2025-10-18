@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = await createServerComponentClient({ cookies });
     const { searchParams } = new URL(request.url);
     
     const page = parseInt(searchParams.get('page') || '1');
@@ -90,7 +90,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = await createServerComponentClient({ cookies });
     const body = await request.json();
     const { action, notification_ids, mark_all = false } = body;
 
@@ -160,7 +160,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = await createServerComponentClient({ cookies });
     const { searchParams } = new URL(request.url);
     const notificationId = searchParams.get('id');
     const cleanupExpired = searchParams.get('cleanup_expired') === 'true';

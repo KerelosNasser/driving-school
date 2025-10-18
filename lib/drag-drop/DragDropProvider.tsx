@@ -34,8 +34,31 @@ export function DragDropProvider({ children, onDragEnd, onDragStart }: DragDropP
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    // Handle drop event if there's a valid drop target
+    if (active && over && over.data?.current) {
+      const dragItem = active.data.current as DragItem;
+      const dropZone = over.data.current;
+
+      // Create a custom event that includes drop information
+      const dropEvent = {
+        ...event,
+        dropResult: {
+          dragItem,
+          dropZone,
+          success: true
+        }
+      };
+
+      // Call the onDragEnd callback with drop information
+      onDragEnd?.(dropEvent);
+    } else {
+      // No valid drop target, call onDragEnd with original event
+      onDragEnd?.(event);
+    }
+
     setActiveItem(null);
-    onDragEnd?.(event);
   };
 
   return (

@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = await createServerComponentClient({ cookies });
     const { searchParams } = new URL(request.url);
     
     const type = searchParams.get('type') || 'files'; // 'files' | 'folders' | 'search'
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'No files provided' }, { status: 400 });
       }
 
-      const supabase = createServerComponentClient({ cookies });
+      const supabase = await createServerComponentClient({ cookies });
       const uploadedFiles: MediaFile[] = [];
       const errors: string[] = [];
 

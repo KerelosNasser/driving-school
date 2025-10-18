@@ -1,13 +1,5 @@
 {
   "content": {
-    "hero_subtitle": {
-      "content_key": "hero_subtitle",
-      "content_value": "Professional driving lessons with experienced instructors at EG Driving School - tailored to your needs.",
-      "content_json": null,
-      "file_url": null,
-      "alt_text": null,
-      "content_type": "text"
-    },
     "features_title": {
       "content_key": "features_title",
       "content_value": "Why Choose EG Driving School?",
@@ -323,6 +315,14 @@
     "instructor_name": {
       "content_key": "instructor_name",
       "content_value": "Emael Ghobrial",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
+    },
+    "hero_subtitle": {
+      "content_key": "hero_subtitle",
+      "content_value": "test",
       "content_json": null,
       "file_url": null,
       "alt_text": null,
@@ -1288,8 +1288,16 @@
       "file_url": null,
       "alt_text": null,
       "content_type": "text"
+    },
+    "hero_locations": {
+      "content_key": "hero_locations",
+      "content_value": "Serving in Brisbane",
+      "content_json": null,
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "text"
     }
   },
-  "timestamp": 1759311672948,
-  "version": "v1759311672948-aigr8cyio"
+  "timestamp": 1759477956875,
+  "version": "v1759477956875-va45n92ig"
 }

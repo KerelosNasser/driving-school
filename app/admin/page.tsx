@@ -219,10 +219,8 @@ export default async function AdminDashboardPage() {
   const transformedBookings = transformBookings((bookings.data as ServerBooking[]) || []);
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="mx-auto">
       <Toaster />
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-      {/* Pass server-fetched data to the client component */}
       <AdminDashboardClient
         initialUsers={users || []}
         initialReviews={(reviews.data as Review[]) || []}

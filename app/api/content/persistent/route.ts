@@ -13,19 +13,14 @@ async function isUserAdmin(_userId: string): Promise<boolean> {
   return process.env.NODE_ENV === 'development';
 }
 
-// GET - Load page content with caching
+// GET - Load page content with caching (no auth required for reading public content)
 async function handlePersistentContentGetRequest(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const pageName = searchParams.get('page') || 'home';
     const contentKey = searchParams.get('key');
 
-    // Load content using persistent loader
+    // Load content using persistent loader (no authentication needed for reading)
     const content = await contentLoader.loadPageContent(pageName);
 
     if (contentKey) {

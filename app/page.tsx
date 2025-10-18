@@ -8,7 +8,6 @@ import { Gallery } from "@/components/home/gallery";
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import type { Metadata } from 'next'
 import { OrganizationSchema, LocalBusinessSchema } from '@/components/seo/StructuredData'
-import { EditableWrapper } from '@/components/drag-drop/EditableWrapper';
 import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
 import {
     getPageContent,
@@ -50,19 +49,6 @@ export const metadata: Metadata = {
 
 export default async function Home() {
     const content = await getPageContent('home');
-
-    // Extract content with fallbacks
-    const heroTitleLine1 = getContentValue(content, 'hero_title_line_1', 'Learn to Drive');
-    const heroTitleLine2 = getContentValue(content, 'hero_title_line_2', 'with Confidence');
-    const heroTitleLine3 = getContentValue(content, 'hero_title_line_3', 'in Australia');
-    const heroSubtitle = getContentValue(content, 'hero_subtitle', 'Professional driving lessons with experienced instructors at EG Driving School - tailored to your needs.');
-
-    const heroFeatures = [
-        { text: getContentValue(content, 'hero_feature_1', 'Licensed Instructors') },
-        { text: getContentValue(content, 'hero_feature_2', 'Modern Vehicles') },
-        { text: getContentValue(content, 'hero_feature_3', 'Flexible Scheduling') },
-        { text: getContentValue(content, 'hero_feature_4', 'Personalized Pace') },
-    ];
 
     const featuresTitle = getContentValue(content, 'features_title', 'Why Choose EG Driving School?');
     const featuresSubtitle = getContentValue(content, 'features_subtitle', "We're committed to providing the best driving education experience.");
@@ -112,8 +98,6 @@ export default async function Home() {
             <div className="min-h-screen">
                 <main>
                     <Hero
-                        subtitle={heroSubtitle}
-                        features={heroFeatures}
                         content={content}
                     />
 

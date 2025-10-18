@@ -90,8 +90,18 @@ export function DragDropExample() {
     }
   };
 
+  const handleDragEnd = (event: any) => {
+    console.log('Drag ended:', event);
+    
+    // Check if this was a successful drop
+    if (event.dropResult && event.dropResult.success) {
+      const { dragItem, dropZone } = event.dropResult;
+      handleDrop(dragItem, dropZone);
+    }
+  };
+
   return (
-    <DragDropProvider>
+    <DragDropProvider onDragEnd={handleDragEnd}>
       <div className="p-6 max-w-6xl mx-auto">
         <h2 className="text-2xl font-bold mb-6">Drag and Drop Example</h2>
         

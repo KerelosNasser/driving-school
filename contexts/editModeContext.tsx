@@ -28,7 +28,7 @@ interface EditModeContextType {
     // Existing properties
     isEditMode: boolean;
     toggleEditMode: () => void;
-    saveContent: (key: string, value: any, type?: 'text' | 'json' | 'file', page?: string) => Promise<boolean>;
+    saveContent: (key: string, value: any, type?: 'text' | 'json' | 'file', page?: string, originalValue?: any) => Promise<boolean>;
     isAdmin: boolean;
     isSaving: boolean;
     saveState: SaveState;
@@ -479,61 +479,39 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
         key: string,
         value: any,
         type: 'text' | 'json' | 'file' = 'text',
-        page: string = 'home'
+        page: string = 'home',
+        providedOriginalValue?: any
     ): Promise<boolean> => {
         if (!isAdmin) {
             toast.error('Unauthorized: Admin access required');
             return false;
         }
 
-        // Skip saving empty/placeholder values
-        if (type === 'text' && (!value || value.trim() === '' || value === 'Click to edit...' || value.includes('Enter your'))) {
-            console.log('Skipping save for empty/placeholder value:', key, value);
+        // Simplified validation - only skip truly empty text
+        if (type === 'text' && !value) {
+            console.log('Skipping save for empty value:', key);
             return true;
         }
 
-        // For JSON type, validate the data
-        if (type === 'json') {
-            if (value === null || value === undefined) {
-                console.log('Skipping save for null/undefined JSON value:', key);
-                return true;
-            }
-
-            // If it's an array (like gallery images), validate it has content
-            if (Array.isArray(value) && value.length === 0) {
-                console.log('Allowing save of empty array for reset:', key);
-                // Allow empty arrays to be saved for reset purposes
-            }
-        }
-
         const contentKey = `${page}:${key}`;
-        const currentVersion = contentVersionsRef.current.get(contentKey) || '1';
-        const nextVersion = String(parseInt(currentVersion) + 1);
 
-        // Store original value for potential rollback
-        const originalValue = optimisticUpdatesRef.current.get(contentKey)?.originalValue;
-        if (!optimisticUpdatesRef.current.has(contentKey)) {
-            // First optimistic update - store the original value
-            optimisticUpdatesRef.current.set(contentKey, {
-                originalValue: value, // This should be the current displayed value
-                newValue: value,
-                timestamp: Date.now()
-            });
-        } else {
-            // Update the new value but keep the original
-            const existing = optimisticUpdatesRef.current.get(contentKey)!;
-            optimisticUpdatesRef.current.set(contentKey, {
-                ...existing,
-                newValue: value,
-                timestamp: Date.now()
-            });
+        // Simplified optimistic update tracking
+        let originalValue = providedOriginalValue;
+        if (optimisticUpdatesRef.current.has(contentKey)) {
+            originalValue = optimisticUpdatesRef.current.get(contentKey)!.originalValue;
         }
+
+        optimisticUpdatesRef.current.set(contentKey, {
+            originalValue,
+            newValue: value,
+            timestamp: Date.now()
+        });
 
         setIsSaving(true);
         setSaveState('saving');
 
         try {
-            console.log('Saving content with optimistic update:', { key, value, type, page, version: nextVersion });
+            console.log('Saving content:', { key, value, type, page });
 
             // Broadcast content change event for real-time sync
             if (eventRouterRef.current && currentPageRef.current && user) {
@@ -543,7 +521,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
                     pageName: currentPageRef.current,
                     userId: user.id,
                     timestamp: new Date().toISOString(),
-                    version: nextVersion,
+                    version: '1',
                     data: {
                         contentKey: key,
                         oldValue: originalValue,
@@ -555,8 +533,8 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
                 await eventRouterRef.current.route(event);
             }
 
-            // Try the new persistent API first, fallback to legacy
-            let response = await fetch('/api/content/persistent', {
+            // Simplified API call
+            const response = await fetch('/api/content/persistent', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -565,96 +543,22 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
                     key,
                     value,
                     type,
-                    page,
-                    version: currentVersion, // Send current version for conflict detection
-                    expectedVersion: currentVersion
+                    page
                 }),
             });
 
-            // If persistent API is not available, fallback to legacy API
-            if (response.status === 404) {
-                response = await fetch('/api/admin/content', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        key,
-                        value,
-                        type,
-                        page,
-                        version: currentVersion,
-                        expectedVersion: currentVersion
-                    }),
-                });
-            }
-
-            // Check content type before parsing
-            const contentType = response.headers.get('content-type');
-            console.log('Response status:', response.status);
-            console.log('Response content-type:', contentType);
-
             if (!response.ok) {
-                // Handle conflict specifically
-                if (response.status === 409) {
-                    const errorData = await response.json();
-                    await handleSaveConflict(contentKey, key, value, type, page, errorData);
-                    return false;
-                }
-
-                // Handle other non-200 responses
-                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-
-                if (contentType && contentType.includes('application/json')) {
-                    try {
-                        const errorData = await response.json();
-                        errorMessage = errorData.details || errorData.error || errorMessage;
-                    } catch (jsonError) {
-                        console.error('Failed to parse error JSON:', jsonError);
-                    }
-                } else {
-                    const errorText = await response.text();
-                    console.error('Non-JSON error response:', errorText.substring(0, 200) + '...');
-
-                    if (response.status === 404) {
-                        errorMessage = 'API endpoint not found.';
-                    } else if (response.status === 405) {
-                        errorMessage = 'Method not allowed.';
-                    } else if (response.status === 401 || response.status === 403) {
-                        errorMessage = 'Authentication/authorization failed.';
-                    }
-                }
-
-                throw new Error(errorMessage);
-            }
-
-            if (!contentType || !contentType.includes('application/json')) {
-                const responseText = await response.text();
-                console.error('Expected JSON but got:', contentType);
-                console.error('Response body:', responseText.substring(0, 200) + '...');
-                throw new Error('Server returned non-JSON response.');
+                const error = await response.json().catch(() => ({ error: response.statusText }));
+                throw new Error(error.error || error.details || 'Failed to save');
             }
 
             const responseData = await response.json();
-            console.log('Content saved successfully:', responseData);
 
-            // Update version tracking
-            contentVersionsRef.current.set(contentKey, responseData.version || nextVersion);
-            
             // Clear optimistic update since save was successful
             optimisticUpdatesRef.current.delete(contentKey);
 
             setSaveState('saved');
-
-            // More descriptive success messages based on content type
-            let successMessage = `Saved: ${key.replace(/_/g, ' ')}`;
-            if (type === 'json' && Array.isArray(value)) {
-                successMessage = `Updated ${key.replace(/_/g, ' ')} (${value.length} items)`;
-            } else if (type === 'file') {
-                successMessage = `Image updated: ${key.replace(/_/g, ' ')}`;
-            }
-
-            toast.success(successMessage);
+            toast.success('Content saved');
 
             const event = new CustomEvent('content-changed', {
                 detail: {

@@ -35,6 +35,7 @@ import { MapTab } from './MapsTab';
 import { FormsTab } from './FormsTab';
 import { ThemeTab } from './ThemeTab';
 import { ReferralRewardsTab } from './ReferralRewardsTab';
+import { AnnouncementTab } from './AnnouncementTab';
 import { MergedUser } from '../page';
 import { Booking, Review, Package } from '@/lib/types';
 
@@ -86,6 +87,13 @@ const navigationItems = [
     label: 'Referral Rewards',
     icon: Users,
     description: 'Manage Referral System & Rewards',
+    category: 'business'
+  },
+  {
+    id: 'announcements',
+    label: 'Announcements',
+    icon: Mail,
+    description: 'Send Email Updates',
     category: 'business'
   },
   {
@@ -227,6 +235,8 @@ export function AdminDashboardClient({
         return <ThemeTab />;
       case 'referral-rewards':
         return <ReferralRewardsTab />;
+      case 'announcements':
+        return <AnnouncementTab />;
       case 'seo':
         return <SEOTab />;
       default:
@@ -260,26 +270,25 @@ export function AdminDashboardClient({
         <div className="absolute bottom-20 right-10 w-40 h-40 bg-teal-400 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Sidebar */}
+      {/* Sidebar - Full height */}
       <div className={cn(
-        "bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 border-r border-emerald-700/50 transition-all duration-300 flex flex-col shadow-2xl relative z-10",
+        "bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 border-r border-emerald-700/50 transition-all duration-300 flex flex-col shadow-2xl relative z-10 h-full",
         sidebarCollapsed ? "w-16" : "w-72"
       )}>
         {/* Background overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 via-teal-800/90 to-blue-900/95" />
         
-        {/* Header */}
+        {/* Header - Simplified without title */}
         <div className="p-4 border-b border-emerald-700/50 backdrop-blur-sm bg-emerald-800/50 relative z-10">
           <div className="flex items-center justify-between">
             {!sidebarCollapsed && (
               <div className="flex-1">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl">
-                    <span className="text-white font-bold text-lg">A</span>
+                    <span className="text-white font-bold text-lg">EG</span>
                   </div>
                   <div>
-                    <h1 className="text-lg font-bold text-white">Admin Dashboard</h1>
-                    <p className="text-xs text-emerald-200">EG Driving School</p>
+                    <p className="text-sm text-emerald-200 font-medium">EG Driving School</p>
                   </div>
                 </div>
               </div>

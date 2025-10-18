@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { motion } from 'framer-motion';
+
 import { Clock, MessageSquare, AlertCircle, Loader2,
   RefreshCw, Car, Gauge, Users, Trophy, Zap, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -452,6 +452,7 @@ export default function ServiceCenterPage() {
                   <QuotaManagementTab
                     userId={user?.id || ''}
                     onQuotaUpdate={refreshQuota}
+                    userEmail={user?.emailAddresses?.[0]?.emailAddress || ''}
                   />
                 </div>
               </TabsContent>

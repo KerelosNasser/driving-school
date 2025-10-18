@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify admin access
-        const user = await clerkClient.users.getUser(userId);
+        const user = await (await clerkClient()).users.getUser(userId);
         const isAdmin = user.publicMetadata?.role === 'admin' || process.env.NODE_ENV === 'development';
 
         if (!isAdmin) {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        const supabase = createServerComponentClient({ cookies });
+        const supabase = await createServerComponentClient({ cookies });
 
         // Generate unique filename
         const fileExtension = file.name.split('.').pop()?.toLowerCase();
@@ -172,7 +172,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         // Verify admin access
-        const user = await clerkClient.users.getUser(userId);
+        const user = await (await clerkClient()).users.getUser(userId);
         const isAdmin = user.publicMetadata?.role === 'admin' || process.env.NODE_ENV === 'development';
 
         if (!isAdmin) {
@@ -186,7 +186,7 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Storage path is required' }, { status: 400 });
         }
 
-        const supabase = createServerComponentClient({ cookies });
+        const supabase = await createServerComponentClient({ cookies });
 
         // 1. Delete from Supabase Storage
         const { error: deleteError } = await supabase.storage

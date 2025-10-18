@@ -34,11 +34,21 @@ export function DragDropTest() {
     alert(`Successfully dropped ${item.preview?.name} on ${zone.id}`);
   };
 
+  const handleDragEnd = (event: any) => {
+    console.log('Drag ended:', event);
+    
+    // Check if this was a successful drop
+    if (event.dropResult && event.dropResult.success) {
+      const { dragItem, dropZone } = event.dropResult;
+      handleDrop(dragItem, dropZone);
+    }
+  };
+
   return (
     <div className="p-8 space-y-8">
       <h2 className="text-2xl font-bold">Drag & Drop Test</h2>
       
-      <DragDropProvider>
+      <DragDropProvider onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-2 gap-8">
           {/* Draggable Item */}
           <div>

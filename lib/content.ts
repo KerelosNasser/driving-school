@@ -1,6 +1,4 @@
 
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 
 export interface ContentItem {
   content_key: string;
@@ -16,19 +14,29 @@ export interface PageContent {
 }
 
 /**
- * Get all content for a specific page
+ * Server-side content loading function for page.tsx
+ * Uses fetch API to call our persistent content API endpoint
  */
 export async function getPageContent(pageName: string): Promise<PageContent> {
-  const supabase = await createServerComponentClient({ cookies });
-
   try {
-    const { data } = await supabase
-        .from('page_content')
-        .select('*')
-        .eq('page_name', pageName);
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/content/persistent?page=${pageName}`, {
+      cache: 'no-store', // Ensure fresh data
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
 
+    if (!response.ok) {
+      console.error('Failed to fetch content:', response.statusText);
+      return FALLBACK_PAGE_CONTENT;
+    }
+
+    const result = await response.json();
+    const contentArray = result.data || [];
+    
     const contentMap: PageContent = {};
-    data?.forEach((item) => {
+    contentArray.forEach((item: any) => {
       contentMap[item.content_key] = {
         content_key: item.content_key,
         content_value: item.content_value,
@@ -41,8 +49,7 @@ export async function getPageContent(pageName: string): Promise<PageContent> {
 
     return contentMap;
   } catch (error) {
-    console.error('Error in getPageContent:', error);
-    // Return a minimal fallback so the renderer never receives `undefined` or malformed content
+    console.error('Error loading page content:', error);
     return FALLBACK_PAGE_CONTENT;
   }
 }
@@ -54,32 +61,9 @@ export const FALLBACK_PAGE_CONTENT: PageContent = {
 };
 
 export async function getContentItem(pageName: string, contentKey: string): Promise<ContentItem | null> {
-  const supabase =  await createServerComponentClient({ cookies });
-
-  try {
-    const { data, error } = await supabase
-        .from('page_content')
-        .select('*')
-        .eq('page_name', pageName)
-        .eq('content_key', contentKey)
-        .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    return {
-      content_key: data.content_key,
-      content_value: data.content_value,
-      content_json: data.content_json,
-      file_url: data.file_url,
-      alt_text: data.alt_text,
-      content_type: data.content_type,
-    };
-  } catch (error) {
-    console.error('Error in getContentItem:', error);
-    return null;
-  }
+  // This function is now a placeholder - server-side content loading should be done in page.tsx
+  console.warn('getContentItem called - this should only be used in server components');
+  return null;
 }
 
 /**

@@ -10,12 +10,6 @@ export function DropZone({ zone, onDrop, children }: DropZoneProps) {
     data: zone,
   });
 
-  const handleDrop = React.useCallback((item: any) => {
-    if (onDrop) {
-      onDrop(item, zone);
-    }
-  }, [onDrop, zone]);
-
   return (
     <div
       ref={setNodeRef}

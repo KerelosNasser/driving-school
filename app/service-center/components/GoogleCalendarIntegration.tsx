@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+
 import { Calendar, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -406,12 +406,9 @@ export default function GoogleCalendarIntegration({
                             ✓ Available Slots ({getAvailableSlots().length})
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            {getAvailableSlots().map((slot, index) => (
-                              <motion.button
+                            {getAvailableSlots().map((slot) => (
+                              <button
                                 key={`${slot.start}-${slot.end}`}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.2, delay: index * 0.05 }}
                                 onClick={() => setSelectedSlot(slot)}
                                 className={`p-3 rounded-lg border text-sm font-medium transition-all ${
                                   selectedSlot === slot
@@ -420,7 +417,7 @@ export default function GoogleCalendarIntegration({
                                 }`}
                               >
                                 {formatTimeSlot(slot)}
-                              </motion.button>
+                              </button>
                             ))}
                           </div>
                         </div>
@@ -462,12 +459,7 @@ export default function GoogleCalendarIntegration({
 
               {/* Booking Form */}
               {selectedSlot && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-4 p-4 bg-gray-50 rounded-lg"
-                >
+                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
                   <h4 className="font-semibold text-gray-900">Complete Your Booking</h4>
                   
                   {/* Lesson Duration */}
@@ -565,7 +557,7 @@ export default function GoogleCalendarIntegration({
                       Cancel
                     </Button>
                   </div>
-                </motion.div>
+                </div>
               )}
             </div>
           )}

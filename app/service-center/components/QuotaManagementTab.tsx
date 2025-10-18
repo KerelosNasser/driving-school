@@ -69,6 +69,7 @@ class ErrorBoundary extends React.Component<
 interface QuotaManagementTabProps {
   userId: string;
   onQuotaUpdate: () => void;
+  userEmail?: string;
 }
 
 interface ExistingBooking {

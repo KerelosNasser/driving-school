@@ -88,12 +88,54 @@ function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');
   const realIP = request.headers.get('x-real-ip');
   const cfConnectingIP = request.headers.get('cf-connecting-ip');
-  
+
   if (cfConnectingIP) return cfConnectingIP;
   if (realIP) return realIP;
   if (forwarded) return forwarded.split(',')[0].trim();
-  
+
   return '127.0.0.1'; // Fallback
+}
+
+// Helper function to check device fingerprint for duplicates
+async function checkDeviceFingerprint(_fingerprint: string, _excludeUserId?: string): Promise<boolean> {
+  try {
+    // This is a placeholder - implement based on your fraud detection needs
+    console.log('Checking device fingerprint');
+    return false; // No duplicates found
+  } catch (error) {
+    console.error('Error checking device fingerprint:', error);
+    return false;
+  }
+}
+
+// Helper function to store device fingerprint
+async function storeDeviceFingerprint(
+  _userId: string,
+  _fingerprint: string,
+  _ipAddress: string,
+  _userAgent: string
+): Promise<void> {
+  try {
+    // This is a placeholder - implement based on your fraud detection needs
+    console.log('Storing device fingerprint');
+  } catch (error) {
+    console.error('Error storing device fingerprint:', error);
+    throw error;
+  }
+}
+
+// Helper function to send referral notification
+async function sendReferralNotification(referralId: string, referredUserName: string): Promise<void> {
+  try {
+    // This is a placeholder - implement email/notification sending
+    console.log('Sending referral notification for referral:', referralId, 'User:', referredUserName);
+
+    // You can implement actual email sending here using your notification service
+    // await sendEmailNotification(referrerEmail, 'New Referral!', `Someone used your invitation code!`);
+  } catch (error) {
+    console.error('Error sending referral notification:', error);
+    throw error;
+  }
 }
 
 async function processProfileCompletion(request: NextRequest, clerkUserId: string) {
@@ -119,8 +161,8 @@ async function processProfileCompletion(request: NextRequest, clerkUserId: strin
       { status: 400 }
     );
   }
-  const { fullName, phone, location, invitationCode } = body;
-  
+  const { fullName, phone, location, invitationCode, deviceFingerprint, userAgent } = body;
+
   // Server-side validation
   console.log('Validating form data...');
   const errors: ValidationErrors = {};
@@ -146,8 +188,9 @@ async function processProfileCompletion(request: NextRequest, clerkUserId: strin
   }
   
   console.log('Validation passed, proceeding with profile completion...');
-  
+
   // Get client IP
+  const clientIP = getClientIP(request);
   
   // For debug mode, create a simple response
   if (clerkUserId.startsWith('debug-user-')) {
@@ -278,42 +321,45 @@ async function processProfileCompletion(request: NextRequest, clerkUserId: strin
   if (invitationCode) {
     console.log('Processing referral with invitation code...');
     try {
-      // First try the secure referral function
-      let referralId: string | null = null;
-      try {
-        referralId = await processReferral(userId, invitationCode.toUpperCase(), deviceFingerprint, clientIP, userAgent);
-        console.log('Referral processed successfully with ID:', referralId);
-      } catch (processError: any) {
-        console.error('Error with secure referral processing, trying fallback:', processError);
-        
-        // Fallback to basic referral processing if secure function doesn't exist
-        const { data, error } = await supabase
-          .rpc('process_referral', {
-            p_referred_user_id: userId,
-            p_invitation_code: invitationCode.toUpperCase(),
-            p_device_fingerprint: deviceFingerprint,
-            p_ip_address: clientIP
-          });
-        
-        if (error) {
-          throw new Error(error.message || 'Failed to process referral');
+      // Call the new process-referral API endpoint
+      const referralResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/process-referral`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` // Use service role for internal API calls
+        },
+        body: JSON.stringify({
+          invitationCode: invitationCode.toUpperCase(),
+          newUserId: userId,
+          newUserEmail: '', // Will be filled by webhook or can be fetched from Clerk
+          deviceFingerprint: deviceFingerprint,
+          ipAddress: clientIP,
+          userAgent: userAgent
+        })
+      });
+
+      if (referralResponse.ok) {
+        const referralData = await referralResponse.json();
+        console.log('Referral processed successfully:', referralData);
+
+        // Send notification to referrer if we have a referral ID
+        if (referralData.referral_id) {
+          try {
+            console.log('Sending notification to referrer...');
+            await sendReferralNotification(referralData.referral_id, fullName.trim());
+          } catch (notificationError) {
+            console.error('Error sending referral notification (non-critical):', notificationError);
+            // Don't fail the entire request for notification errors
+          }
         }
-        referralId = data;
-        console.log('Referral processed with fallback method, ID:', referralId);
-      }
-      
-      // Send notification to referrer if we have a referral ID
-      if (referralId) {
-        try {
-          console.log('Sending notification to referrer...');
-          await sendReferralNotification(referralId, fullName.trim());
-        } catch (notificationError) {
-          console.error('Error sending referral notification (non-critical):', notificationError);
-          // Don't fail the entire request for notification errors
-        }
+      } else {
+        const errorData = await referralResponse.json();
+        console.error('Referral processing failed:', errorData);
+        // Don't fail the entire request for referral processing errors
+        console.warn('Referral processing failed, but allowing profile completion to continue');
       }
     } catch (error: any) {
-      console.error('Error processing referral:', error);
+      console.error('Error calling process-referral endpoint:', error);
       // Instead of failing the entire request, just log the error and continue
       // This allows the user to complete their profile even if referral processing fails
       console.warn('Referral processing failed, but allowing profile completion to continue');
@@ -412,9 +458,9 @@ export async function POST(request: NextRequest) {
     console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     
     try {
-      const authResult = auth();
+      const authResult = await auth();
       console.log('Full auth result:', authResult);
-      
+
       const { userId: clerkUserId, sessionId, orgId } = authResult;
       
       console.log('Auth details:', {

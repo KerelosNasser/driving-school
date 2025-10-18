@@ -11,6 +11,7 @@ import { EditModeProvider } from "@/contexts/editModeContext";
 import { GlobalContentProvider } from "@/contexts/globalContentContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AndroidStyleEditor } from "@/components/drag-drop/AndroidStyleEditor";
+import { ReactQueryProvider } from "@/components/providers";
 
 // Optimized font loading
 const geistSans = Geist({
@@ -153,19 +154,21 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <ThemeProvider>
-            <Suspense fallback={<div>Loading...</div>}>
-              <EditModeProvider>
-                <GlobalContentProvider>
-                  <PostSignupWrapper>
-                    <LayoutWrapper>
-                      <AndroidStyleEditor>{children}</AndroidStyleEditor>
-                    </LayoutWrapper>
-                  </PostSignupWrapper>
-                </GlobalContentProvider>
-              </EditModeProvider>
-            </Suspense>
-          </ThemeProvider>
+          <ReactQueryProvider>
+            <ThemeProvider>
+              <Suspense fallback={<div>Loading...</div>}>
+                <EditModeProvider>
+                  <GlobalContentProvider>
+                    <PostSignupWrapper>
+                      <LayoutWrapper>
+                        <AndroidStyleEditor>{children}</AndroidStyleEditor>
+                      </LayoutWrapper>
+                    </PostSignupWrapper>
+                  </GlobalContentProvider>
+                </EditModeProvider>
+              </Suspense>
+            </ThemeProvider>
+          </ReactQueryProvider>
 
           {/* Performance monitoring */}
           <Suspense fallback={null}>

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = await createServerComponentClient({ cookies });
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = await createServerComponentClient({ cookies });
     const body = await request.json();
     const { action } = body;
 
@@ -282,7 +282,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = await createServerComponentClient({ cookies });
     const body = await request.json();
     const {
       id,
@@ -360,7 +360,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = await createServerComponentClient({ cookies });
     const { searchParams } = new URL(request.url);
     const tierId = searchParams.get('id');
 

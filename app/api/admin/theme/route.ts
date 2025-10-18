@@ -14,7 +14,7 @@ async function isUserAdmin(_userId: string): Promise<boolean> {
 }
 
 // GET - Retrieve current theme configuration
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Public: allow reading theme configuration without authentication so
     // the site can render the configured theme for all visitors.

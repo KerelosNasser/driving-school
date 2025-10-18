@@ -67,49 +67,40 @@ async function handleInvitationStatsRequest(_request: NextRequest) {
         });
       }
 
-      // Get referrals (if table present)
-      let referrals: any[] = [];
-      const referralStats = {
-        totalReferrals: 0,
-        completedReferrals: 0,
-        pendingReferrals: 0
-      };
-
-      try {
-        const { data: referralsData, error: referralsError } = await supabaseAdmin
-          .from('referrals')
-          .select(`
+      // Get referrals from unified referrals table
+      const { data: referralsData } = await supabaseAdmin
+        .from('referrals')
+        .select(`
+          id,
+          status,
+          created_at,
+          completed_at,
+          referred_user_id,
+          users!referrals_referred_user_id_fkey (
             id,
-            status,
-            created_at,
-            completed_at,
-            users!referrals_referred_user_id_fkey (
-              id,
-              full_name,
-              email
-            )
-          `)
-          .eq('referrer_user_id', internalUserId);
+            full_name,
+            email
+          )
+        `)
+        .eq('referrer_user_id', internalUserId)
+        .order('created_at', { ascending: false });
 
-        if (!referralsError && referralsData) {
-          referrals = referralsData.map((referral: any) => ({
-            id: referral.id,
-            referredUser: {
-              name: referral.users?.full_name || 'Unknown User',
-              email: referral.users?.email || 'unknown@example.com'
-            },
-            completedAt: referral.completed_at || referral.created_at,
-            createdAt: referral.created_at,
-            status: referral.status
-          }));
+      const referrals = (referralsData || []).map((referral: any) => ({
+        id: referral.id,
+        referredUser: {
+          name: referral.users?.full_name || 'Unknown User',
+          email: referral.users?.email || 'unknown@example.com'
+        },
+        completedAt: referral.completed_at || referral.created_at,
+        createdAt: referral.created_at,
+        status: referral.status
+      }));
 
-          referralStats.totalReferrals = referralsData.length;
-          referralStats.completedReferrals = referralsData.filter((r: any) => r.status === 'completed').length;
-          referralStats.pendingReferrals = referralsData.filter((r: any) => r.status === 'pending').length;
-        }
-      } catch (err) {
-        console.warn('Referrals table not available or query failed:', err);
-      }
+      const referralStats = {
+        totalReferrals: referralsData?.length || 0,
+        completedReferrals: referralsData?.filter((r: any) => r.status === 'completed').length || 0,
+        pendingReferrals: referralsData?.filter((r: any) => r.status === 'pending').length || 0
+      };
 
       // Get rewards (if table present)
       let rewards: any[] = [];
