@@ -21,3 +21,6 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
     </html>
   );
 }
+
+// Note: This global error component is for pages, not API routes.
+// API routes should handle their own errors and return JSON responses.

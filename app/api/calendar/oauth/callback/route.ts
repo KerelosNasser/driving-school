@@ -44,15 +44,30 @@ export async function GET(request: NextRequest) {
 
     const tokenData = await tokenResponse.json();
     
-    // In a real implementation, you would store these tokens in your database
-    // associated with the user ID (state parameter)
-    // For now, we'll just log them and redirect with success
-    console.log('OAuth tokens received for user:', state);
-    console.log('Access token:', tokenData.access_token);
-    console.log('Refresh token:', tokenData.refresh_token);
+    // Calculate expiry time
+    const expiresAt = tokenData.expires_in 
+      ? new Date(Date.now() + tokenData.expires_in * 1000)
+      : undefined;
+
+    // Store tokens securely in database using TokenManager
+    const { TokenManager } = await import('@/lib/oauth/token-manager');
     
-    // Store tokens securely in database here
-    // await storeUserTokens(state, tokenData);
+    const storedTokens = await TokenManager.storeTokens(state, {
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      token_type: tokenData.token_type || 'Bearer',
+      expires_at: expiresAt,
+      scope: tokenData.scope,
+    });
+
+    if (!storedTokens) {
+      console.error('Failed to store OAuth tokens for user:', state);
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/service-center?calendar_error=token_storage_failed`
+      );
+    }
+
+    console.log('OAuth tokens successfully stored for user:', state);
 
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL}/service-center?calendar_connected=true`

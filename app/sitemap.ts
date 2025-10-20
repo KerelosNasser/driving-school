@@ -6,7 +6,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://your-domain.vercel.app' // Replace with your actual domain
   
   // Get packages for dynamic URLs
-  const supabase = await createServerComponentClient({ cookies })
+  const supabase = createServerComponentClient({ cookies })
   const { data: packages } = await supabase
     .from('packages')
     .select('id, name, created_at')

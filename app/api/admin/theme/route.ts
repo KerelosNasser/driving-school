@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 async function isUserAdmin(_userId: string): Promise<boolean> {
@@ -18,7 +18,23 @@ export async function GET(_request: NextRequest) {
   try {
     // Public: allow reading theme configuration without authentication so
     // the site can render the configured theme for all visitors.
-    const supabase = await createServerComponentClient({ cookies });
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          }
+        }
+      }
+    );
 
     const { data, error } = await supabase
       .from('site_settings')
@@ -95,7 +111,23 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Theme configuration is required' }, { status: 400 });
     }
 
-    const supabase = await createServerComponentClient({ cookies });
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          }
+        }
+      }
+    );
 
     // Use upsert to handle both insert and update
     const { data, error } = await supabase

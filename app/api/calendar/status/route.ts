@@ -1,35 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { withCentralizedStateManagement } from '@/lib/api-middleware';
+import { SimpleCalendarService } from '@/lib/calendar/simple-calendar';
 
-async function handleCalendarStatusRequest(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    // Check authentication
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user has OAuth access token stored
-    // In a real implementation, you'd check the database for user's stored OAuth tokens
-    const hasAccessToken = !!process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
+    const isConnected = await SimpleCalendarService.checkConnection();
     
-    return NextResponse.json({
-      connected: hasAccessToken,
-      userId: userId
+    return NextResponse.json({ 
+      status: 'healthy',
+      connected: isConnected,
+      timestamp: new Date().toISOString()
     });
-
   } catch (error) {
-    console.error('Error checking calendar connection status:', error);
-    return NextResponse.json(
-      { error: 'Failed to check calendar connection status' },
-      { status: 500 }
-    );
+    return NextResponse.json({ 
+      status: 'error',
+      connected: false,
+      error: 'Failed to check status',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 }
-
-export const GET = withCentralizedStateManagement(handleCalendarStatusRequest, '/api/calendar/status', {
-  priority: 'medium',
-  maxRetries: 2,
-  requireAuth: true
-});

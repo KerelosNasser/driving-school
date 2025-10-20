@@ -25,21 +25,21 @@ async function handlePersistentContentGetRequest(request: NextRequest) {
 
     if (contentKey) {
       const item = content[contentKey];
-      return NextResponse.json({ 
+      return NextResponse.json({
         data: item || null,
         meta: { pageName, contentKey }
       });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       data: Object.values(content),
       meta: { pageName, count: Object.keys(content).length }
     });
-    
+
   } catch (error) {
     console.error('GET /api/content/persistent error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' }, 
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -102,7 +102,7 @@ async function handlePersistentContentPutRequest(request: NextRequest) {
 export const GET = withCentralizedStateManagement(handlePersistentContentGetRequest, '/api/content/persistent', {
   priority: 'medium',
   maxRetries: 2,
-  requireAuth: true
+  requireAuth: false
 });
 
 export const PUT = withCentralizedStateManagement(handlePersistentContentPutRequest, '/api/content/persistent', {

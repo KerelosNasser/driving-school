@@ -81,41 +81,76 @@ export default function GoogleCalendarIntegration({
     fetchUserData();
   }, []);
 
-  const checkCalendarConnection = async () => {
+  const checkCalendarConnection = useCallback(async () => {
     try {
-      const response = await fetch('/api/calendar/status');
+      const response = await fetch('/api/calendar/connection');
       const data = await response.json();
       setCalendarConnected(data.connected || false);
+
+      if (!data.connected && data.message) {
+        setError(data.message);
+      }
     } catch (err) {
       console.error('Error checking calendar connection:', err);
       setCalendarConnected(false);
+      setError('Failed to check calendar connection status');
     }
-  };
+  }, []);
 
   // Connect to Google Calendar
   const connectCalendar = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/calendar/connect', {
+      setError(null);
+      
+      const response = await fetch('/api/calendar/oauth/authorize', {
         method: 'POST'
       });
       const data = await response.json();
       
       if (data.authUrl) {
-        window.open(data.authUrl, '_blank', 'width=500,height=600');
+        // Open OAuth popup
+        const popup = window.open(
+          data.authUrl, 
+          'google-oauth', 
+          'width=500,height=600,scrollbars=yes,resizable=yes'
+        );
+        
         // Poll for connection status
         const pollInterval = setInterval(async () => {
-          const statusResponse = await fetch('/api/calendar/status');
-          const statusData = await statusResponse.json();
-          if (statusData.connected) {
-            setCalendarConnected(true);
-            clearInterval(pollInterval);
-            fetchAvailableSlots();
+          try {
+            // Check if popup was closed
+            if (popup?.closed) {
+              clearInterval(pollInterval);
+              await checkCalendarConnection();
+              if (calendarConnected) {
+                fetchAvailableSlots();
+              }
+              return;
+            }
+            
+            const statusResponse = await fetch('/api/calendar/connection');
+            const statusData = await statusResponse.json();
+            if (statusData.connected) {
+              setCalendarConnected(true);
+              clearInterval(pollInterval);
+              popup?.close();
+              fetchAvailableSlots();
+            }
+          } catch (pollErr) {
+            console.error('Error during polling:', pollErr);
           }
         }, 2000);
         
         // Stop polling after 2 minutes
-        setTimeout(() => clearInterval(pollInterval), 120000);
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+        }, 120000);
+      } else {
+        setError(data.error || 'Failed to get authorization URL');
       }
     } catch (err) {
       console.error('Error connecting calendar:', err);
@@ -136,14 +171,19 @@ export default function GoogleCalendarIntegration({
       const targetDate = date || selectedDate;
       if (!targetDate) return;
       
-      const response = await fetch(`/api/calendar/availability?date=${targetDate}&bufferMinutes=${bufferTimeMinutes}`);
+      const response = await fetch(`/api/calendar/events?date=${targetDate}&bufferMinutes=${bufferTimeMinutes}&type=availability`);
       const data = await response.json();
       
       if (response.ok) {
         setAvailableSlots(data.slots || []);
         setEvents(data.events || []);
       } else {
-        setError(data.error || 'Failed to fetch availability');
+        if (response.status === 401) {
+          setCalendarConnected(false);
+          setError('Calendar connection expired. Please reconnect.');
+        } else {
+          setError(data.error || 'Failed to fetch availability');
+        }
       }
     } catch (err) {
       console.error('Error fetching availability:', err);
