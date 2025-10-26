@@ -1,27 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { SimpleCalendarService } from '@/lib/calendar/simple-calendar';
+import { EnhancedCalendarService } from '@/lib/calendar/enhanced-calendar-service';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const isConnected = await SimpleCalendarService.checkConnection();
+    const calendarService = new EnhancedCalendarService();
+    const status = await calendarService.getCalendarStatus();
     
-    return NextResponse.json({ 
-      status: 'healthy',
-      connected: isConnected,
-      timestamp: new Date().toISOString()
-    });
+    return NextResponse.json(status);
   } catch (error) {
+    console.error('Error fetching calendar status:', error);
     return NextResponse.json({ 
-      status: 'error',
-      connected: false,
-      error: 'Failed to check status',
-      timestamp: new Date().toISOString()
+      error: 'Failed to fetch calendar status',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

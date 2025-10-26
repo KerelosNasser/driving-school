@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { SimpleCalendarService } from '@/lib/calendar/simple-calendar';
+import { EnhancedCalendarService } from '@/lib/calendar/enhanced-calendar-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,11 +9,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const isConnected = await SimpleCalendarService.checkConnection();
-    
-    return NextResponse.json({ 
-      connected: isConnected,
-      status: isConnected ? 'connected' : 'disconnected'
+    const calendarService = new EnhancedCalendarService();
+    const status = await calendarService.getCalendarStatus();
+
+    return NextResponse.json({
+      connected: status.connected,
+      status: status.connected ? 'connected' : 'disconnected',
+      message: status.message,
+      calendar: status.calendar
     });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to check connection' }, { status: 500 });
@@ -26,9 +29,6 @@ export async function DELETE(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // For simplicity, we'll just return success
-    // In a real implementation, you might want to revoke tokens
     return NextResponse.json({ 
       success: true,
       message: 'Calendar disconnected successfully'

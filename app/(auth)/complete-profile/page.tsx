@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Copy, Check, MapPin, User, Phone, Gift } from 'lucide-react';
+import { Copy, Check, MapPin, User, Phone, Gift } from 'lucide-react';
 import { toast } from 'sonner';
+import { LoadingIndicator } from '@/components/ui/loading-indicator';
 
 interface FormData {
   fullName: string;
@@ -362,7 +363,9 @@ export default function CompleteProfilePage() {
                   autoComplete="off"
                 />
                 {isLoadingLocation && (
-                  <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin" />
+                  <div className="absolute right-3 top-3">
+                    <LoadingIndicator color="#059669" size="small" variant="lines" />
+                  </div>
                 )}
                 
                 {/* Location Suggestions */}
@@ -423,7 +426,7 @@ export default function CompleteProfilePage() {
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <LoadingIndicator color="#ffffff" size="small" variant="lines" />
                   Completing Profile...
                 </>
               ) : (

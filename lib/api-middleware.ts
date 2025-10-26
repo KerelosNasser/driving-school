@@ -1,59 +1,33 @@
-/**
- * API Middleware for Centralized State Management
- * 
- * This middleware replaces individual rate limiting with unified request processing.
- * It integrates seamlessly with existing API routes while providing centralized control.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { apiStateManager, type RequestHandler } from './api-state-manager';
 
 interface MiddlewareOptions {
   priority?: 'high' | 'medium' | 'low';
   maxRetries?: number;
-  requireAuth?: boolean;
   timeout?: number;
 }
 
 /**
- * Centralized API middleware that replaces individual rate limiting
- * with unified request queue processing
+ * Centralized API middleware for unified request queue processing
  */
 export function withCentralizedStateManagement(
   handler: RequestHandler,
   endpoint: string,
   options: MiddlewareOptions = {}
 ) {
-  const {
-    priority = 'medium',
-    maxRetries = 3,
-    requireAuth = true  } = options;
+  const { priority = 'medium', maxRetries = 3 } = options;
+  const endpointKey = `${endpoint}_${Date.now()}`;
 
-  // We don't pre-register handlers for all methods since each route export
-  // (GET, POST, etc.) will call this middleware separately with the specific handler
-
-  // Return the wrapped handler
   return async (request: NextRequest): Promise<NextResponse> => {
     try {
-      // Register the handler for this specific method and endpoint
-      const endpointKey = `${request.method} ${endpoint}`;
+      console.log(`API route hit: ${endpoint} ${request.method}`);
+
+      // Register the handler with the state manager
       apiStateManager.registerHandler(endpointKey, async (req: NextRequest) => {
         try {
-          // Apply authentication check if required
-          if (requireAuth) {
-            const authResult = await checkAuthentication(req);
-            if (!authResult.success) {
-              return NextResponse.json(
-                { error: authResult.error },
-                { status: 401 }
-              );
-            }
-          }
-
-          // Execute the original handler
           return await handler(req);
         } catch (error) {
-          console.error(`[API Middleware] Error in ${endpoint}:`, error);
+          console.error(`[API Middleware] Handler error for ${endpointKey}:`, error);
           return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
@@ -61,32 +35,16 @@ export function withCentralizedStateManagement(
         }
       });
 
-      // Queue the request through the centralized state manager
+      // Process the request through the state manager using queueRequest
       return await apiStateManager.queueRequest(
         request,
         endpointKey,
         priority,
         maxRetries
       );
+
     } catch (error) {
-      console.error(`[API Middleware] Failed to queue request for ${endpoint}:`, error);
-      
-      // Return appropriate error response
-      if (error instanceof Error) {
-        if (error.message.includes('frozen')) {
-          return NextResponse.json(
-            { error: 'API system is temporarily unavailable' },
-            { status: 503 }
-          );
-        }
-        if (error.message.includes('queue is full')) {
-          return NextResponse.json(
-            { error: 'Server is busy, please try again later' },
-            { status: 429 }
-          );
-        }
-      }
-      
+      console.error('[API Middleware] Request processing failed:', error);
       return NextResponse.json(
         { error: 'Request processing failed' },
         { status: 500 }

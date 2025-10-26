@@ -1,7 +1,6 @@
-/**
- * Simplified Token Manager for Google Calendar Integration
- * Since Google OAuth is configured via Clerk dashboard, we use static tokens
- */
+import { JWT } from 'google-auth-library';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface OAuthTokens {
   access_token: string;
@@ -11,22 +10,66 @@ export interface OAuthTokens {
   scope?: string;
 }
 
+const getServiceAccountToken = async (): Promise<string | null> => {
+  try {
+    // Use the service account key file from lib/config/
+    const keyFile = path.join(process.cwd(), 'lib/config/service-account.json');
+
+    if (!fs.existsSync(keyFile)) {
+      console.error('Service account key file not found at:', keyFile);
+      return null;
+    }
+
+    // Read and parse the service account key
+    const keyData = JSON.parse(fs.readFileSync(keyFile, 'utf8'));
+
+    // Create JWT client with service account credentials
+    const jwtClient = new JWT({
+      email: keyData.client_email,
+      key: keyData.private_key,
+      scopes: [
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/calendar.events',
+        'https://www.googleapis.com/auth/calendar.readonly'
+      ],
+    });
+
+    // Get access token
+    const tokenResponse = await jwtClient.getAccessToken();
+    return tokenResponse?.token || null;
+  } catch (error) {
+    console.error('Error getting service account token:', error);
+    return null;
+  }
+};
+
 export class TokenManager {
+  private static cachedToken: { token: string; expiresAt: number } | null = null;
+
   /**
-   * Get access token for Google Calendar API
-   * Uses static token from .env.local since OAuth is configured via Clerk
+   * Get access token for Google Calendar API using service account
    */
   static async getValidAccessToken(_userId?: string): Promise<string | null> {
     try {
-      // Use static token from .env.local
-      const accessToken = process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
-
-      if (!accessToken) {
-        console.error('GOOGLE_OAUTH_ACCESS_TOKEN not found in environment variables');
-        return null;
+      // Check if we have a cached token that's still valid (with 5 minute buffer)
+      if (this.cachedToken && this.cachedToken.expiresAt > Date.now() + 5 * 60 * 1000) {
+        return this.cachedToken.token;
       }
 
-      return accessToken;
+      // Get fresh token from service account
+      const accessToken = await getServiceAccountToken();
+
+      if (accessToken) {
+        // Cache the token (Google service account tokens typically last 1 hour)
+        this.cachedToken = {
+          token: accessToken,
+          expiresAt: Date.now() + 55 * 60 * 1000 // 55 minutes from now
+        };
+        return accessToken;
+      }
+
+      console.error('GOOGLE_OAUTH_ACCESS_TOKEN not found in environment variables');
+      return null;
     } catch (error) {
       console.error('Error getting access token:', error);
       return null;

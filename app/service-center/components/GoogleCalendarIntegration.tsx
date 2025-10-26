@@ -331,27 +331,27 @@ export default function GoogleCalendarIntegration({
     <div className="space-y-6">
       {/* Error/Success Messages */}
       {error && (
-        <Alert className="border-red-300 bg-red-50">
+        <Alert className="border-red-300 bg-red-50 shadow-sm">
           <AlertCircle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">{error}</AlertDescription>
+          <AlertDescription className="text-red-800 font-medium">{error}</AlertDescription>
         </Alert>
       )}
       
       {success && (
-        <Alert className="border-green-300 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">{success}</AlertDescription>
+        <Alert className="border-emerald-300 bg-emerald-50 shadow-sm">
+          <CheckCircle className="h-4 w-4 text-emerald-600" />
+          <AlertDescription className="text-emerald-800 font-medium">{success}</AlertDescription>
         </Alert>
       )}
 
       {/* Calendar Connection */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+      <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5 text-blue-600" />
-            <span className="text-blue-900">Google Calendar Integration</span>
+            <Calendar className="h-5 w-5 text-emerald-600" />
+            <span className="text-emerald-900">Google Calendar Integration</span>
           </CardTitle>
-          <CardDescription className="text-blue-700">
+          <CardDescription className="text-emerald-700">
             Connect your Google Calendar for seamless booking with automatic buffer time management
           </CardDescription>
         </CardHeader>
@@ -362,7 +362,7 @@ export default function GoogleCalendarIntegration({
               <p className="text-gray-600 mb-4">
                 Connect your Google Calendar to view real-time availability and book lessons directly
               </p>
-              <Button onClick={connectCalendar} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+              <Button onClick={connectCalendar} disabled={loading} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg">
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -378,16 +378,22 @@ export default function GoogleCalendarIntegration({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium text-green-800">Calendar Connected</span>
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-emerald-500 rounded-full">
+                    <CheckCircle className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-emerald-800">Calendar Connected</span>
+                    <div className="text-sm text-emerald-600">Real-time sync active</div>
+                  </div>
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => fetchAvailableSlots()}
                   disabled={loading}
+                  className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
                 >
                   <RefreshCw className="h-4 w-4 mr-1" />
                   Refresh
@@ -395,12 +401,14 @@ export default function GoogleCalendarIntegration({
               </div>
 
               {/* Buffer Time Info */}
-              <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="flex items-center space-x-2 mb-1">
-                  <Clock className="h-4 w-4 text-yellow-600" />
-                  <span className="font-medium text-yellow-800">Buffer Time: {bufferTimeMinutes} minutes</span>
+              <div className="p-4 bg-gradient-to-r from-teal-50 to-blue-50 rounded-xl border border-teal-200 shadow-sm">
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="p-2 bg-teal-500 rounded-full">
+                    <Clock className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="font-semibold text-teal-800">Buffer Time: {bufferTimeMinutes} minutes</span>
                 </div>
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-teal-700">
                   Automatic rest periods are included between bookings to ensure adequate preparation time.
                 </p>
               </div>
@@ -442,18 +450,23 @@ export default function GoogleCalendarIntegration({
                       {/* Available Slots */}
                       {getAvailableSlots().length > 0 ? (
                         <div>
-                          <div className="text-sm font-medium text-green-700 mb-2">
-                            ✓ Available Slots ({getAvailableSlots().length})
+                          <div className="flex items-center space-x-2 mb-3">
+                            <div className="p-1 bg-emerald-500 rounded-full">
+                              <CheckCircle className="h-3 w-3 text-white" />
+                            </div>
+                            <span className="text-sm font-semibold text-emerald-700">
+                              Available Slots ({getAvailableSlots().length})
+                            </span>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                             {getAvailableSlots().map((slot) => (
                               <button
                                 key={`${slot.start}-${slot.end}`}
                                 onClick={() => setSelectedSlot(slot)}
-                                className={`p-3 rounded-lg border text-sm font-medium transition-all ${
+                                className={`p-3 rounded-xl border text-sm font-medium transition-all duration-200 shadow-sm ${
                                   selectedSlot === slot
-                                    ? 'bg-green-100 border-green-300 text-green-800 ring-2 ring-green-200'
-                                    : 'bg-white border-green-200 hover:bg-green-50 text-green-700 hover:border-green-300'
+                                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 border-emerald-300 text-white ring-2 ring-emerald-200 shadow-lg transform scale-105'
+                                    : 'bg-white border-emerald-200 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 text-emerald-700 hover:border-emerald-300 hover:shadow-md'
                                 }`}
                               >
                                 {formatTimeSlot(slot)}
@@ -471,22 +484,27 @@ export default function GoogleCalendarIntegration({
                       {/* Unavailable Slots with Reasons */}
                       {getUnavailableSlots().length > 0 && (
                         <div>
-                          <div className="text-sm font-medium text-gray-600 mb-2">
-                            ⚠️ Unavailable Slots ({getUnavailableSlots().length})
+                          <div className="flex items-center space-x-2 mb-3">
+                            <div className="p-1 bg-gray-400 rounded-full">
+                              <AlertCircle className="h-3 w-3 text-white" />
+                            </div>
+                            <span className="text-sm font-semibold text-gray-600">
+                              Unavailable Slots ({getUnavailableSlots().length})
+                            </span>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                             {getUnavailableSlots().slice(0, 8).map((slot, index) => (
                               <div
                                 key={`unavailable-${slot.start}-${slot.end}`}
-                                className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-500"
+                                className="p-3 rounded-xl border border-gray-200 bg-gray-50 text-xs text-gray-500 shadow-sm"
                               >
-                                <div className="font-medium">{formatTimeSlot(slot)}</div>
-                                <div className="text-xs mt-1">{slot.reason}</div>
+                                <div className="font-medium text-gray-700">{formatTimeSlot(slot)}</div>
+                                <div className="text-xs mt-1 text-gray-500">{slot.reason}</div>
                               </div>
                             ))}
                           </div>
                           {getUnavailableSlots().length > 8 && (
-                            <div className="text-xs text-gray-500 mt-2">
+                            <div className="text-xs text-gray-500 mt-3 text-center p-2 bg-gray-50 rounded-lg">
                               +{getUnavailableSlots().length - 8} more unavailable slots
                             </div>
                           )}
@@ -499,8 +517,13 @@ export default function GoogleCalendarIntegration({
 
               {/* Booking Form */}
               {selectedSlot && (
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-semibold text-gray-900">Complete Your Booking</h4>
+                <div className="space-y-6 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 shadow-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-emerald-500 rounded-full">
+                      <CheckCircle className="h-5 w-5 text-white" />
+                    </div>
+                    <h4 className="text-lg font-bold text-emerald-900">Complete Your Booking</h4>
+                  </div>
                   
                   {/* Lesson Duration */}
                   <div>
@@ -559,32 +582,52 @@ export default function GoogleCalendarIntegration({
                   </div>
 
                   {/* Booking Summary */}
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <h5 className="font-medium text-blue-900 mb-2">Booking Summary</h5>
-                    <div className="space-y-1 text-sm text-blue-800">
-                      <div>Date: {format(parseISO(selectedDate), 'EEEE, MMMM dd, yyyy')}</div>
-                      <div>Time: {formatTimeSlot(selectedSlot)}</div>
-                      <div>Duration: {lessonHours} hour{lessonHours > 1 ? 's' : ''}</div>
-                      {location && <div>Location: {location}</div>}
-                      <div>Buffer time: {bufferTimeMinutes} minutes included</div>
+                  <div className="p-4 bg-gradient-to-r from-teal-50 to-blue-50 rounded-xl border border-teal-200 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Calendar className="h-5 w-5 text-teal-600" />
+                      <h5 className="font-semibold text-teal-900">Booking Summary</h5>
+                    </div>
+                    <div className="space-y-2 text-sm text-teal-800">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Date:</span>
+                        <span>{format(parseISO(selectedDate), 'EEEE, MMMM dd, yyyy')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Time:</span>
+                        <span>{formatTimeSlot(selectedSlot)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Duration:</span>
+                        <span>{lessonHours} hour{lessonHours > 1 ? 's' : ''}</span>
+                      </div>
+                      {location && (
+                        <div className="flex justify-between">
+                          <span className="font-medium">Location:</span>
+                          <span>{location}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-xs text-teal-600 pt-2 border-t border-teal-200">
+                        <span>Buffer time:</span>
+                        <span>{bufferTimeMinutes} minutes included</span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-3">
                     <Button 
                       onClick={handleBookLesson}
                       disabled={!location || booking}
-                      className="flex-1"
+                      className="flex-1 h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg font-semibold"
                     >
                       {booking ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Booking...
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          Booking Lesson...
                         </>
                       ) : (
                         <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
+                          <CheckCircle className="h-5 w-5 mr-2" />
                           Confirm Booking
                         </>
                       )}
@@ -593,6 +636,7 @@ export default function GoogleCalendarIntegration({
                       variant="outline" 
                       onClick={() => setSelectedSlot(null)}
                       disabled={booking}
+                      className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                     >
                       Cancel
                     </Button>

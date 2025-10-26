@@ -12,6 +12,7 @@ import { GlobalContentProvider } from "@/contexts/globalContentContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AndroidStyleEditor } from "@/components/drag-drop/AndroidStyleEditor";
 import { ReactQueryProvider } from "@/components/providers";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 
 // Optimized font loading
 const geistSans = Geist({
@@ -156,7 +157,7 @@ export default function RootLayout({
         >
           <ReactQueryProvider>
             <ThemeProvider>
-              <Suspense fallback={<div>Loading...</div>}>
+              <Suspense fallback={<LoadingIndicator size="large" text="Loading application..." className="items-center text-center" />}>
                 <EditModeProvider>
                   <GlobalContentProvider>
                     <PostSignupWrapper>

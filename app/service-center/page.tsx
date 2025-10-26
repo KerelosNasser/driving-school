@@ -16,8 +16,10 @@ import NegotiationTab from './components/NegotiationTab';
 import TransactionHistoryTab from './components/TransactionHistoryTab';
 import InvitationDashboard from '@/components/InvitationDashboard';
 
+
 import UserDataDisplay from './components/UserDataDisplay';
 import UserDataReview from './components/UserDataReview';
+import { LoadingIndicator } from '@/components/ui/loading-indicator';
 
 interface UserQuota {
   user_id: string;
@@ -151,10 +153,7 @@ export default function ServiceCenterPage() {
       <div className="min-h-screen bg-gradient-to-r from-emerald-900/95 via-teal-800/90 to-blue-900/95 flex items-center justify-center px-4">
         <div className="flex flex-col items-center space-y-4 p-6 bg-white/90 backdrop-blur-sm rounded-xl shadow-xl">
           <Car className="h-10 w-10 text-emerald-600" />
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
-            <span className="text-base font-medium text-gray-700">Loading dashboard...</span>
-          </div>
+          <LoadingIndicator color="#059669" size="medium" text="Loading dashboard..." variant="bars" />
         </div>
       </div>
     );
@@ -293,8 +292,7 @@ export default function ServiceCenterPage() {
               <CardContent className="relative z-10">
                 {loading ? (
                   <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-5 w-5 animate-spin text-emerald-200 mr-3" />
-                    <span className="text-emerald-100 text-base">Loading progress...</span>
+                    <LoadingIndicator color="#a7f3d0" size="small" text="Loading progress..." variant="lines" />
                   </div>
                 ) : error ? (
                   <Alert className="bg-red-500/20 border-red-300/30">
@@ -383,7 +381,7 @@ export default function ServiceCenterPage() {
           <div className="max-w-6xl mx-auto">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <div className="flex justify-center mb-6">
-                <TabsList className="grid grid-cols-5 h-12 w-full max-w-3xl bg-gradient-to-r from-emerald-50/90 via-teal-50/90 to-blue-50/90 backdrop-blur-sm border border-emerald-200/50 shadow-lg rounded-lg p-1">
+                <TabsList className="grid grid-cols-6 h-12 w-full max-w-3xl bg-gradient-to-r from-emerald-50/90 via-teal-50/90 to-blue-50/90 backdrop-blur-sm border border-emerald-200/50 shadow-lg rounded-lg p-1">
                   <TabsTrigger
                     value="quota"
                     className="flex items-center justify-center space-x-1 rounded-md font-medium text-xs
@@ -408,6 +406,7 @@ export default function ServiceCenterPage() {
                     <MessageSquare className="h-4 w-4" />
                     <span className="hidden sm:inline">Chat</span>
                   </TabsTrigger>
+
                   <TabsTrigger
                     value="history"
                     className="flex items-center justify-center space-x-1 rounded-md font-medium text-xs
@@ -462,6 +461,8 @@ export default function ServiceCenterPage() {
                   <NegotiationTab />
                 </div>
               </TabsContent>
+
+
 
               <TabsContent value="history" className="mt-0">
                 <div className="bg-white/95 backdrop-blur-sm rounded-lg border border-emerald-200/50 shadow-lg p-4">

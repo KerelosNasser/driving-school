@@ -1,8 +1,6 @@
 import { ApolloServer } from '@apollo/server';
 import { startServerAndCreateNextHandler } from '@as-integrations/next';
 import { makeExecutableSchema } from '@graphql-tools/schema';
-import { applyMiddleware } from 'graphql-middleware';
-import { shield, rule, and, or } from 'graphql-shield';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import depthLimit from 'graphql-depth-limit';
 import { GraphQLError } from 'graphql';
@@ -19,7 +17,7 @@ import { supabaseAdmin } from '@/lib/api/utils';
 // Modern PubSub instance for subscriptions
 const pubsub = new PubSub();
 
-// Rate limiters configuration
+// Rate limiters configuration (keeping basic rate limiting for security)
 const rateLimiters = {
   general: new RateLimiterMemory({
     keyGenerator: (root, args, context) => context.req.ip || 'anonymous',
@@ -37,86 +35,6 @@ const rateLimiters = {
     duration: 60, // Per 60 seconds
   }),
 };
-
-// Authentication rules
-const isAuthenticated = rule({ cache: 'contextual' })(
-  async (parent, args, context) => {
-    return context.user !== null;
-  }
-);
-
-const isAdmin = rule({ cache: 'contextual' })(
-  async (parent, args, context) => {
-    return context.user && context.user.role === 'admin';
-  }
-);
-
-const isOwner = rule({ cache: 'contextual' })(
-  async (parent, args, context) => {
-    if (!context.user) return false;
-    
-    // For user-specific operations, check if the user is accessing their own data
-    if (args.userId) {
-      return context.user.id === args.userId;
-    }
-    
-    return true;
-  }
-);
-
-// Rate limiting rules
-const rateLimit = (limiter: RateLimiterMemory) => rule({ cache: 'no_cache' })(
-  async (parent, args, context) => {
-    try {
-      await limiter.consume(context.req.ip || 'anonymous');
-      return true;
-    } catch (rejRes) {
-      throw new GraphQLError(
-        `Rate limit exceeded. Try again in ${Math.round((rejRes as { msBeforeNext: number }).msBeforeNext / 1000)} seconds.`,
-        {
-          extensions: {
-            code: 'RATE_LIMITED',
-            retryAfter: (rejRes as { msBeforeNext: number }).msBeforeNext
-          }
-        }
-      );
-    }
-  }
-);
-
-// Security shield
-const permissions = shield({
-  Query: {
-    '*': rateLimit(rateLimiters.general),
-    me: isAuthenticated,
-    myBookings: isAuthenticated,
-    myQuota: isAuthenticated,
-    myNotifications: isAuthenticated,
-    users: isAdmin,
-    bookings: isAdmin,
-    quotaTransactions: and(isAuthenticated, or(isAdmin, isOwner)),
-  },
-  Mutation: {
-    '*': and(rateLimit(rateLimiters.mutation), isAuthenticated),
-    createUser: rateLimit(rateLimiters.general), // Allow unauthenticated user creation
-    createReview: rateLimit(rateLimiters.general), // Allow unauthenticated reviews
-    createPackage: isAdmin,
-    updatePackage: isAdmin,
-    deletePackage: isAdmin,
-    updateBooking: isAdmin,
-    purchaseQuota: isAuthenticated,
-    consumeQuota: isAuthenticated,
-    refundQuota: isAdmin,
-  },
-  Subscription: {
-    '*': and(rateLimit(rateLimiters.subscription), isAuthenticated),
-  },
-}, {
-  allowExternalErrors: true,
-  fallbackError: new GraphQLError('Access denied', {
-    extensions: { code: 'FORBIDDEN' }
-  })
-});
 
 // Modern Query Complexity Plugin Configuration
 const createQueryComplexityPlugin = () => {
@@ -211,13 +129,6 @@ const securityConfig = {
 
 interface GraphQLContext {
   req: NextRequest;
-  user?: {
-    id: string;
-    email: string;
-    role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
-    permissions: string[];
-    sessionId: string;
-  } | null;
   dataloaders: ReturnType<typeof createDataLoaders>;
   supabase: typeof supabaseAdmin;
   pubsub: PubSub;
@@ -233,44 +144,8 @@ const createContext = async ({ req }: { req: NextRequest }): Promise<GraphQLCont
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
   const userAgent = req.headers.get('user-agent') || 'unknown';
   
-  let user: GraphQLContext['user'] = null;
-  
-  try {
-    // Extract JWT token from Authorization header
-    const authHeader = req.headers.get('authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      
-      // Verify JWT token with Supabase
-      const { data: { user: authUser }, error } = await supabaseAdmin.auth.getUser(token);
-      
-      if (!error && authUser) {
-        // Get additional user data from database
-        const { data: userData } = await supabaseAdmin
-          .from('users')
-          .select('id, email, role, permissions')
-          .eq('id', authUser.id)
-          .single();
-        
-        if (userData) {
-          user = {
-            id: authUser.id,
-            email: authUser.email || '',
-            role: userData.role || 'STUDENT',
-            permissions: userData.permissions || [],
-            sessionId: authUser.session?.access_token?.substring(0, 8) || requestId.substring(0, 8),
-          };
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Authentication error:', error);
-    // Continue with null user for public queries
-  }
-  
   return {
     req,
-    user,
     dataloaders: createDataLoaders(),
     supabase: supabaseAdmin,
     pubsub,
@@ -287,8 +162,8 @@ const baseSchema = makeExecutableSchema({
   resolvers,
 });
 
-// Apply middleware to schema
-const schema = applyMiddleware(baseSchema, permissions);
+// No authentication middleware applied - all operations are public
+const schema = baseSchema;
 
 // WebSocket server setup for subscriptions
 const httpServer = createServer();

@@ -11,10 +11,11 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { Search, Loader2, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useBookings } from '@/hooks/useBookings';
 import { Booking } from '@/lib/types';
+import { LoadingIndicator } from '@/components/ui/loading-indicator';
 
 interface BookingsTabProps {
   bookings: Booking[];
@@ -127,8 +128,7 @@ export const BookingsTab = ({ bookings, loading, onBookingUpdate }: BookingsTabP
           </div>
           
           {loading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            <div className="flex justify-center items-center py-10">              <LoadingIndicator color="#6b7280" size="large" variant="bars" />
             </div>
           ) : (
             <div className="space-y-4">
@@ -268,7 +268,7 @@ export const BookingsTab = ({ bookings, loading, onBookingUpdate }: BookingsTabP
             >
               {isUpdating ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <LoadingIndicator color="#ffffff" size="small" variant="lines" />
                   Updating...
                 </>
               ) : (

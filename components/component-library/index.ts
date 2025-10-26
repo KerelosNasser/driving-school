@@ -10,6 +10,7 @@ export {
   RowComponentEdit
 } from './LayoutComponents';
 export { ButtonComponentPreview, ButtonComponentEdit } from './ButtonComponent';
+export { LoadingIndicator } from '../ui/loading-indicator';
 
 // Component registration helper
 import { ComponentRenderer } from '../../lib/components/ComponentRenderer';

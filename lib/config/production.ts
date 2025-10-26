@@ -10,21 +10,8 @@ export interface ProductionConfig {
   supabaseAnonKey: string
   supabaseServiceKey: string
 
-  // Authentication
-  clerkPublishableKey: string
-  clerkSecretKey: string
-  nextAuthSecret: string
-  jwtSecret: string
-
   // Google Services
-  googleOAuthClientId: string
-  googleOAuthClientSecret: string
-  googleCalendarApiKey: string
   googlePlacesApiKey: string
-
-  // Redis
-  redisUrl?: string
-  redisToken?: string
 
   // Email
   smtpHost?: string
@@ -47,13 +34,6 @@ const requiredEnvVars = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
-  'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-  'CLERK_SECRET_KEY',
-  'NEXTAUTH_SECRET',
-  'JWT_SECRET',
-  'GOOGLE_OAUTH_CLIENT_ID',
-  'GOOGLE_OAUTH_CLIENT_SECRET',
-  'GOOGLE_CALENDAR_API_KEY',
   'NEXT_PUBLIC_GOOGLE_PLACES_API_KEY'
 ]
 
@@ -84,21 +64,8 @@ export function validateEnvironment(): ProductionConfig {
     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
 
-    // Authentication
-    clerkPublishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!,
-    clerkSecretKey: process.env.CLERK_SECRET_KEY!,
-    nextAuthSecret: process.env.NEXTAUTH_SECRET!,
-    jwtSecret: process.env.JWT_SECRET!,
-
     // Google Services
-    googleOAuthClientId: process.env.GOOGLE_OAUTH_CLIENT_ID!,
-    googleOAuthClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
-    googleCalendarApiKey: process.env.GOOGLE_CALENDAR_API_KEY!,
     googlePlacesApiKey: process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY!,
-
-    // Redis (optional)
-    redisUrl: process.env.UPSTASH_REDIS_REST_URL,
-    redisToken: process.env.UPSTASH_REDIS_REST_TOKEN,
 
     // Email (optional)
     smtpHost: process.env.SMTP_HOST,
@@ -126,7 +93,6 @@ try {
     
     // Log which optional services are configured
     const configuredServices = []
-    if (config.redisUrl) configuredServices.push('Redis')
     if (config.smtpHost) configuredServices.push('Email')
     if (config.sentryDsn) configuredServices.push('Sentry')
     if (config.stripeSecretKey) configuredServices.push('Stripe')

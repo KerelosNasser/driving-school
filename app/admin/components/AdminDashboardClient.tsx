@@ -28,6 +28,7 @@ import { BookingsTab } from './BookingsTab';
 import { UsersTab } from './UsersTab';
 import { ReviewsTab } from './ReviewsTab';
 import { CalendarTab } from './CalendarTab';
+import { CalendarSettingsTab } from './CalendarSettingsTab';
 import { PackagesTab } from './PackagesTab';
 import { SEOTab } from './SEOTab';
 import { DirectPagesTab } from './DirectPagesTab';
@@ -108,6 +109,13 @@ const navigationItems = [
     label: 'Calendar',
     icon: CalendarDays,
     description: 'Schedule View',
+    category: 'business'
+  },
+  {
+    id: 'calendar-settings',
+    label: 'Calendar Settings',
+    icon: CalendarDays,
+    description: 'Buffer Time, Hours & Vacation Days',
     category: 'business'
   },
   {
@@ -215,6 +223,8 @@ export function AdminDashboardClient({
             }))} 
           />
         );
+      case 'calendar-settings':
+        return <CalendarSettingsTab />;
       case 'pages':
         return <DirectPagesTab />;
       case 'forms':
@@ -424,6 +434,7 @@ export function AdminDashboardClient({
                 activeItem?.id === 'packages' && "bg-gradient-to-r from-emerald-500 to-teal-600",
                 activeItem?.id === 'reviews' && "bg-gradient-to-r from-emerald-500 to-teal-600",
                 activeItem?.id === 'calendar' && "bg-gradient-to-r from-emerald-500 to-teal-600",
+                activeItem?.id === 'calendar-settings' && "bg-gradient-to-r from-emerald-500 to-teal-600",
                 activeItem?.id === 'pages' && "bg-gradient-to-r from-emerald-500 to-teal-600",
                 activeItem?.id === 'forms' && "bg-gradient-to-r from-emerald-500 to-teal-600",
                 activeItem?.id === 'maps' && "bg-gradient-to-r from-emerald-500 to-teal-600",

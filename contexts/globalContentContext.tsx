@@ -54,19 +54,23 @@ export function GlobalContentProvider({ children }: { children: ReactNode }) {
 
     const fetchGlobalContent = async () => {
         try {
-            const response = await fetch('/api/admin/content?page=global').catch((e) => null);
+            const response = await fetch('/api/admin/content?page=global').catch(() => null);
             if (response && response.ok) {
                 const { data } = await response.json();
                 const contentMap: Partial<GlobalContent> = {};
 
-                data.forEach((item: any) => {
-                    const key = item.content_key as keyof GlobalContent;
-                    if (item.content_type === 'json') {
-                        contentMap[key] = item.content_json as any;
-                    } else if (item.content_type === 'text') {
-                        contentMap[key] = item.content_value as any;
-                    }
-                });
+                if (data && Array.isArray(data)) {
+                    data.forEach((item: any) => {
+                        const key = item.content_key as keyof GlobalContent;
+                        if (item.content_type === 'json') {
+                            // @ts-ignore
+                            contentMap[key] = item.content_json as any;
+                        } else if (item.content_type === 'text') {
+                            // @ts-ignore
+                            contentMap[key] = item.content_value as any;
+                        }
+                    });
+                }
 
                 setContent(prev => ({ ...prev, ...contentMap }));
             } else {
