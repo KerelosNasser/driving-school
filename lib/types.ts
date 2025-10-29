@@ -7,8 +7,7 @@ export interface Package {
   features: string[];
   popular: boolean;
   created_at: string;
-  stripe_price_id?: string;
-  stripe_product_id?: string;
+  payment_id?: string;
 }
 
 export interface Review {

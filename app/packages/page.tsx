@@ -12,7 +12,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EditableTermsConditions } from '@/components/ui/editable-terms-conditions';
-import { supabase } from '@/lib/supabase';
 import { useUser } from '@clerk/nextjs';
 import type { Package } from '@/lib/supabase';
 import GoogleCalendarIntegration from '@/app/service-center/components/GoogleCalendarIntegration';
@@ -27,8 +26,8 @@ export default function PackagesPage() {
   const [quota, setQuota] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('packages');
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const { user, isSignedIn } = useUser();
+  const [_paymentError, setPaymentError] = useState<string | null>(null);
+  const { user: _user, isSignedIn } = useUser();
 
   const handlePurchaseQuota = async (packageId: string, paymentMethod: string = 'payid') => {
     if (!isSignedIn) {
@@ -133,26 +132,29 @@ export default function PackagesPage() {
     setTimeout(() => setBookingSuccess(null), 5000);
   };
 
-  // Fetch packages and quota from Supabase
+  // Fetch packages and quota from API
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data, error } = await supabase
-          .from('packages')
-          .select('*')
-          .order('price', { ascending: true });
+        const packagesResponse = await fetch('/api/packages');
+        const packagesResult = await packagesResponse.json();
 
-        console.log('Packages fetch result:', { data, error });
+        if (!packagesResponse.ok) {
+          throw new Error(packagesResult.error || `HTTP ${packagesResponse.status}`);
+        }
 
-        if (error) {
-          console.error('Error fetching packages:', error);
-        } else if (data && data.length > 0) {
-          console.log('Setting packages:', data);
-          setPackages(data as Package[]);
-          setSelectedPackage(data[0].id);
-          console.log('Selected package ID:', data[0].id);
+        console.log('Packages fetch result:', packagesResult);
+
+        if (packagesResult.packages && packagesResult.packages.length > 0) {
+          const sortedPackages = packagesResult.packages.sort((a, b) => a.price - b.price);
+          setPackages(sortedPackages as Package[]);
+          setSelectedPackage(sortedPackages[0].id);
+          console.log('Selected package ID:', sortedPackages[0].id);
         } else {
           console.log('No packages found in database');
+          if (packagesResult.warning) {
+            console.warn(packagesResult.warning);
+          }
         }
 
         // Fetch quota if user is signed in
@@ -160,7 +162,9 @@ export default function PackagesPage() {
           await fetchQuota();
         }
       } catch (error) {
-        console.error('Error in data fetch:', error);
+        console.error('Error fetching packages:', error);
+        // Set packages to empty array instead of throwing
+        setPackages([]);
       } finally {
         setLoading(false);
       }
@@ -497,8 +501,8 @@ export default function PackagesPage() {
                           <div className="space-y-6">
                             <h3 className="text-2xl font-bold text-gray-900 mb-6">What's Included</h3>
                             <div className="space-y-4">
-                              {selectedPackageDetails.features.map((feature, index) => (
-                                <div key={index} className="flex items-start p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+                              {selectedPackageDetails.features.map((feature, _index) => (
+                                <div key={_index} className="flex items-start p-4 bg-white rounded-xl shadow-sm border border-gray-100">
                                   <CheckCircle2 className="h-6 w-6 text-green-500 mr-4 shrink-0 mt-0.5" />
                                   <span className="text-gray-700 font-medium">{feature}</span>
                                 </div>

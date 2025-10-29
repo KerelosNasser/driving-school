@@ -12,12 +12,12 @@ export async function POST(request: NextRequest) {
     console.log('Request body:', body);
     
     // Check environment variables
-    const hasStripeKey = !!process.env.STRIPE_SECRET_KEY;
     const hasBaseUrl = !!process.env.NEXT_PUBLIC_BASE_URL;
+    const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
     
     console.log('Environment check:', {
-      hasStripeKey,
       hasBaseUrl,
+      hasSupabaseUrl,
       baseUrl: process.env.NEXT_PUBLIC_BASE_URL
     });
     
@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
       clerkUserId,
       body,
       env: {
-        hasStripeKey,
         hasBaseUrl,
+        hasSupabaseUrl,
         baseUrl: process.env.NEXT_PUBLIC_BASE_URL
       }
     });

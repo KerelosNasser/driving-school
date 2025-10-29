@@ -18,7 +18,7 @@ export function TrustSignals() {
         </div>
         <div className="flex items-center space-x-2">
           <CheckCircle className="h-4 w-4 text-green-600" />
-          <span className="text-xs font-medium text-green-800">Stripe Verified</span>
+          <span className="text-xs font-medium text-green-800">Payment ID Verified</span>
         </div>
         <div className="flex items-center space-x-2">
           <CreditCard className="h-4 w-4 text-green-600" />

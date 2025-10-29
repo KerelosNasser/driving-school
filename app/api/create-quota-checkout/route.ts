@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import Stripe from 'stripe';
 import { supabase } from '@/lib/supabase';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-});
+import { PaymentIdService } from '@/lib/payment-id-service';
 
 // Server admin client (use only on server & keep env secret)
 const supabaseAdmin = createClient(
@@ -19,7 +15,7 @@ const supabaseAdmin = createClient(
 // Input validation schema
 const checkoutSchema = z.object({
   packageId: z.string().min(1, 'Package ID is required'),
-  paymentGateway: z.string().optional().default('stripe'),
+  paymentGateway: z.string().optional().default('payid'),
   acceptedTerms: z.boolean().refine(val => val === true, {
     message: 'You must accept the terms and conditions to proceed',
   }),
@@ -171,63 +167,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create enhanced Stripe checkout session
-    console.log('💳 Creating Stripe checkout session...');
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'aud',
-            product_data: {
-              name: `${packageData.name} - Driving Lesson Hours`,
-              description: `${packageData.hours} hours of professional driving instruction`,
-              metadata: {
-                package_id: packageId,
-                hours: packageData.hours.toString(),
-              },
-            },
-            unit_amount: Math.round(packageData.price * 100), // Convert to cents
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/service-center?quota_purchase=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/packages?quota_purchase=cancelled`,
-      customer_email: userRow.email,
-      billing_address_collection: 'required',
-      payment_intent_data: {
-        metadata: {
-          type: 'quota_purchase',
-          user_id: userRow.id,
-          package_id: packageId,
-        },
-      },
-      metadata: {
-        type: 'quota_purchase',
+    // Create payment ID for the transaction
+    console.log('💳 Creating payment ID...');
+    const paymentId = PaymentIdService.generatePaymentId();
+    
+    // Store payment record in database
+    const { error: paymentError } = await supabaseAdmin
+      .from('payments')
+      .insert({
+        payment_id: paymentId,
         user_id: userRow.id,
         package_id: packageId,
-        package_name: packageData.name,
-        hours: packageData.hours.toString(),
-        price: packageData.price.toString(),
-        user_email: userRow.email,
-        user_name: userRow.full_name,
-        payment_gateway: paymentGateway,
-      },
-      consent_collection: {
-        terms_of_service: 'required',
-      },
-      expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes expiry
-    });
+        amount: packageData.price,
+        currency: 'AUD',
+        payment_method: paymentGateway,
+        status: 'pending',
+        metadata: {
+          type: 'quota_purchase',
+          package_name: packageData.name,
+          hours: packageData.hours,
+          user_email: userRow.email,
+          user_name: userRow.full_name,
+        }
+      });
 
-    console.log('✅ Stripe session created successfully:', session.id);
+    if (paymentError) {
+      console.log('❌ Error creating payment record:', paymentError);
+      return NextResponse.json(
+        {
+          error: 'Payment initialization failed',
+          details: paymentError.message,
+          step: 'payment_creation',
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ Payment ID created successfully:', paymentId);
 
     return NextResponse.json({
-      sessionId: session.id,
-      url: session.url,
-      expiresAt: session.expires_at,
+      paymentId: paymentId,
+      amount: packageData.price,
+      currency: 'AUD',
+      paymentMethod: paymentGateway,
       success: true,
+      redirectUrl: `/service-center?payment_id=${paymentId}&status=pending`,
     });
   } catch (error) {
     console.error('💥 Checkout API Error:', error);
@@ -245,15 +229,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Handle Stripe errors
+    // Handle payment ID errors
     if (error instanceof Error) {
-      if (error.message.includes('stripe') || error.message.includes('Stripe')) {
-        console.log('❌ Stripe error:', error.message);
+      if (error.message.includes('payment_id') || error.message.includes('PaymentId')) {
+        console.log('❌ Payment ID error:', error.message);
         return NextResponse.json(
           {
-            error: 'Payment service error',
+            error: 'Payment ID generation failed',
             details: error.message,
-            step: 'stripe',
+            step: 'payment_id',
           },
           { status: 503 }
         );

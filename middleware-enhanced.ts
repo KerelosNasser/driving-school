@@ -14,11 +14,11 @@ export default clerkMiddleware((auth, req) => {
   // Content Security Policy for payment security
   response.headers.set('Content-Security-Policy', 
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' js.stripe.com; " +
+    "script-src 'self' 'unsafe-inline'; " +
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: https:; " +
-    "connect-src 'self' api.stripe.com; " +
-    "frame-src js.stripe.com;"
+    "connect-src 'self'; " +
+    "frame-src 'self';"
   );
   
   // HSTS for HTTPS enforcement

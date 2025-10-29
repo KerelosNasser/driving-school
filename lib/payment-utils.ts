@@ -45,14 +45,6 @@ export const PAYMENT_GATEWAYS: PaymentGateway[] = [
     type: 'manual'
   },
   {
-    id: 'stripe',
-    name: 'Credit/Debit Card',
-    fees: '2.9% + 30¢',
-    supported: true,
-    recommended: false,
-    type: 'automated'
-  },
-  {
     id: 'afterpay',
     name: 'Afterpay',
     fees: '3.5% + 30¢',
@@ -82,16 +74,6 @@ export function parsePaymentError(error: any): PaymentError {
     };
   }
 
-  // Handle Stripe errors
-  if (error.type === 'StripeCardError') {
-    return {
-      code: error.code || 'CARD_ERROR',
-      message: error.message || 'Your card was declined. Please check your card details and try again.',
-      type: 'gateway',
-      recoverable: true
-    };
-  }
-
   // Handle validation errors
   if (error.type === 'validation') {
     return {
@@ -112,16 +94,6 @@ export function parsePaymentError(error: any): PaymentError {
     };
   }
 
-  // Handle gateway-specific errors
-  if (error.step === 'stripe') {
-    return {
-      code: 'STRIPE_ERROR',
-      message: error.details || 'Payment processor error. Please try again or use a different payment method.',
-      type: 'gateway',
-      recoverable: true
-    };
-  }
-
   // Handle manual payment errors
   if (error.step === 'manual') {
     return {
@@ -129,6 +101,16 @@ export function parsePaymentError(error: any): PaymentError {
       message: error.details || 'Payment processing error. Please contact support.',
       type: 'gateway',
       recoverable: false
+    };
+  }
+
+  // Handle payment ID errors
+  if (error.step === 'payment_id') {
+    return {
+      code: 'PAYMENT_ID_ERROR',
+      message: error.details || 'Payment ID generation or validation error. Please try again.',
+      type: 'gateway',
+      recoverable: true
     };
   }
 

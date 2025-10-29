@@ -64,7 +64,7 @@ export const webhookRateLimit = {
   windowMs: 60 * 1000, // 1 minute
   maxRequests: 100, // 100 webhook calls per minute
   keyGenerator: (req: NextRequest) => {
-    return `webhook:${req.headers.get('stripe-signature')?.slice(0, 10) || 'unknown'}`;
+    return `webhook:${req.headers.get('x-webhook-signature')?.slice(0, 10) || 'unknown'}`;
   }
 };
 

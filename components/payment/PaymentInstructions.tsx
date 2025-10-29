@@ -30,13 +30,13 @@ export function PaymentInstructions({ paymentData, onPaymentComplete }: PaymentI
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const renderStripeInstructions = () => (
+  const renderAfterPayInstructions = () => (
     <div className="space-y-4">
-      <div className="text-center p-4 bg-blue-50 rounded-lg">
-        <CreditCard className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-        <h3 className="font-semibold text-lg">Redirecting to Secure Payment</h3>
+      <div className="text-center p-4 bg-purple-50 rounded-lg">
+        <CreditCard className="h-12 w-12 text-purple-600 mx-auto mb-2" />
+        <h3 className="font-semibold text-lg">Redirecting to Afterpay</h3>
         <p className="text-gray-600">
-          You will be redirected to our secure payment processor to complete your purchase.
+          You will be redirected to Afterpay to complete your purchase with flexible payment options.
         </p>
       </div>
       
@@ -45,11 +45,11 @@ export function PaymentInstructions({ paymentData, onPaymentComplete }: PaymentI
         <ul className="text-sm space-y-1 text-gray-600">
           <li className="flex items-start">
             <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
-            Enter your card details on the secure payment page
+            Set up your Afterpay payment plan
           </li>
           <li className="flex items-start">
             <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
-            Confirm your payment
+            Confirm your payment schedule
           </li>
           <li className="flex items-start">
             <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
@@ -290,8 +290,7 @@ export function PaymentInstructions({ paymentData, onPaymentComplete }: PaymentI
         </CardHeader>
         <CardContent>
           <AnimatePresence mode="wait">
-            {paymentData.paymentMethod === 'stripe' && renderStripeInstructions()}
-            {paymentData.paymentMethod === 'afterpay' && renderStripeInstructions()}
+            {paymentData.paymentMethod === 'afterpay' && renderAfterPayInstructions()}
             {paymentData.paymentMethod === 'tyro' && renderTyroInstructions()}
             {paymentData.paymentMethod === 'bpay' && renderBPAYInstructions()}
             {paymentData.paymentMethod === 'payid' && renderPayIDInstructions()}

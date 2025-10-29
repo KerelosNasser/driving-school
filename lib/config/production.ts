@@ -21,10 +21,6 @@ export interface ProductionConfig {
 
   // Monitoring
   sentryDsn?: string
-
-  // Payment
-  stripePublishableKey?: string
-  stripeSecretKey?: string
 }
 
 // Required environment variables for production
@@ -75,10 +71,6 @@ export function validateEnvironment(): ProductionConfig {
 
     // Monitoring (optional)
     sentryDsn: process.env.SENTRY_DSN,
-
-    // Payment (optional)
-    stripePublishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-    stripeSecretKey: process.env.STRIPE_SECRET_KEY,
   }
 }
 
@@ -95,7 +87,6 @@ try {
     const configuredServices = []
     if (config.smtpHost) configuredServices.push('Email')
     if (config.sentryDsn) configuredServices.push('Sentry')
-    if (config.stripeSecretKey) configuredServices.push('Stripe')
     
     if (configuredServices.length > 0) {
       console.log(`📦 Configured services: ${configuredServices.join(', ')}`)

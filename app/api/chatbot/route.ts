@@ -234,7 +234,7 @@ const knowledgeBase = {
   policies: {
     cancellation: "24 hours notice required for cancellations",
     rescheduling: "Free rescheduling up to 24 hours before lesson",
-    payment: "Secure online payment via Stripe",
+    payment: "Secure online payment via PayID and other methods",
     refund: "Full refund for unused lessons with 48 hours notice"
   }
 };

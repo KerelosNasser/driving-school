@@ -131,7 +131,6 @@ export default function RootLayout({
             crossOrigin="anonymous"
           />
           <link rel="preconnect" href="https://images.unsplash.com" />
-          <link rel="preconnect" href="https://api.stripe.com" />
 
           {/* DNS prefetch for external resources */}
           <link rel="dns-prefetch" href="https://widget.chatbot.com" />

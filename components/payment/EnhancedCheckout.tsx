@@ -72,14 +72,6 @@ export function EnhancedCheckout({ packageDetails, onPurchase }: EnhancedCheckou
       color: 'from-purple-500 to-violet-600'
     },
     { 
-      id: 'stripe', 
-      name: 'Credit Card', 
-      icon: CreditCard, 
-      description: 'Visa, Mastercard, American Express',
-      fee: '2.9% + 30¢',
-      color: 'from-gray-600 to-gray-800'
-    },
-    { 
       id: 'afterpay', 
       name: 'Afterpay', 
       icon: Clock, 
@@ -118,7 +110,6 @@ export function EnhancedCheckout({ packageDetails, onPurchase }: EnhancedCheckou
       case 'payid': return <QrCode className="h-5 w-5" />;
       case 'tyro': return <CreditCard className="h-5 w-5" />;
       case 'bpay': return <Banknote className="h-5 w-5" />;
-      case 'stripe': return <CreditCard className="h-5 w-5" />;
       case 'afterpay': return <Clock className="h-5 w-5" />;
       default: return <CreditCard className="h-5 w-5" />;
     }
