@@ -1,12 +1,20 @@
-import { Redis } from '@upstash/redis'
+interface CacheItem {
+  value: any
+  expiry: number
+}
 
-// Initialize Redis client
-const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    })
-  : null
+// Simple in-memory cache
+const memoryCache = new Map<string, CacheItem>()
+
+// Clean up expired items periodically
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, item] of memoryCache.entries()) {
+    if (item.expiry < now) {
+      memoryCache.delete(key)
+    }
+  }
+}, 60000) // Clean up every minute
 
 // Cache configuration
 const CACHE_TTL = {
@@ -18,11 +26,16 @@ const CACHE_TTL = {
 
 export class CacheService {
   static async get<T>(key: string): Promise<T | null> {
-    if (!redis) return null
-    
     try {
-      const data = await redis.get(key)
-      return data as T
+      const item = memoryCache.get(key)
+      if (!item) return null
+      
+      if (item.expiry < Date.now()) {
+        memoryCache.delete(key)
+        return null
+      }
+      
+      return item.value as T
     } catch (error) {
       console.error('Cache get error:', error)
       return null
@@ -30,10 +43,9 @@ export class CacheService {
   }
 
   static async set(key: string, value: any, ttl: number = CACHE_TTL.MEDIUM): Promise<boolean> {
-    if (!redis) return false
-    
     try {
-      await redis.setex(key, ttl, JSON.stringify(value))
+      const expiry = Date.now() + (ttl * 1000)
+      memoryCache.set(key, { value, expiry })
       return true
     } catch (error) {
       console.error('Cache set error:', error)
@@ -42,10 +54,8 @@ export class CacheService {
   }
 
   static async del(key: string): Promise<boolean> {
-    if (!redis) return false
-    
     try {
-      await redis.del(key)
+      memoryCache.delete(key)
       return true
     } catch (error) {
       console.error('Cache delete error:', error)
@@ -54,12 +64,13 @@ export class CacheService {
   }
 
   static async invalidatePattern(pattern: string): Promise<boolean> {
-    if (!redis) return false
-    
     try {
-      const keys = await redis.keys(pattern)
-      if (keys.length > 0) {
-        await redis.del(...keys)
+      // Simple pattern matching for keys
+      const regex = new RegExp(pattern.replace(/\*/g, '.*'))
+      for (const key of memoryCache.keys()) {
+        if (regex.test(key)) {
+          memoryCache.delete(key)
+        }
       }
       return true
     } catch (error) {
@@ -99,3 +110,20 @@ export class CacheService {
 }
 
 export default CacheService
+
+// Legacy exports for backward compatibility
+export async function get(key: string): Promise<any> {
+  return CacheService.get(key)
+}
+
+export async function set(key: string, value: any, ttl: number = CACHE_TTL.MEDIUM): Promise<boolean> {
+  return CacheService.set(key, value, ttl)
+}
+
+export async function del(key: string): Promise<boolean> {
+  return CacheService.del(key)
+}
+
+export async function clear(pattern?: string): Promise<boolean> {
+  return CacheService.invalidatePattern(pattern || '*')
+}

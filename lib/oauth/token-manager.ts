@@ -1,7 +1,3 @@
-import { JWT } from 'google-auth-library';
-import * as fs from 'fs';
-import * as path from 'path';
-
 export interface OAuthTokens {
   access_token: string;
   refresh_token?: string;
@@ -12,21 +8,29 @@ export interface OAuthTokens {
 
 const getServiceAccountToken = async (): Promise<string | null> => {
   try {
-    // Use the service account key file from lib/config/
-    const keyFile = path.join(process.cwd(), 'lib/config/service-account.json');
+    // Check if we have service account credentials in environment variables
+    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
 
-    if (!fs.existsSync(keyFile)) {
-      console.error('Service account key file not found at:', keyFile);
+    if (!clientEmail || !privateKey) {
+      console.warn('Google service account credentials not configured in environment variables');
       return null;
     }
 
-    // Read and parse the service account key
-    const keyData = JSON.parse(fs.readFileSync(keyFile, 'utf8'));
+    // Only import JWT when we actually need it and have credentials
+    // Use dynamic import to prevent build-time errors
+    const googleAuthLib = await import('google-auth-library').catch(() => null);
+    if (!googleAuthLib) {
+      console.warn('google-auth-library not available');
+      return null;
+    }
+
+    const { JWT } = googleAuthLib;
 
     // Create JWT client with service account credentials
     const jwtClient = new JWT({
-      email: keyData.client_email,
-      key: keyData.private_key,
+      email: clientEmail,
+      key: privateKey.replace(/\\n/g, '\n'), // Handle escaped newlines
       scopes: [
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events',

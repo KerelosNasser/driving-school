@@ -1,11 +1,4 @@
-import { OAuth2Client } from 'google-auth-library';
-import { google } from 'googleapis';
-import { encrypt, decrypt } from '../utils/encryption';
 
-/**
- * Modern Google OAuth2 Client following 2024 best practices
- * Implements proper token management, refresh handling, and security
- */
 
 export interface GoogleOAuthConfig {
   clientId: string;
@@ -30,7 +23,7 @@ export interface SecureTokenStorage {
 }
 
 export class ModernGoogleOAuthClient {
-  private oauth2Client: OAuth2Client;
+  private oauth2Client: any;
   private config: GoogleOAuthConfig;
   
   // Required scopes for calendar access following incremental authorization best practices
@@ -41,18 +34,32 @@ export class ModernGoogleOAuthClient {
 
   constructor(config: GoogleOAuthConfig) {
     this.config = config;
-    this.oauth2Client = new OAuth2Client({
-      clientId: config.clientId,
-      clientSecret: config.clientSecret,
-      redirectUri: config.redirectUri,
-    });
+    // Lazy load OAuth2Client to avoid build-time errors
+    this.initializeOAuth2Client();
   }
 
-  /**
-   * Generate authorization URL following OAuth 2.0 best practices
-   * Uses 'offline' access type to get refresh tokens
-   */
-  generateAuthUrl(scopes: string[] = ModernGoogleOAuthClient.CALENDAR_SCOPES): string {
+  private async initializeOAuth2Client() {
+    try {
+      const { OAuth2Client } = await import('google-auth-library');
+      this.oauth2Client = new OAuth2Client({
+        clientId: this.config.clientId,
+        clientSecret: this.config.clientSecret,
+        redirectUri: this.config.redirectUri,
+      });
+    } catch (error) {
+      console.warn('Google OAuth2Client not available:', error);
+    }
+  }
+
+  async generateAuthUrl(scopes: string[] = ModernGoogleOAuthClient.CALENDAR_SCOPES): Promise<string> {
+    if (!this.oauth2Client) {
+      await this.initializeOAuth2Client();
+    }
+    
+    if (!this.oauth2Client) {
+      throw new Error('Google OAuth2Client not available');
+    }
+
     return this.oauth2Client.generateAuthUrl({
       access_type: 'offline', // Required for refresh tokens
       scope: scopes,
@@ -67,6 +74,14 @@ export class ModernGoogleOAuthClient {
    */
   async exchangeCodeForTokens(code: string): Promise<TokenData> {
     try {
+      if (!this.oauth2Client) {
+        await this.initializeOAuth2Client();
+      }
+      
+      if (!this.oauth2Client) {
+        throw new Error('Google OAuth2Client not available');
+      }
+
       const { tokens } = await this.oauth2Client.getToken(code);
       
       if (!tokens.access_token) {
@@ -95,6 +110,14 @@ export class ModernGoogleOAuthClient {
    */
   async refreshAccessToken(refreshToken: string): Promise<TokenData> {
     try {
+      if (!this.oauth2Client) {
+        await this.initializeOAuth2Client();
+      }
+      
+      if (!this.oauth2Client) {
+        throw new Error('Google OAuth2Client not available');
+      }
+
       this.oauth2Client.setCredentials({
         refresh_token: refreshToken,
       });
@@ -122,7 +145,15 @@ export class ModernGoogleOAuthClient {
    * Get authenticated OAuth2 client with automatic token refresh
    * This is the main method for API calls
    */
-  async getAuthenticatedClient(tokenData: TokenData): Promise<OAuth2Client> {
+  async getAuthenticatedClient(tokenData: TokenData): Promise<any> {
+    if (!this.oauth2Client) {
+      await this.initializeOAuth2Client();
+    }
+    
+    if (!this.oauth2Client) {
+      throw new Error('Google OAuth2Client not available');
+    }
+
     this.oauth2Client.setCredentials({
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,
@@ -173,6 +204,7 @@ export class ModernGoogleOAuthClient {
   async getUserInfo(tokenData: TokenData): Promise<any> {
     try {
       const authClient = await this.getAuthenticatedClient(tokenData);
+      const { google } = await import('googleapis');
       const oauth2 = google.oauth2({ version: 'v2', auth: authClient });
       const { data } = await oauth2.userinfo.get();
       return data;
@@ -187,6 +219,7 @@ export class ModernGoogleOAuthClient {
    */
   async getCalendarClient(tokenData: TokenData) {
     const authClient = await this.getAuthenticatedClient(tokenData);
+    const { google } = await import('googleapis');
     return google.calendar({ version: 'v3', auth: authClient });
   }
 
@@ -198,6 +231,7 @@ export class ModernGoogleOAuthClient {
       throw new Error('No refresh token to store');
     }
 
+    const { encrypt } = await import('../utils/encryption');
     const encryptedRefreshToken = await encrypt(tokenData.refresh_token);
     
     return {
@@ -212,12 +246,13 @@ export class ModernGoogleOAuthClient {
   /**
    * Retrieve and decrypt stored refresh token
    */
-  async retrieveStoredToken(secureStorage: SecureTokenStorage): Promise<string> {
+  async retrieveStoredToken(encryptedToken: string): Promise<string> {
     try {
-      return await decrypt(secureStorage.encryptedRefreshToken);
+      const { decrypt } = await import('../utils/encryption');
+      return await decrypt(encryptedToken);
     } catch (error) {
       console.error('Error decrypting stored token:', error);
-      throw new Error('Failed to decrypt stored refresh token');
+      throw new Error('Failed to decrypt stored token');
     }
   }
 }

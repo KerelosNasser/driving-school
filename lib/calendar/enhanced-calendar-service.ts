@@ -1,4 +1,3 @@
-import { google } from 'googleapis';
 import { TokenManager } from '@/lib/oauth/token-manager';
 
 export interface CalendarEvent {
@@ -132,6 +131,7 @@ export class EnhancedCalendarService {
       }
 
       // Test connection with a simple calendar info call using service account
+      const { google } = await import('googleapis');
       const calendar = google.calendar({ version: 'v3', auth: accessToken });
       const response = await calendar.calendarList.get({ calendarId: 'primary' });
 
@@ -258,6 +258,7 @@ Booked via Driving School System
       throw new Error('Calendar not connected or tokens expired');
     }
 
+    const { google } = await import('googleapis');
     const calendar = google.calendar({ version: 'v3', auth: accessToken });
     const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
 
@@ -279,6 +280,7 @@ Booked via Driving School System
       throw new Error('Calendar not connected or tokens expired');
     }
 
+    const { google } = await import('googleapis');
     const calendar = google.calendar({ version: 'v3', auth: accessToken });
     const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
 
@@ -298,6 +300,7 @@ Booked via Driving School System
       return []; // Return empty array instead of throwing
     }
 
+    const { google } = await import('googleapis');
     const calendar = google.calendar({ version: 'v3', auth: accessToken });
     const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
 
@@ -322,6 +325,7 @@ Booked via Driving School System
       return []; // Return empty array instead of throwing
     }
 
+    const { google } = await import('googleapis');
     const calendar = google.calendar({ version: 'v3', auth: accessToken });
 
     // Use primary calendar or configurable calendar ID instead of hardcoded group calendars
@@ -504,6 +508,7 @@ Booked via Driving School System
       throw new Error('Admin calendar not connected or tokens expired');
     }
 
+    const { google } = await import('googleapis');
     const calendar = google.calendar({ version: 'v3', auth: accessToken });
 
     const createEventData = {
@@ -571,6 +576,7 @@ Booked via Driving School System
       throw new Error('Calendar not connected or tokens expired');
     }
 
+    const { google } = await import('googleapis');
     const calendar = google.calendar({ version: 'v3', auth: accessToken });
     const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
 

@@ -1,29 +1,36 @@
-import Redis from 'ioredis';
 import { GraphQLResolveInfo } from 'graphql';
 import { createHash } from 'crypto';
 
-// Redis client configuration
-let redis: Redis | null = null;
-
-if (process.env.REDIS_URL) {
-  redis = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-    retryDelayOnFailover: 100,
-    enableReadyCheck: false,
-    maxRetriesPerRequest: 3,
-    lazyConnect: true,
-  });
-  
-  redis.on('error', (error) => {
-    console.error('Redis connection error:', error);
-  });
-  
-  redis.on('connect', () => {
-    console.log('Redis connected successfully');
-  });
+// Simple in-memory cache implementation
+interface CacheItem {
+  data: any;
+  expiry: number;
+  tags: string[];
 }
+
+// In-memory cache store
+const memoryCache = new Map<string, CacheItem>();
+const tagIndex = new Map<string, Set<string>>();
+
+// Cleanup expired entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, item] of memoryCache.entries()) {
+    if (item.expiry < now) {
+      // Remove from tag index
+      item.tags.forEach(tag => {
+        const tagSet = tagIndex.get(tag);
+        if (tagSet) {
+          tagSet.delete(key);
+          if (tagSet.size === 0) {
+            tagIndex.delete(tag);
+          }
+        }
+      });
+      memoryCache.delete(key);
+    }
+  }
+}, 60000); // Clean up every minute
 
 // Cache key generators
 export const generateCacheKey = (prefix: string, ...parts: (string | number)[]): string => {
