@@ -1,7 +1,7 @@
 'use client';
 
-import { Shield, Lock, Award, Users, Clock, CheckCircle, CreditCard } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Shield, Lock,CheckCircle, CreditCard } from 'lucide-react';
+
 
 export function TrustSignals() {
   return (

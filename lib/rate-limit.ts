@@ -12,7 +12,7 @@ class RateLimiter {
 
   async isAllowed(key: string, config: RateLimitConfig): Promise<boolean> {
     const now = Date.now();
-    const windowStart = now - config.windowMs;
+    const _windowStart = now - config.windowMs;
     
     // Clean up old entries
     for (const [k, v] of this.requests.entries()) {
