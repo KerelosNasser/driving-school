@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (createError) {
-        console.error('Error creating user:', createError);
         return NextResponse.json(
           { message: 'Failed to create user' },
           { status: 500 }
@@ -49,7 +48,6 @@ export async function POST(request: NextRequest) {
       
       user = newUser;
     } else if (userError) {
-      console.error('Error fetching user:', userError);
       return NextResponse.json(
         { message: 'Database error' },
         { status: 500 }
@@ -63,7 +61,6 @@ export async function POST(request: NextRequest) {
       // Try to generate encrypted code
       invitationCode = generateEncryptedInvitationCode(user.id);
     } catch (error) {
-      console.warn('Encryption failed, using simple code:', error);
       // Fallback to simple code if encryption fails
       invitationCode = generateSimpleInvitationCode();
     }

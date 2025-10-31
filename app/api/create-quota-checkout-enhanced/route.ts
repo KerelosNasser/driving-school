@@ -46,10 +46,9 @@ export async function POST(request: NextRequest) {
     const validatedInput = checkoutSchema.parse(body);
     const { packageId, promoCode, metadata = {}, paymentGateway, acceptedTerms } = validatedInput;
 
-    // Validate payment gateway
-    const supportedGateways = ['payid', 'tyro', 'bpay', 'afterpay'];
-    if (!supportedGateways.includes(paymentGateway)) {
-      return NextResponse.json({ error: 'Unsupported payment gateway' }, { status: 400 });
+    // Validate payment gateway - only PayID is supported
+    if (paymentGateway !== 'payid') {
+      return NextResponse.json({ error: 'Only PayID payment gateway is supported' }, { status: 400 });
     }
 
     // Get package details with error handling

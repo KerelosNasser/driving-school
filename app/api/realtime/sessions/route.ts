@@ -238,8 +238,14 @@ async function handleSessionsPatchRequest(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Simple admin check - in production, implement proper role checking
-    const isAdmin = process.env.NODE_ENV === 'development' || true;
+    // Get user from Clerk to check admin role
+    const { data: user, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('clerk_id', userId)
+      .single();
+
+    const isAdmin = user?.role === 'admin';
     if (!isAdmin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }

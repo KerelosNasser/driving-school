@@ -118,7 +118,7 @@ async function generateAvailableSlots(instructorId: string, date: string) {
     .in('status', ['scheduled', 'confirmed'])
 
   if (bookingsError) {
-    console.warn('Could not fetch bookings:', bookingsError)
+    // Could not fetch bookings - continue with empty bookings array
   }
 
   // Generate time slots (1-hour intervals)

@@ -1,5 +1,10 @@
 import { z } from 'zod'
 
+// Basic validation schemas
+export const uuidSchema = z.string().uuid('Invalid UUID format')
+export const dateSchema = z.string().datetime('Invalid date format')
+export const emailSchema = z.string().email('Invalid email format')
+
 // Basic user validation
 export const userSchema = z.object({
   email: z.string().email(),

@@ -94,7 +94,6 @@ export async function POST(request: NextRequest) {
       });
 
     if (insertError) {
-      console.error('Error storing notification:', insertError);
       // Continue anyway - notification storage is not critical
     }
 
@@ -108,7 +107,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Notification trigger error:', error);
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }
@@ -119,8 +117,7 @@ export async function POST(request: NextRequest) {
 // Simple notification dispatch (in production, use Redis pub/sub or WebSockets)
 async function sendNotificationToUser(clerkUserId: string, notification: any) {
   // This would integrate with the SSE connection or WebSocket
-  // For now, we'll just log it
-  console.log(`Notification for user ${clerkUserId}:`, notification);
+  // For now, we'll just return success
   
   // In a real implementation, you could:
   // 1. Use Redis pub/sub to notify the SSE endpoint

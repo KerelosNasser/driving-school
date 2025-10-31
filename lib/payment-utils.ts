@@ -1,4 +1,4 @@
-// Payment utilities for handling multiple gateways and error management
+// Payment utilities for PayID-only payment system
 
 export interface PaymentError {
   code: string;
@@ -16,8 +16,7 @@ export interface PaymentGateway {
   type: 'automated' | 'manual';
 }
 
-// List of supported payment gateways for Australian businesses
-// Manual payment methods are prioritized as primary/recommended options
+// PayID-only payment gateway for Australian businesses
 // PayID is set as the primary recommended payment method with the specific ID 0431512095
 export const PAYMENT_GATEWAYS: PaymentGateway[] = [
   {
@@ -27,38 +26,6 @@ export const PAYMENT_GATEWAYS: PaymentGateway[] = [
     supported: true,
     recommended: true,
     type: 'manual'
-  },
-  {
-    id: 'tyro',
-    name: 'Tyro EFTPOS',
-    fees: '1.8% + 30¢',
-    supported: true,
-    recommended: true,
-    type: 'manual'
-  },
-  {
-    id: 'bpay',
-    name: 'BPAY',
-    fees: '0.6% + 25¢',
-    supported: true,
-    recommended: true,
-    type: 'manual'
-  },
-  {
-    id: 'afterpay',
-    name: 'Afterpay',
-    fees: '3.5% + 30¢',
-    supported: true,
-    recommended: false,
-    type: 'automated'
-  },
-  {
-    id: 'paypal',
-    name: 'PayPal',
-    fees: '2.6% + 30¢',
-    supported: true,
-    recommended: false,
-    type: 'automated'
   }
 ];
 

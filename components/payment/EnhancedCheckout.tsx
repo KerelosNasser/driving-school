@@ -54,30 +54,6 @@ export function EnhancedCheckout({ packageDetails, onPurchase }: EnhancedCheckou
       fee: '0.5% + 10¢',
       popular: true,
       color: 'from-emerald-500 to-teal-600'
-    },
-    { 
-      id: 'tyro', 
-      name: 'Tyro EFTPOS', 
-      icon: CreditCard, 
-      description: 'EFTPOS card payment',
-      fee: '1.8% + 30¢',
-      color: 'from-blue-500 to-indigo-600'
-    },
-    { 
-      id: 'bpay', 
-      name: 'BPAY', 
-      icon: Banknote, 
-      description: 'Bank transfer via BPAY',
-      fee: '0.6% + 25¢',
-      color: 'from-purple-500 to-violet-600'
-    },
-    { 
-      id: 'afterpay', 
-      name: 'Afterpay', 
-      icon: Clock, 
-      description: 'Buy now, pay later in 4 installments',
-      fee: '3.5% + 30¢',
-      color: 'from-pink-500 to-rose-600'
     }
   ];
 
@@ -108,10 +84,7 @@ export function EnhancedCheckout({ packageDetails, onPurchase }: EnhancedCheckou
   const getGatewayIcon = (gateway: string) => {
     switch (gateway) {
       case 'payid': return <QrCode className="h-5 w-5" />;
-      case 'tyro': return <CreditCard className="h-5 w-5" />;
-      case 'bpay': return <Banknote className="h-5 w-5" />;
-      case 'afterpay': return <Clock className="h-5 w-5" />;
-      default: return <CreditCard className="h-5 w-5" />;
+      default: return <QrCode className="h-5 w-5" />;
     }
   };
 

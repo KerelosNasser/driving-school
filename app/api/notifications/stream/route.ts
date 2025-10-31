@@ -85,7 +85,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Notification stream error:', error);
     return new Response('Internal server error', { status: 500 });
   }
 }
@@ -113,11 +112,9 @@ export async function sendNotificationToUser(
     })}\n\n`;
 
     // In a real implementation, you would write to the controller
-    // For now, we'll just log the notification
-    console.log('Sending notification to user:', clerkUserId, notification);
+    // For now, we'll just return success
     return true;
   } catch (error) {
-    console.error('Error sending notification:', error);
     cleanupConnection(clerkUserId);
     return false;
   }

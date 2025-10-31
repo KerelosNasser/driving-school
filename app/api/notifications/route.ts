@@ -53,7 +53,6 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('Fetch notifications error:', error);
       return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });
     }
 
@@ -77,7 +76,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('GET /api/notifications error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -136,7 +134,6 @@ export async function PUT(request: NextRequest) {
     const { data, error } = await query.select();
 
     if (error) {
-      console.error('Update notifications error:', error);
       return NextResponse.json({ error: 'Failed to update notifications' }, { status: 500 });
     }
 
@@ -147,7 +144,6 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('PUT /api/notifications error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -222,7 +218,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'No action specified' }, { status: 400 });
 
   } catch (error) {
-    console.error('DELETE /api/notifications error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

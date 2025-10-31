@@ -192,19 +192,8 @@ async function processProfileCompletion(request: NextRequest, clerkUserId: strin
   // Get client IP
   const clientIP = getClientIP(request);
   
-  // For debug mode, create a simple response
-  if (clerkUserId.startsWith('debug-user-')) {
-    console.log('DEBUG MODE: Returning success without database operations');
-    return NextResponse.json({
-      message: 'Profile completed successfully (DEBUG MODE)',
-      invitationCode: 'DEBUG123',
-      userId: clerkUserId,
-      debug: true
-    });
-  }
-  
-  // Continue with normal database operations for real users
-  console.log('Processing real user profile completion...');
+  // Continue with normal database operations
+  console.log('Processing user profile completion...');
   
   // Check if user already exists
   console.log('Checking if user exists in database...');
@@ -472,20 +461,8 @@ export async function POST(request: NextRequest) {
       
       if (!clerkUserId) {
         console.log('No authenticated user found - userId is null/undefined');
-        console.log('Session ID:', sessionId);
-        console.log('This might be a session/cookie issue');
-        
-        // TEMPORARY DEBUG MODE: Allow the request to proceed without auth for debugging
-        const debugMode = process.env.NODE_ENV === 'development';
-        if (debugMode) {
-          console.log('🚨 DEBUG MODE: Proceeding without authentication for debugging');
-          // Create a temporary user ID for testing
-          const tempUserId = 'debug-user-' + Date.now();
-          console.log('Using temporary user ID:', tempUserId);
-          
-          // Continue with a mock user ID
-          return await processProfileCompletion(request, tempUserId);
-        }
+        console.error('Session ID:', sessionId);
+        console.error('Authentication failed - no user ID found');
         
         return NextResponse.json(
           { 

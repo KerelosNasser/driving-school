@@ -39,17 +39,9 @@ export async function GET(request: NextRequest) {
       userName: session.metadata?.user_name,
     };
 
-    // Add gateway-specific details based on environment variables
-    switch (session.gateway) {
-      case 'payid':
-        paymentDetails.payIdIdentifier = process.env.NEXT_PUBLIC_PAYID_IDENTIFIER || 'contact@drivingschool.com.au';
-        break;
-      case 'bpay':
-        paymentDetails.bpayBillerCode = process.env.NEXT_PUBLIC_BPAY_BILLER_CODE || '123456';
-        break;
-      case 'tyro':
-        paymentDetails.tyroPaymentId = process.env.NEXT_PUBLIC_TYRO_PAYMENT_ID || 'tyro-payment-id';
-        break;
+    // Add PayID-specific details
+    if (session.gateway === 'payid') {
+      paymentDetails.payIdIdentifier = process.env.NEXT_PUBLIC_PAYID_IDENTIFIER || '0431512095';
     }
 
     return NextResponse.json(paymentDetails);

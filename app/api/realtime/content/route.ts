@@ -16,9 +16,19 @@ const supabaseAdmin = createClient(
   }
 );
 
-async function isUserAdmin(_userId: string): Promise<boolean> {
-  // Simplified admin check - in production, check against proper user roles
-  return process.env.NODE_ENV === 'development' || true;
+async function isUserAdmin(userId: string): Promise<boolean> {
+  try {
+    const { data: user, error } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('clerk_id', userId)
+      .single();
+    
+    return !error && user?.role === 'admin';
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
 }
 
 // GET - Subscribe to real-time content updates for a page

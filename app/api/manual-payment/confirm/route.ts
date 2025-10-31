@@ -137,23 +137,16 @@ export async function POST(request: NextRequest) {
 }
 
 function validatePaymentReference(ref: string, gateway: string): string | null {
-  if (!ref || !ref.trim()) return 'Payment reference is required';
-  
+  if (!ref || ref.trim().length === 0) {
+    return 'Payment reference is required';
+  }
+
   const cleanRef = ref.trim();
-  
-  switch (gateway) {
-    case 'payid':
-      if (cleanRef.length < 6) return 'PayID reference must be at least 6 characters';
-      if (!/^[A-Za-z0-9]+$/.test(cleanRef)) return 'PayID reference should contain only letters and numbers';
-      break;
-    case 'bpay':
-      if (cleanRef.length < 8) return 'BPAY reference must be at least 8 characters';
-      if (!/^[0-9]+$/.test(cleanRef)) return 'BPAY reference should contain only numbers';
-      break;
-    case 'tyro':
-      if (cleanRef.length < 10) return 'Tyro receipt number must be at least 10 characters';
-      if (!/^[A-Za-z0-9-]+$/.test(cleanRef)) return 'Tyro reference should contain letters, numbers, and hyphens only';
-      break;
+
+  // Only validate PayID references
+  if (gateway === 'payid') {
+    if (cleanRef.length < 6) return 'PayID reference must be at least 6 characters';
+    if (!/^[A-Za-z0-9]+$/.test(cleanRef)) return 'PayID reference should contain only letters and numbers';
   }
   
   return null;

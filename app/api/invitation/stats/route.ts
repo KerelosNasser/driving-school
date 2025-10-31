@@ -20,7 +20,6 @@ async function handleInvitationStatsRequest(_request: NextRequest) {
       .single();
 
     if (userLookupError || !userRow) {
-      console.error('Local user lookup failed for clerk id:', clerkId, userLookupError);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     const internalUserId = userRow.id as string;
@@ -130,8 +129,8 @@ async function handleInvitationStatsRequest(_request: NextRequest) {
           rewardStats.unusedRewards = rewardsData.filter((r: any) => !r.is_used && (!r.expires_at || new Date(r.expires_at) > new Date())).length;
         }
       } catch (err) {
-        console.warn('Referral rewards table not available or query failed:', err);
-      }
+         // Referral rewards table not available or query failed
+       }
 
       // Return consolidated response
       return NextResponse.json({
@@ -170,12 +169,12 @@ async function handleInvitationStatsRequest(_request: NextRequest) {
           rewards: []
         });
       }
-      console.error('Unhandled error fetching invitation stats:', err);
-      return NextResponse.json({ error: 'Failed to fetch invitation statistics' }, { status: 500 });
+      // Unhandled error fetching invitation stats
+      return NextResponse.json({ error: 'Failed to fetch invitation stats' }, { status: 500 });
     }
-  } catch (error: any) {
-    console.error('Error in GET /api/invitation/stats:', error);
-    return NextResponse.json({ error: 'Failed to fetch invitation statistics' }, { status: 500 });
+
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
