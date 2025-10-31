@@ -72,17 +72,18 @@ async function handleRealtimeContentGetRequest(request: NextRequest) {
                 id: crypto.randomUUID(),
                 type: 'content_change',
                 pageName,
-                userId: payload.new?.updated_by || payload.old?.updated_by || 'system',
+                userId: (payload.new as any)?.updated_by || (payload.old as any)?.updated_by || 'system',
                 timestamp: new Date().toISOString(),
-                version: payload.new?.lock_version?.toString() || '1',
+                version: (payload.new as any)?.lock_version?.toString() || '1',
                 data: {
-                  contentKey: payload.new?.content_key || payload.old?.content_key,
-                  oldValue: payload.old?.content_value || payload.old?.content_json,
-                  newValue: payload.new?.content_value || payload.new?.content_json,
-                  contentType: payload.new?.content_type || payload.old?.content_type,
-                  componentId: payload.new?.component_id || payload.old?.component_id,
+                  contentKey: (payload.new as any)?.content_key || (payload.old as any)?.content_key,
+                  oldValue: (payload.old as any)?.content_value || (payload.old as any)?.content_json,
+                  newValue: (payload.new as any)?.content_value || (payload.new as any)?.content_json,
+                  contentType: (payload.new as any)?.content_type || (payload.old as any)?.content_type,
+                  componentId: (payload.new as any)?.component_id || (payload.old as any)?.component_id,
                   eventType: payload.eventType
                 } as ContentChangeEventData
+
               };
 
               try {
@@ -96,36 +97,6 @@ async function handleRealtimeContentGetRequest(request: NextRequest) {
 
         // Also listen to component changes if componentId is specified
         if (componentId) {
-          const componentChannel = supabaseAdmin
-            .channel(`component-${componentId}`)
-            .on(
-              'postgres_changes',
-              {
-                event: '*',
-                schema: 'public',
-                table: 'page_components',
-                filter: `component_id=eq.${componentId}`
-              },
-              (payload) => {
-                const event: RealtimeEvent = {
-                  id: crypto.randomUUID(),
-                  type: payload.eventType === 'DELETE' ? 'component_delete' : 
-                        payload.eventType === 'INSERT' ? 'component_add' : 'component_move',
-                  pageName,
-                  userId: payload.new?.last_modified_by || payload.old?.last_modified_by || 'system',
-                  timestamp: new Date().toISOString(),
-                  version: payload.new?.version || payload.old?.version || '1',
-                  data: payload
-                };
-
-                try {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-                } catch (error) {
-                  console.error('Error sending component event:', error);
-                }
-              }
-            )
-            .subscribe();
         }
 
         // Send keepalive every 30 seconds
@@ -137,11 +108,12 @@ async function handleRealtimeContentGetRequest(request: NextRequest) {
             })}\n\n`));
           } catch (error) {
             clearInterval(keepAlive);
+            console.log('Cleaning up connection',error);
           }
         }, 30000);
 
         // Clean up on close
-        controller.closed?.then(() => {
+        request.signal.addEventListener('abort', () => {
           clearInterval(keepAlive);
           channel.unsubscribe();
         });
@@ -304,12 +276,14 @@ async function handleRealtimeContentPostRequest(request: NextRequest) {
 
 // Export handlers with centralized state management
 export const GET = withCentralizedStateManagement(
-  handleRealtimeContentGetRequest, 
+  async (req: NextRequest) => {
+    const res = await handleRealtimeContentGetRequest(req);
+    return res instanceof NextResponse ? res : NextResponse.json(res.body, { status: res.status, headers: res.headers });
+  },
   '/api/realtime/content', 
   {
     priority: 'high',
     maxRetries: 2,
-    requireAuth: true
   }
 );
 
@@ -319,6 +293,5 @@ export const POST = withCentralizedStateManagement(
   {
     priority: 'high',
     maxRetries: 1,
-    requireAuth: true
   }
 );
