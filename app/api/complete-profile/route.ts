@@ -91,7 +91,7 @@ function getClientIP(request: NextRequest): string {
 
   if (cfConnectingIP) return cfConnectingIP;
   if (realIP) return realIP;
-  if (forwarded) return forwarded.split(',')[0].trim();
+  if (forwarded) return forwarded.split(',')[0]?.trim() ?? '127.0.0.1';
 
   return '127.0.0.1'; // Fallback
 }
