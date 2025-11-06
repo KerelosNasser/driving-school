@@ -349,12 +349,55 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to consume quota for booking' }, { status: 500 });
     }
 
+    // Get updated quota and user details for email
+    const { data: updatedQuota } = await supabase
+      .from('user_quotas')
+      .select('available_hours')
+      .eq('user_id', supabaseUserId)
+      .single();
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('email, full_name, phone, address, suburb, experience_level')
+      .eq('id', supabaseUserId)
+      .single();
+
+    // Send confirmation emails
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-booking-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'confirmation',
+          userName: userData?.full_name || studentName,
+          userEmail: userData?.email || studentEmail,
+          userPhone: userData?.phone,
+          date: date,
+          time: time,
+          duration: duration,
+          lessonType: lessonType,
+          location: location,
+          notes: notes,
+          hoursConsumed: hoursUsed,
+          remainingHours: updatedQuota?.available_hours || 0,
+          bookingId: booking.id,
+          experienceLevel: userData?.experience_level,
+          address: userData?.address,
+          suburb: userData?.suburb
+        })
+      });
+    } catch (emailError) {
+      console.error('Failed to send confirmation emails:', emailError);
+      // Don't fail the booking if email fails
+    }
+
     return NextResponse.json({
       success: true,
       booking: booking,
       adminEvent: adminEvent,
       userEvent: userEvent,
       consumed_hours: hoursUsed,
+      remaining_hours: updatedQuota?.available_hours || 0,
       message: 'Booking created successfully'
     });
 

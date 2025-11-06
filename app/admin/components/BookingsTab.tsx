@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useBookings } from '@/hooks/useBookings';
 import { Booking } from '@/lib/types';
 import { LoadingIndicator } from '@/components/ui/loading-indicator';
+import { CancelBookingDialog } from './CancelBookingDialog';
 
 interface BookingsTabProps {
   bookings: Booking[];
@@ -29,9 +30,24 @@ export const BookingsTab = ({ bookings, loading, onBookingUpdate }: BookingsTabP
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
   
   const { updateBookingStatus, isUpdating } = useBookings(onBookingUpdate);
+
+  const handleCancelBooking = (booking: Booking) => {
+    setBookingToCancel(booking);
+    setIsCancelDialogOpen(true);
+  };
+
+  const handleCancelSuccess = () => {
+    // Refresh bookings list
+    if (bookingToCancel) {
+      onBookingUpdate({ ...bookingToCancel, status: 'cancelled' });
+    }
+    setBookingToCancel(null);
+  };
 
   const filteredBookings = bookings.filter(booking => {
     const searchTermLower = searchTerm.toLowerCase();
@@ -145,6 +161,15 @@ export const BookingsTab = ({ bookings, loading, onBookingUpdate }: BookingsTabP
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => handleViewBooking(booking)}>View</Button>
                         <Button size="sm" onClick={() => handleStatusChange(booking)}>Update Status</Button>
+                        {booking.status !== 'cancelled' && (
+                          <Button 
+                            size="sm" 
+                            variant="destructive" 
+                            onClick={() => handleCancelBooking(booking)}
+                          >
+                            Cancel
+                          </Button>
+                        )}
                       </div>
                     </div>
                     <div className="text-sm text-gray-500">
@@ -278,6 +303,19 @@ export const BookingsTab = ({ bookings, loading, onBookingUpdate }: BookingsTabP
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Booking Dialog */}
+      {bookingToCancel && (
+        <CancelBookingDialog
+          bookingId={bookingToCancel.id}
+          studentName={bookingToCancel.users?.full_name || 'Unknown Student'}
+          date={bookingToCancel.date}
+          time={bookingToCancel.start_time || bookingToCancel.time || ''}
+          open={isCancelDialogOpen}
+          onOpenChange={setIsCancelDialogOpen}
+          onSuccess={handleCancelSuccess}
+        />
+      )}
     </div>
   );
 };

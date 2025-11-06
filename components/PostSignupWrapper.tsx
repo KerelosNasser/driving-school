@@ -25,18 +25,15 @@ export default function PostSignupWrapper({ children }: PostSignupWrapperProps) 
       const profileCompleted = user.publicMetadata?.profileCompleted;
       const isAdmin = user.publicMetadata?.role === 'admin';
       
-      // Check if user has visited service center before
-      const visitedServiceCenter = localStorage.getItem(`service-center-visited-${user.id}`);
-      setHasVisitedServiceCenter(!!visitedServiceCenter);
-      
-      // Show post-signup form as popup only on service center page for first-time visitors
+      // Show post-signup form as popup on service center page if profile not completed
       const isServiceCenterPage = pathname === '/service-center';
-      const shouldShowPopup = !isAdmin && !profileCompleted && isServiceCenterPage && !visitedServiceCenter;
+      const shouldShowPopup = !isAdmin && !profileCompleted && isServiceCenterPage;
       
       if (shouldShowPopup) {
-        setShowPostSignup(true);
-        // Mark service center as visited
-        localStorage.setItem(`service-center-visited-${user.id}`, 'true');
+        // Small delay to ensure page is loaded
+        setTimeout(() => {
+          setShowPostSignup(true);
+        }, 500);
       } else {
         setShowPostSignup(false);
       }
