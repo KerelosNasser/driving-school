@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { format, addMinutes, parseISO, } from 'date-fns';
+import { format, addMinutes, parseISO, isWeekend } from 'date-fns';
 
 interface CalendarEvent {
   id: string;
@@ -323,8 +323,47 @@ export default function GoogleCalendarIntegration({
     return availableSlots.filter(slot => !slot.available && slot.reason);
   };
 
+  // Friendly time label (e.g., 9:00 AM – 10:00 AM)
   const formatTimeSlot = (slot: TimeSlot) => {
-    return `${slot.start} - ${slot.end}`;
+    try {
+      const startDt = parseISO(slot.start);
+      const endDt = parseISO(slot.end);
+      const startStr = format(startDt, 'h:mm a');
+      const endStr = format(endDt, 'h:mm a');
+      return `${startStr} – ${endStr}`;
+    } catch {
+      // Fallback to raw string if parsing fails
+      return `${slot.start} – ${slot.end}`;
+    }
+  };
+
+  // Friendly reason mapping
+  const friendlyReason = (reason?: string) => {
+    if (!reason) return '';
+    const lower = reason.toLowerCase();
+    if (lower.includes('conflicts') || lower.includes('overlap')) {
+      return 'Overlaps with another lesson (including buffer time)';
+    }
+    if (lower.includes('buffer')) {
+      return 'Insufficient buffer time around an existing lesson';
+    }
+    if (lower.includes('working hours')) {
+      return 'Outside working hours';
+    }
+    return reason;
+  };
+
+  // Determine a friendly day-level message when no slots
+  const getDayUnavailableMessage = () => {
+    if (!selectedDate) return null;
+    const dt = parseISO(selectedDate);
+    if (events && events.length > 0) {
+      return 'This day is blocked due to existing admin events. Please choose another date.';
+    }
+    if (isWeekend(dt)) {
+      return "We’re closed on weekends. Please pick a weekday.";
+    }
+    return 'No available times left today. Please try a different time or another date.';
   };
 
   return (
@@ -439,6 +478,15 @@ export default function GoogleCalendarIntegration({
                       Auto-refreshes every 2 minutes
                     </div>
                   </div>
+                  {/* Day-level admin event notice */}
+                  {events && events.length > 0 && (
+                    <Alert className="border-yellow-300 bg-yellow-50">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertDescription className="text-yellow-800">
+                        This day has existing admin calendar events. Booking is disabled for this date.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   
                   {loading ? (
                     <div className="flex items-center justify-center py-8">
@@ -475,9 +523,12 @@ export default function GoogleCalendarIntegration({
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center py-6 text-gray-500">
+                        <div className="text-center py-6 text-gray-600 space-y-2">
                           <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                          <p>No available slots for this date</p>
+                          <p>{getDayUnavailableMessage()}</p>
+                          <div className="text-xs text-gray-500">
+                            Tips: Try another time on this day, or pick a different date. Buffer time between lessons may block adjacent times.
+                          </div>
                         </div>
                       )}
                       
@@ -493,13 +544,13 @@ export default function GoogleCalendarIntegration({
                             </span>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {getUnavailableSlots().slice(0, 8).map((slot, index) => (
+                            {getUnavailableSlots().slice(0, 8).map((slot) => (
                               <div
                                 key={`unavailable-${slot.start}-${slot.end}`}
-                                className="p-3 rounded-xl border border-gray-200 bg-gray-50 text-xs text-gray-500 shadow-sm"
+                                className="p-3 rounded-xl border border-gray-200 bg-gray-50 text-xs text-gray-600 shadow-sm"
                               >
                                 <div className="font-medium text-gray-700">{formatTimeSlot(slot)}</div>
-                                <div className="text-xs mt-1 text-gray-500">{slot.reason}</div>
+                                <div className="text-xs mt-1 text-gray-500">{friendlyReason(slot.reason)}</div>
                               </div>
                             ))}
                           </div>
@@ -640,6 +691,10 @@ export default function GoogleCalendarIntegration({
                     >
                       Cancel
                     </Button>
+                  </div>
+                  {/* Helper: find next available slot */}
+                  <div className="pt-2 text-xs text-gray-500">
+                    Can’t find a suitable time? Try another date or adjust duration. We include {bufferTimeMinutes} minutes buffer between lessons to keep things smooth.
                   </div>
                 </div>
               )}

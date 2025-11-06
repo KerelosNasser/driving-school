@@ -5,7 +5,9 @@ import { NextResponse } from "next/server";
 export default clerkMiddleware((auth, req) => {
   // Add some debugging for API routes
   if (req.nextUrl.pathname.startsWith('/api/')) {
-    console.log('API route hit:', req.nextUrl.pathname, req.method);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('API route hit:', req.nextUrl.pathname, req.method);
+    }
   }
   
   const response = NextResponse.next();

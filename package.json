@@ -123,6 +123,7 @@
     "jest-junit": "^16.0.0",
     "jest-watch-typeahead": "^2.2.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "whatwg-fetch": "^3.6.20"
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ChevronLeft, ChevronRight,Plus, RefreshCw, Calendar, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, RefreshCw, Calendar, Users, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +51,7 @@ export default function CalendarView({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [findingNext, setFindingNext] = useState(false);
 
   // Get events for a specific date
   const getEventsForDate = useCallback((date: Date) => {
@@ -66,9 +67,11 @@ export default function CalendarView({
     
     setLoadingSlots(true);
     try {
-      const response = await fetch(`/api/calendar/availability?date=${format(date, 'yyyy-MM-dd')}`);
+      // Use the unified events endpoint with availability mode
+      const response = await fetch(`/api/calendar/events?eventType=availability&date=${format(date, 'yyyy-MM-dd')}`);
       if (response.ok) {
-        const slots = await response.json();
+        const data = await response.json();
+        const slots = Array.isArray(data) ? data : (data.slots || []);
         setAvailableSlots(slots);
       } else {
         toast.error('Failed to load available time slots');
@@ -137,6 +140,41 @@ export default function CalendarView({
     handleDateSelect(today);
   };
 
+  // Find the next available slot across upcoming days
+  const findNextAvailableSlot = useCallback(async () => {
+    if (!showBookingInterface) return;
+    setFindingNext(true);
+    try {
+      const start = new Date();
+      const startDate = selectedDate && selectedDate > start ? selectedDate : start;
+      // Search up to 30 days ahead
+      for (let i = 0; i < 30; i++) {
+        const checkDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+        const dateStr = format(checkDate, 'yyyy-MM-dd');
+        const res = await fetch(`/api/calendar/events?eventType=availability&date=${dateStr}`);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const slots: TimeSlot[] = Array.isArray(data) ? data : (data.slots || []);
+        const available = slots.filter(s => s.available);
+        if (available.length > 0) {
+          // Jump calendar to this date and select it
+          setCurrentMonth(checkDate);
+          onDateSelect(checkDate);
+          // Preload slots into side panel
+          setAvailableSlots(available);
+          toast.success(`Next available: ${format(checkDate, 'EEE, MMM d')} at ${format(new Date(available[0].start), 'h:mm a')}`);
+          return;
+        }
+      }
+      toast.error('No available slots found in the next 30 days');
+    } catch (err) {
+      console.error('Error searching for next available slot:', err);
+      toast.error('Failed to search for available slots');
+    } finally {
+      setFindingNext(false);
+    }
+  }, [showBookingInterface, selectedDate, onDateSelect]);
+
   // Generate calendar days
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -174,6 +212,22 @@ export default function CalendarView({
           <Button variant="outline" size="sm" onClick={goToNextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          {showBookingInterface && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={findNextAvailableSlot}
+              disabled={findingNext}
+              className="ml-2"
+            >
+              {findingNext ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              <span className="ml-2">Find next available</span>
+            </Button>
+          )}
         </div>
       </div>
 

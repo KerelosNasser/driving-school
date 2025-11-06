@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Search, RefreshCw } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, isBefore, startOfDay } from "date-fns";
 
 // Compact Error Alert Component
@@ -71,6 +71,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   calendarSettings
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [findingNext, setFindingNext] = useState(false);
 
   // Generate calendar days
   const monthStart = startOfMonth(currentMonth);
@@ -97,6 +98,36 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     setCurrentMonth(today);
     if (isToday(today)) {
       onDateSelect(today);
+    }
+  };
+
+  // Find the next available date with at least one slot
+  const findNextAvailableDate = async () => {
+    setFindingNext(true);
+    try {
+      const start = new Date();
+      const startDate = selectedDate && selectedDate > start ? selectedDate : start;
+      for (let i = 0; i < 30; i++) {
+        const checkDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+        // Skip disabled days early
+        if (isDateDisabled(checkDate)) continue;
+        const dateStr = checkDate.toISOString().split('T')[0];
+        const res = await fetch(`/api/calendar/events?eventType=availability&date=${dateStr}`);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const slots = Array.isArray(data) ? data : (data.slots || []);
+        const available = (slots || []).filter((s: any) => s.available);
+        if (available.length > 0) {
+          setCurrentMonth(checkDate);
+          onDateSelect(checkDate);
+          return;
+        }
+      }
+      console.warn('No available slots found in the next 30 days');
+    } catch (err) {
+      console.error('Failed to search next available date:', err);
+    } finally {
+      setFindingNext(false);
     }
   };
 
@@ -153,26 +184,38 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         <h3 className="text-lg font-semibold text-gray-900">
           {format(currentMonth, 'MMMM yyyy')}
         </h3>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={goToToday}
-            className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Today
-          </button>
-          <button
-            onClick={goToPreviousMonth}
-            className="p-1 hover:bg-gray-100 rounded"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            onClick={goToNextMonth}
-            className="p-1 hover:bg-gray-100 rounded"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={goToToday}
+          className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Today
+        </button>
+        <button
+          onClick={goToPreviousMonth}
+          className="p-1 hover:bg-gray-100 rounded"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <button
+          onClick={goToNextMonth}
+          className="p-1 hover:bg-gray-100 rounded"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <button
+          onClick={findNextAvailableDate}
+          disabled={findingNext}
+          className="ml-2 px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600 flex items-center"
+        >
+          {findingNext ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <Search className="h-4 w-4" />
+          )}
+          <span className="ml-2">Find next available</span>
+        </button>
+      </div>
       </div>
 
       {/* Weekday Headers */}

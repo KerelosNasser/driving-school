@@ -28,9 +28,14 @@ export async function GET(request: NextRequest) {
     if (eventType === 'availability') {
       // For availability, get events and generate slots
       const adminEvents = await calendarService.getAdminEvents(startDate, endDate);
-      const bufferMinutes = 15;
+      const bufferMinutesParam = searchParams.get('bufferMinutes');
+      const bufferMinutes = bufferMinutesParam ? parseInt(bufferMinutesParam, 10) : 15;
       const dateOnly = date || startDate.split('T')[0];
-      const slots = calendarService.generateTimeSlots(dateOnly, adminEvents, bufferMinutes);
+
+      // Use the same availability logic as the dedicated availability endpoint
+      // This will block the entire day if admin has any events on that date
+      const slots = await calendarService.getAvailableSlots(dateOnly, bufferMinutes);
+
       return NextResponse.json({ events: adminEvents, slots });
     } else if (admin) {
       // For admin events
@@ -45,7 +50,6 @@ export async function GET(request: NextRequest) {
       events
     });
   } catch (error) {
-    console.error('Error fetching calendar events:', error);
     return NextResponse.json({
       error: 'Failed to fetch calendar events',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -65,7 +69,6 @@ export async function POST(request: NextRequest) {
       event
     });
   } catch (error) {
-    console.error('Error creating calendar event:', error);
     return NextResponse.json({ 
       error: 'Failed to create calendar event',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -92,7 +95,6 @@ export async function PUT(request: NextRequest) {
       event
     });
   } catch (error) {
-    console.error('Error updating calendar event:', error);
     return NextResponse.json({ 
       error: 'Failed to update calendar event',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -119,7 +121,6 @@ export async function DELETE(request: NextRequest) {
       message: 'Event deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting calendar event:', error);
     return NextResponse.json({ 
       error: 'Failed to delete calendar event',
       details: error instanceof Error ? error.message : 'Unknown error'

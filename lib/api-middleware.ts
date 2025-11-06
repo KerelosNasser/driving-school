@@ -16,11 +16,25 @@ export function withCentralizedStateManagement(
   options: MiddlewareOptions = {}
 ) {
   const { priority = 'medium', maxRetries = 3 } = options;
+  const IS_PROD = process.env.NODE_ENV === 'production';
   const endpointKey = `${endpoint}_${Date.now()}`;
 
   return async (request: NextRequest): Promise<NextResponse> => {
     try {
-      console.log(`API route hit: ${endpoint} ${request.method}`);
+      // In development/test environments, bypass the centralized queue to simplify debugging
+      // and avoid any potential race conditions with dev servers.
+      if (!IS_PROD) {
+        try {
+          console.log(`API (dev) route hit: ${endpoint} ${request.method}`);
+          return await handler(request);
+        } catch (error) {
+          console.error(`[API Middleware - DEV] Handler error for ${endpoint}:`, error);
+          return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+          );
+        }
+      }
 
       // Register the handler with the state manager
       apiStateManager.registerHandler(endpointKey, async (req: NextRequest) => {
@@ -79,7 +93,9 @@ async function checkAuthentication(_request: NextRequest): Promise<{
     userId
   };
 } catch (error) {
-  console.error('[API Middleware] Authentication check failed:', error);
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('[API Middleware] Authentication check failed:', error);
+  }
   return {
     success: false,
     error: 'Authentication service unavailable'
@@ -143,7 +159,9 @@ export function createLegacyRateLimitWrapper(
   originalHandler: RequestHandler,
   endpoint: string
 ) {
-  console.warn(`[API Middleware] Using legacy wrapper for ${endpoint}. Consider migrating to withCentralizedStateManagement.`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(`[API Middleware] Using legacy wrapper for ${endpoint}. Consider migrating to withCentralizedStateManagement.`);
+  }
   
   return withCentralizedStateManagement(originalHandler, endpoint, {
     priority: 'low', // Legacy endpoints get lower priority

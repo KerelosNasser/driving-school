@@ -1,4 +1,4 @@
-// Jest setup file for GraphQL tests
+import 'whatwg-fetch';
 import 'jest-extended';
 import { TextEncoder, TextDecoder } from 'util';
 
@@ -15,9 +15,6 @@ process.env.REDIS_URL = 'redis://localhost:6379';
 process.env.JWT_SECRET = 'test-jwt-secret';
 process.env.RATE_LIMIT_MAX = '100';
 process.env.RATE_LIMIT_WINDOW = '900000';
-
-// Mock fetch globally
-global.fetch = jest.fn();
 
 // Mock Redis (guarded so tests don't fail if 'redis' isn't installed)
 const _redisMock = {
@@ -95,6 +92,16 @@ try {
   }));
 } catch (e) {
   global.__SUPABASE_MOCK__ = true;
+}
+
+try {
+  jest.doMock('@clerk/nextjs/server', () => ({
+    auth: jest.fn(() => Promise.resolve({ userId: 'test-user-id' })),
+    currentUser: jest.fn(() => Promise.resolve({ id: 'test-user-id', firstName: 'Test', lastName: 'User' })),
+    getAuth: jest.fn(() => ({ userId: 'test-user-id' }))
+  }));
+} catch (e) {
+  global.__CLERK_MOCK__ = true;
 }
 
 // Mock GraphQL Yoga (guarded)

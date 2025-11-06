@@ -1,4 +1,5 @@
 import { TokenManager } from '@/lib/oauth/token-manager';
+import { createClient } from '@supabase/supabase-js';
 
 export interface CalendarEvent {
   id: string;
@@ -91,6 +92,35 @@ export interface CalendarConnectionStatus {
 
 export class EnhancedCalendarService {
   private readonly DEFAULT_TIMEZONE = 'Australia/Brisbane';
+  private supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  private settingsLoaded = false;
+  private workingHoursByDay: Record<number, { start: string; end: string; enabled: boolean }> = {
+    0: { start: '10:00', end: '16:00', enabled: false }, // Sunday
+    1: { start: '09:00', end: '17:00', enabled: true },  // Monday
+    2: { start: '09:00', end: '17:00', enabled: true },  // Tuesday
+    3: { start: '09:00', end: '17:00', enabled: true },  // Wednesday
+    4: { start: '09:00', end: '17:00', enabled: true },  // Thursday
+    5: { start: '09:00', end: '17:00', enabled: true },  // Friday
+    6: { start: '10:00', end: '16:00', enabled: false }  // Saturday
+  };
+  
+  // Helper: create an authenticated Calendar API client using service account
+  private async getCalendarClient(): Promise<any> {
+    const authClient = await TokenManager.getAuthClient();
+    if (!authClient) {
+      throw new Error('Calendar not connected or tokens expired');
+    }
+    const { google } = await import('googleapis');
+    return google.calendar({ version: 'v3', auth: authClient });
+  }
+  // Resolve a single calendar ID to use consistently across reads/writes
+  private getCalendarId(): string {
+    // Prefer explicit calendar ID, otherwise fall back to admin email, then primary
+    return process.env.GOOGLE_CALENDAR_ID || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'primary';
+  }
 
   // Default booking settings
   private readonly DEFAULT_SETTINGS: BookingSettings = {
@@ -109,6 +139,65 @@ export class EnhancedCalendarService {
   }
 
   /**
+   * Load calendar settings and vacation days from Supabase (if available)
+   */
+  private async ensureSettingsLoaded(): Promise<void> {
+    if (this.settingsLoaded) return;
+    try {
+      // Load calendar settings row (single)
+      const { data: settingsRow, error: settingsError } = await this.supabase
+        .from('calendar_settings')
+        .select('*')
+        .single();
+
+      if (!settingsError && settingsRow) {
+        // Map enabled working days
+        const enabledDays: number[] = [];
+        const dayKeys = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+        dayKeys.forEach((day, idx) => {
+          const enabled = Boolean(settingsRow[`${day}_enabled`]);
+          const start = (settingsRow[`${day}_start`] || (this.workingHoursByDay[idx]?.start ?? '09:00')).toString().slice(0,5);
+          const end = (settingsRow[`${day}_end`] || (this.workingHoursByDay[idx]?.end ?? '17:00')).toString().slice(0,5);
+          this.workingHoursByDay[idx] = { start, end, enabled };
+          if (enabled) enabledDays.push(idx);
+        });
+
+        // Update core settings
+        const monday = this.workingHoursByDay[1];
+        this.settings = {
+          ...this.settings,
+          bufferTimeMinutes: Number(settingsRow.buffer_time_minutes ?? this.DEFAULT_SETTINGS.bufferTimeMinutes),
+          workingHours: { start: monday.start, end: monday.end },
+          workingDays: enabledDays,
+        };
+      }
+
+      // Load vacation days
+      const { data: vacationRows, error: vacationError } = await this.supabase
+        .from('vacation_days')
+        .select('date');
+
+      if (!vacationError && Array.isArray(vacationRows)) {
+        this.settings.vacationDays = vacationRows.map((row: any) => {
+          const d = row.date;
+          // Ensure ISO yyyy-mm-dd string
+          if (typeof d === 'string') return d;
+          try {
+            return new Date(d).toISOString().split('T')[0];
+          } catch {
+            return d;
+          }
+        });
+      }
+
+      this.settingsLoaded = true;
+    } catch (err) {
+      // If Supabase is not configured or query fails, fall back to defaults silently
+      this.settingsLoaded = true; // Avoid retry loops; can be refreshed on demand
+    }
+  }
+
+  /**
    * Check calendar connection status using service account
    */
   async getCalendarStatus(): Promise<CalendarConnectionStatus> {
@@ -122,17 +211,8 @@ export class EnhancedCalendarService {
         };
       }
 
-      const accessToken = await TokenManager.getValidAccessToken();
-      if (!accessToken) {
-        return {
-          connected: false,
-          message: 'Failed to retrieve valid access token'
-        };
-      }
-
       // Test connection with a simple calendar info call using service account
-      const { google } = await import('googleapis');
-      const calendar = google.calendar({ version: 'v3', auth: accessToken });
+      const calendar = await this.getCalendarClient();
       const response = await calendar.calendarList.get({ calendarId: 'primary' });
 
       return {
@@ -146,7 +226,6 @@ export class EnhancedCalendarService {
         }
       };
     } catch (error) {
-      console.error('Error checking calendar connection:', error);
       return {
         connected: false,
         message: 'Error checking calendar connection: ' + (error instanceof Error ? error.message : 'Unknown error')
@@ -158,6 +237,7 @@ export class EnhancedCalendarService {
    * Get current booking settings
    */
   async getSettings(): Promise<BookingSettings> {
+    await this.ensureSettingsLoaded();
     return { ...this.settings };
   }
 
@@ -173,10 +253,14 @@ export class EnhancedCalendarService {
    * Get available time slots for a specific date
    */
   async getAvailableSlots(date: string, bufferMinutes: number = 15): Promise<TimeSlot[]> {
+    await this.ensureSettingsLoaded();
     const targetDate = new Date(date);
 
     // Check if date is a working day
-    if (!this.settings.workingDays.includes(targetDate.getDay())) {
+    const dow = targetDate.getDay();
+    const dayConfig = this.workingHoursByDay[dow];
+    const isEnabled = dayConfig?.enabled ?? this.settings.workingDays.includes(dow);
+    if (!isEnabled) {
       return [];
     }
 
@@ -188,19 +272,39 @@ export class EnhancedCalendarService {
     // Get existing events for the date
     const existingEvents = await this.getEventsForDate(date);
 
+    // Add admin events to the list of events to check against
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const adminEventsForDay = await this.getAdminEvents(
+        startOfDay.toISOString(),
+        endOfDay.toISOString()
+      );
+      if (adminEventsForDay && adminEventsForDay.length > 0) {
+        existingEvents.push(...adminEventsForDay);
+      }
+    } catch (_err) {
+      // If we cannot read admin events, degrade gracefully and proceed with normal availability
+    }
+
     // Generate potential time slots
     const slots = this.generateTimeSlotsInternal(date);
 
     // Filter out unavailable slots based on existing events and buffer times
-    return this.filterAvailableSlots(slots, existingEvents, bufferMinutes);
+    const effectiveBuffer = typeof bufferMinutes === 'number' ? bufferMinutes : this.settings.bufferTimeMinutes;
+    return this.filterAvailableSlots(slots, existingEvents, effectiveBuffer);
   }
 
   /**
    * Create a new booking
    */
   async createBooking(booking: BookingRequest): Promise<CalendarEvent> {
-    const accessToken = await TokenManager.getValidAccessToken();
-    if (!accessToken) {
+    await this.ensureSettingsLoaded();
+    const authClient = await TokenManager.getAuthClient();
+    if (!authClient) {
       throw new Error('Calendar not connected or tokens expired');
     }
 
@@ -253,14 +357,8 @@ Booked via Driving School System
    * Update an existing event using service account
    */
   async updateEvent(eventId: string, updateData: Partial<CreateEventData>): Promise<CalendarEvent> {
-    const accessToken = await TokenManager.getValidAccessToken();
-    if (!accessToken) {
-      throw new Error('Calendar not connected or tokens expired');
-    }
-
-    const { google } = await import('googleapis');
-    const calendar = google.calendar({ version: 'v3', auth: accessToken });
-    const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+    const calendar = await this.getCalendarClient();
+    const calendarId = this.getCalendarId();
 
     const response = await calendar.events.patch({
       calendarId: calendarId,
@@ -275,14 +373,8 @@ Booked via Driving School System
    * Delete an event using service account
    */
   async deleteEvent(eventId: string): Promise<void> {
-    const accessToken = await TokenManager.getValidAccessToken();
-    if (!accessToken) {
-      throw new Error('Calendar not connected or tokens expired');
-    }
-
-    const { google } = await import('googleapis');
-    const calendar = google.calendar({ version: 'v3', auth: accessToken });
-    const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+    const calendar = await this.getCalendarClient();
+    const calendarId = this.getCalendarId();
 
     await calendar.events.delete({
       calendarId: calendarId,
@@ -294,42 +386,17 @@ Booked via Driving School System
    * Get events in date range using service account
    */
   async getEvents(startDate: string, endDate: string, _eventType?: string): Promise<CalendarEvent[]> {
-    const accessToken = await TokenManager.getValidAccessToken();
-    if (!accessToken) {
-      console.warn('No valid access token available for calendar events');
+    console.log('getEvents called with:', { startDate, endDate });
+    const authClient = await TokenManager.getAuthClient();
+    if (!authClient) {
+      console.error('Failed to get auth client in getEvents');
       return []; // Return empty array instead of throwing
     }
 
     const { google } = await import('googleapis');
-    const calendar = google.calendar({ version: 'v3', auth: accessToken });
-    const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
-
-    const response = await calendar.events.list({
-      calendarId: calendarId,
-      timeMin: startDate,
-      timeMax: endDate,
-      singleEvents: true,
-      orderBy: 'startTime',
-    });
-
-    return response.data.items?.map(this.transformGoogleEvent) || [];
-  }
-
-  /**
-   * Get admin events (for admin calendar) using service account
-   */
-  async getAdminEvents(startDate: string, endDate: string): Promise<CalendarEvent[]> {
-    const accessToken = await TokenManager.getValidAccessToken();
-    if (!accessToken) {
-      console.warn('No valid access token available for admin calendar events');
-      return []; // Return empty array instead of throwing
-    }
-
-    const { google } = await import('googleapis');
-    const calendar = google.calendar({ version: 'v3', auth: accessToken });
-
-    // Use primary calendar or configurable calendar ID instead of hardcoded group calendars
-    const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+    const calendar = google.calendar({ version: 'v3', auth: authClient });
+    const calendarId = this.getCalendarId();
+    console.log('Using calendarId:', calendarId);
 
     try {
       const response = await calendar.events.list({
@@ -340,21 +407,45 @@ Booked via Driving School System
         orderBy: 'startTime',
       });
 
-      const events = (response.data.items || []).map(event => ({
-        ...this.transformGoogleEvent(event),
-        hidden: true // Mark as hidden
-      }));
-
-      return events;
+      const events = response.data.items || [];
+      console.log(`Found ${events.length} events in calendar.`);
+      return events.map(this.transformGoogleEvent);
     } catch (error) {
-      console.error(`Error fetching events from calendar ${calendarId}:`, error);
+      console.error('Error fetching calendar events:', error);
+      return [];
+    }
+  }
 
-      if (error instanceof Error && error.message.includes('API key not valid')) {
-        console.error('Authentication failed. Please check service account permissions in Google Cloud Console.');
-        console.error('Service account email: eg-driving-school@ace-matrix-349719.iam.gserviceaccount.com');
-        console.error('Required scopes: calendar, calendar.events, calendar.readonly');
-      }
+  /**
+   * Get admin events (for admin calendar) using service account
+   */
+  async getAdminEvents(startDate: string, endDate: string): Promise<CalendarEvent[]> {
+    console.log('getAdminEvents called with:', { startDate, endDate });
+    const authClient = await TokenManager.getAuthClient();
+    if (!authClient) {
+      console.error('Failed to get auth client in getAdminEvents');
+      return []; // Return empty array instead of throwing
+    }
 
+    const { google } = await import('googleapis');
+    const calendar = google.calendar({ version: 'v3', auth: authClient });
+    const calendarId = this.getCalendarId();
+    console.log('Using admin calendarId:', calendarId);
+
+    try {
+      const response = await calendar.events.list({
+        calendarId: calendarId,
+        timeMin: startDate,
+        timeMax: endDate,
+        singleEvents: true,
+        orderBy: 'startTime',
+      });
+
+      const events = response.data.items || [];
+      console.log(`Found ${events.length} admin events in calendar.`);
+      return events.map(this.transformGoogleEvent);
+    } catch (error) {
+      console.error('Error fetching admin calendar events:', error);
       return [];
     }
   }
@@ -408,7 +499,6 @@ Booked via Driving School System
       await this.deleteEvent(eventId);
       return true;
     } catch (error) {
-      console.error('Error cancelling booking:', error);
       return false;
     }
   }
@@ -498,18 +588,14 @@ Booked via Driving School System
     description?: string;
     location?: string;
   }): Promise<CalendarEvent> {
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-    if (!adminEmail) {
-      throw new Error('Admin email not configured in environment variables');
-    }
-
-    const accessToken = await TokenManager.getValidAccessToken();
-    if (!accessToken) {
+    const authClient = await TokenManager.getAuthClient();
+    if (!authClient) {
       throw new Error('Admin calendar not connected or tokens expired');
     }
 
     const { google } = await import('googleapis');
-    const calendar = google.calendar({ version: 'v3', auth: accessToken });
+    const calendar = google.calendar({ version: 'v3', auth: authClient });
+    const calendarId = this.getCalendarId();
 
     const createEventData = {
       summary: eventData.title,
@@ -525,14 +611,13 @@ Booked via Driving School System
       location: eventData.location || null,
     };
 
-    console.log('Creating event in admin calendar:', adminEmail);
-
+    // Create event in resolved admin calendar
     const response = await calendar.events.insert({
-      calendarId: adminEmail,
+      calendarId: calendarId,
       requestBody: createEventData,
     });
 
-    console.log('Event created successfully:', response.data.id);
+    // Event created successfully
 
     return this.transformGoogleEvent(response.data);
   }
@@ -550,13 +635,14 @@ Booked via Driving School System
   }
 
   private async validateBookingRequest(booking: BookingRequest): Promise<void> {
+    await this.ensureSettingsLoaded();
     // Check if the requested time slot is available
     const availableSlots = await this.getAvailableSlots(booking.date);
-    const requestedDateTime = new Date(`${booking.date}T${booking.time}:00`);
 
     const isSlotAvailable = availableSlots.some(slot => {
-      const slotStart = new Date(slot.start);
-      return slotStart.getTime() === requestedDateTime.getTime() && slot.available;
+      // Prefer comparing by local HH:MM to avoid timezone mismatches
+      const slotTime = new Date(slot.start).toTimeString().slice(0,5);
+      return slotTime === booking.time && slot.available;
     });
 
     if (!isSlotAvailable) {
@@ -571,14 +657,14 @@ Booked via Driving School System
   }
 
   private async createCalendarEvent(eventData: CreateEventData): Promise<CalendarEvent> {
-    const accessToken = await TokenManager.getValidAccessToken();
-    if (!accessToken) {
+    const authClient = await TokenManager.getAuthClient();
+    if (!authClient) {
       throw new Error('Calendar not connected or tokens expired');
     }
 
     const { google } = await import('googleapis');
-    const calendar = google.calendar({ version: 'v3', auth: accessToken });
-    const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+    const calendar = google.calendar({ version: 'v3', auth: authClient });
+    const calendarId = this.getCalendarId();
 
     const response = await calendar.events.insert({
       calendarId: calendarId,
@@ -590,8 +676,10 @@ Booked via Driving School System
 
   private generateTimeSlotsInternal(date: string): TimeSlot[] {
     const slots: TimeSlot[] = [];
-    const [startHour = 9, startMinute = 0] = this.settings.workingHours.start.split(':').map(Number);
-    const [endHour = 17, endMinute = 0] = this.settings.workingHours.end.split(':').map(Number);
+    const dow = new Date(date).getDay();
+    const cfg = this.workingHoursByDay[dow] || { start: this.settings.workingHours.start, end: this.settings.workingHours.end, enabled: true };
+    const [startHour = 9, startMinute = 0] = cfg.start.split(':').map(Number);
+    const [endHour = 17, endMinute = 0] = cfg.end.split(':').map(Number);
 
     const startTime = startHour * 60 + startMinute;
     const endTime = endHour * 60 + endMinute;
@@ -606,6 +694,7 @@ Booked via Driving School System
       slots.push({
         start: slotStart.toISOString(),
         end: slotEnd.toISOString(),
+        time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
         available: true
       });
     }
@@ -622,28 +711,34 @@ Booked via Driving School System
       const slotStart = new Date(slot.start);
       const slotEnd = new Date(slot.end);
 
-      // Check for conflicts with existing events (including buffer time)
-      const hasConflict = existingEvents.some(event => {
+      const isUnavailable = existingEvents.some(event => {
+        if (!event.start || !event.end) {
+          return false; // Skip events with invalid time data
+        }
+
         const eventStart = new Date(event.start);
         const eventEnd = new Date(event.end);
 
-        // Add buffer time to existing events
         const bufferedStart = new Date(eventStart.getTime() - bufferMinutes * 60000);
         const bufferedEnd = new Date(eventEnd.getTime() + bufferMinutes * 60000);
 
-        return (slotStart < bufferedEnd && slotEnd > bufferedStart);
+        const conflict = slotStart < bufferedEnd && slotEnd > bufferedStart;
+
+        if (conflict) {
+          console.log(
+            `Conflict found: Slot ${slot.time} is unavailable due to event "${event.title}".`
+          );
+        }
+
+        return conflict;
       });
 
-      if (hasConflict) {
-        return {
-          ...slot,
-          available: false,
-          reason: 'Time slot conflicts with existing booking'
-        };
-      }
-
-      return slot;
-    }).filter(slot => slot.available || slot.reason); // Include unavailable slots with reasons
+      return {
+        ...slot,
+        available: !isUnavailable,
+        reason: isUnavailable ? 'Time slot conflicts with an existing booking.' : undefined
+      };
+    });
   }
 
   private transformGoogleEvent(googleEvent: any): CalendarEvent {
