@@ -5,51 +5,6 @@ export interface OAuthTokens {
   expires_at?: Date;
   scope?: string;
   id_token?: string;
-  /**
-   * Get authenticated client with automatic token refresh and retry logic
-   */
-  static async getAuthenticatedClient(userId?: string): Promise<any | null> {
-    try {
-      const accessToken = await this.getValidAccessToken(userId);
-      if (!accessToken) {
-        return null;
-      }
-
-      const authClient = await getServiceAccountAuthClient();
-      return authClient;
-    } catch (error) {
-      console.error('Error getting authenticated client:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Health check for token manager
-   */
-  static async healthCheck(): Promise<{ status: 'healthy' | 'degraded' | 'error'; details: any }> {
-    try {
-      const testToken = await this.getValidAccessToken('health_check');
-      
-      return {
-        status: testToken ? 'healthy' : 'degraded',
-        details: {
-          cachedTokens: this.tokenCache.size,
-          refreshInProgress: this.refreshInProgress.size,
-          hasServiceAccount: !!(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL),
-          testTokenObtained: !!testToken
-        }
-      };
-    } catch (error) {
-      return {
-        status: 'error',
-        details: {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          cachedTokens: this.tokenCache.size,
-          refreshInProgress: this.refreshInProgress.size
-        }
-      };
-    }
-  }
 }
 
 export interface TokenRefreshResult {
@@ -67,16 +22,27 @@ export interface TokenManagerConfig {
   maxRetryDelayMs: number;
 }
 
+export interface JWTConfig {
+  clientEmail: string;
+  privateKey: string;
+  scopes?: string[];
+  tokenLifetime?: number;
+  additionalClaims?: Record<string, any>;
+}
+
+// Cache duration for JWT auth client (5 minutes)
+const CACHE_DURATION_MS = 5 * 60 * 1000;
+
 // Cache the initialized JWT auth client to avoid re-creating on every request
 let cachedAuthClient: any | null = null;
 
-const getServiceAccountToken = async (): Promise<string | null> => {
+const getServiceAccountToken = async (config?: JWTConfig): Promise<string | null> => {
   try {
-    // Check if we have service account credentials in environment variables
+    // Check if we have service account credentials in environment variables or config
     // Support both GOOGLE_SERVICE_ACCOUNT_* and legacy GOOGLE_CLIENT_EMAIL/GOOGLE_PRIVATE_KEY names
-    const clientEmail =
+    const clientEmail = config?.clientEmail ||
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
-    const privateKey =
+    const privateKey = config?.privateKey ||
       process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
 
     if (!clientEmail || !privateKey) {
@@ -97,7 +63,7 @@ const getServiceAccountToken = async (): Promise<string | null> => {
     const jwtClient = new JWT({
       email: clientEmail,
       key: privateKey.replace(/\\n/g, '\n'), // Handle escaped newlines
-      scopes: [
+      scopes: config?.scopes || [
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events',
         'https://www.googleapis.com/auth/calendar.readonly'
@@ -203,6 +169,52 @@ export class TokenManager {
     retryDelayMs: 1000, // Initial retry delay (1 second)
     maxRetryDelayMs: 30000, // Maximum retry delay (30 seconds)
   };
+
+  /**
+   * Get authenticated client with automatic token refresh and retry logic
+   */
+  static async getAuthenticatedClient(userId?: string): Promise<any | null> {
+    try {
+      const accessToken = await this.getValidAccessToken(userId);
+      if (!accessToken) {
+        return null;
+      }
+
+      const authClient = await getServiceAccountAuthClient();
+      return authClient;
+    } catch (error) {
+      console.error('Error getting authenticated client:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Health check for token manager
+   */
+  static async healthCheck(): Promise<{ status: 'healthy' | 'degraded' | 'error'; details: any }> {
+    try {
+      const testToken = await this.getValidAccessToken('health_check');
+      
+      return {
+        status: testToken ? 'healthy' : 'degraded',
+        details: {
+          cachedTokens: this.tokenCache.size,
+          refreshInProgress: this.refreshInProgress.size,
+          hasServiceAccount: !!(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL),
+          testTokenObtained: !!testToken
+        }
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        details: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          cachedTokens: this.tokenCache.size,
+          refreshInProgress: this.refreshInProgress.size
+        }
+      };
+    }
+  }
 
   /**
    * Calculate exponential backoff delay
