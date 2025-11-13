@@ -332,6 +332,13 @@ export async function POST(request: NextRequest) {
 
     // Send confirmation emails
     try {
+      const ics = userEvent ? undefined : new (await import('@/lib/calendar/enhanced-calendar-service')).EnhancedCalendarService().buildICS(
+        `Driving Lesson - ${lessonType}`,
+        startDateTime.toISOString(),
+        endDateTime.toISOString(),
+        `Lesson Type: ${lessonType}\nNotes: ${notes || ''}`,
+        location || undefined
+      );
       await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-booking-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -351,7 +358,8 @@ export async function POST(request: NextRequest) {
           bookingId: booking.id,
           experienceLevel: userData?.experience_level,
           address: userData?.address,
-          suburb: userData?.suburb
+          suburb: userData?.suburb,
+          ics
         })
       });
     } catch (emailError) {

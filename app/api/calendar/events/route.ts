@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
+    const month = searchParams.get('month'); // YYYY-MM
     const admin = searchParams.get('admin') === 'true';
     const eventType = searchParams.get('eventType') ?? 'events';
 
@@ -14,13 +15,22 @@ export async function GET(request: NextRequest) {
     let startDate: string;
     let endDate: string;
 
-    if (date) {
-      // If date is provided, set start and end to the start and end of that day
+    if (month) {
+      // Month range: first day 00:00 to first day of next month 00:00
+      const [yyyyStr, mmStr] = month.split('-');
+      const yyyy = parseInt(yyyyStr, 10);
+      const mm = parseInt(mmStr, 10) - 1; // JS months 0-based
+      const firstOfMonth = new Date(yyyy, mm, 1);
+      const firstOfNextMonth = new Date(yyyy, mm + 1, 1);
+      startDate = firstOfMonth.toISOString();
+      endDate = firstOfNextMonth.toISOString();
+    } else if (date) {
+      // Day range: exact day
       const targetDate = new Date(date);
       startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).toISOString();
       endDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1).toISOString();
     } else {
-      // Fallback to original logic
+      // Generic range from provided params or default 30 days
       startDate = searchParams.get('startDate') || new Date().toISOString();
       endDate = searchParams.get('endDate') || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     }
@@ -42,8 +52,8 @@ export async function GET(request: NextRequest) {
       // For admin events
       events = await calendarService.getAdminEvents(startDate, endDate);
     } else {
-      // Regular events
-      events = await calendarService.getEvents(startDate, endDate);
+      // Public events (anonymized)
+      events = await calendarService.getPublicEvents(startDate, endDate);
     }
 
     return NextResponse.json({

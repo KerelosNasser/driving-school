@@ -389,32 +389,33 @@ Booked via Driving School System
    * Get events in date range using service account
    */
   async getEvents(startDate: string, endDate: string, _eventType?: string): Promise<CalendarEvent[]> {
-    console.log('getEvents called with:', { startDate, endDate });
     const authClient = await TokenManager.getAuthClient();
     if (!authClient) {
-      console.error('Failed to get auth client in getEvents');
-      return []; // Return empty array instead of throwing
+      return [];
     }
-
     const { google } = await import('googleapis');
     const calendar = google.calendar({ version: 'v3', auth: authClient });
     const calendarId = this.getCalendarId();
-    console.log('Using calendarId:', calendarId);
-
     try {
-      const response = await calendar.events.list({
-        calendarId: calendarId,
-        timeMin: startDate,
-        timeMax: endDate,
-        singleEvents: true,
-        orderBy: 'startTime',
-      });
-
-      const events = response.data.items || [];
-      console.log(`Found ${events.length} events in calendar.`);
-      return events.map(this.transformGoogleEvent);
-    } catch (error) {
-      console.error('Error fetching calendar events:', error);
+      let pageToken: string | undefined;
+      const all: any[] = [];
+      do {
+        const response = await calendar.events.list({
+          calendarId,
+          timeMin: startDate,
+          timeMax: endDate,
+          singleEvents: true,
+          orderBy: 'startTime',
+          timeZone: this.DEFAULT_TIMEZONE,
+          pageToken,
+        });
+        if (Array.isArray(response.data.items)) {
+          all.push(...response.data.items);
+        }
+        pageToken = response.data.nextPageToken || undefined;
+      } while (pageToken);
+      return all.map(this.transformGoogleEvent);
+    } catch {
       return [];
     }
   }
@@ -456,32 +457,33 @@ Booked via Driving School System
    * Get admin events (for admin calendar) using service account
    */
   async getAdminEvents(startDate: string, endDate: string): Promise<CalendarEvent[]> {
-    console.log('getAdminEvents called with:', { startDate, endDate });
     const authClient = await TokenManager.getAuthClient();
     if (!authClient) {
-      console.error('Failed to get auth client in getAdminEvents');
-      return []; // Return empty array instead of throwing
+      return [];
     }
-
     const { google } = await import('googleapis');
     const calendar = google.calendar({ version: 'v3', auth: authClient });
     const calendarId = this.getCalendarId();
-    console.log('Using admin calendarId:', calendarId);
-
     try {
-      const response = await calendar.events.list({
-        calendarId: calendarId,
-        timeMin: startDate,
-        timeMax: endDate,
-        singleEvents: true,
-        orderBy: 'startTime',
-      });
-
-      const events = response.data.items || [];
-      console.log(`Found ${events.length} admin events in calendar.`);
-      return events.map(this.transformGoogleEvent);
-    } catch (error) {
-      console.error('Error fetching admin calendar events:', error);
+      let pageToken: string | undefined;
+      const all: any[] = [];
+      do {
+        const response = await calendar.events.list({
+          calendarId,
+          timeMin: startDate,
+          timeMax: endDate,
+          singleEvents: true,
+          orderBy: 'startTime',
+          timeZone: this.DEFAULT_TIMEZONE,
+          pageToken,
+        });
+        if (Array.isArray(response.data.items)) {
+          all.push(...response.data.items);
+        }
+        pageToken = response.data.nextPageToken || undefined;
+      } while (pageToken);
+      return all.map(this.transformGoogleEvent);
+    } catch {
       return [];
     }
   }
@@ -495,7 +497,7 @@ Booked via Driving School System
     // Anonymize events for public view
     return events.map(event => ({
       ...event,
-      title: 'Driving Lesson', // Generic title
+      title: 'BOOKED',
       description: '', // Remove personal details
       attendees: [] // Remove attendee information
     }));
@@ -824,6 +826,30 @@ Booked via Driving School System
     return { adminEvent, userEvent };
   }
 
+  buildICS(summary: string, startISO: string, endISO: string, description?: string, location?: string): string {
+    const dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const fmt = (iso: string) => iso.replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const uid = `${Math.random().toString(36).slice(2)}@driving-school`;
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Driving School//Calendar//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART:${fmt(startISO)}`,
+      `DTEND:${fmt(endISO)}`,
+      `SUMMARY:${summary}`,
+      description ? `DESCRIPTION:${description.replace(/\n/g, '\\n')}` : 'DESCRIPTION:',
+      location ? `LOCATION:${location}` : 'LOCATION:',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ];
+    return lines.join('\r\n');
+  }
+
   /**
    * Find the first contiguous available window that satisfies durationMinutes
    */
@@ -880,12 +906,25 @@ Booked via Driving School System
   }
 
   private transformGoogleEvent(googleEvent: any): CalendarEvent {
+    const isAllDay = !!googleEvent.start?.date && !googleEvent.start?.dateTime;
+    let startISO = googleEvent.start?.dateTime || googleEvent.start?.date || '';
+    let endISO = googleEvent.end?.dateTime || googleEvent.end?.date || '';
+
+    if (isAllDay && googleEvent.start?.date && googleEvent.end?.date) {
+      // Google all-day events use exclusive end date; normalize to inclusive end-of-day
+      const startDate = new Date(`${googleEvent.start.date}T00:00:00.000Z`);
+      const endDateExclusive = new Date(`${googleEvent.end.date}T00:00:00.000Z`);
+      const endDateInclusive = new Date(endDateExclusive.getTime() - 1);
+      startISO = startDate.toISOString();
+      endISO = endDateInclusive.toISOString();
+    }
+
     return {
       id: googleEvent.id,
       title: googleEvent.summary || 'Untitled Event',
       description: googleEvent.description || '',
-      start: googleEvent.start?.dateTime || googleEvent.start?.date,
-      end: googleEvent.end?.dateTime || googleEvent.end?.date,
+      start: startISO,
+      end: endISO,
       location: googleEvent.location || '',
       status: googleEvent.status,
       attendees: googleEvent.attendees || [],
