@@ -107,23 +107,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     try {
       const start = new Date();
       const startDate = selectedDate && selectedDate > start ? selectedDate : start;
-      for (let i = 0; i < 30; i++) {
-        const checkDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
-        // Skip disabled days early
-        if (isDateDisabled(checkDate)) continue;
-        const dateStr = checkDate.toISOString().split('T')[0];
-        const res = await fetch(`/api/calendar/events?eventType=availability&date=${dateStr}`);
-        if (!res.ok) continue;
-        const data = await res.json();
-        const slots = Array.isArray(data) ? data : (data.slots || []);
-        const available = (slots || []).filter((s: any) => s.available);
-        if (available.length > 0) {
-          setCurrentMonth(checkDate);
-          onDateSelect(checkDate);
-          return;
-        }
-      }
-      console.warn('No available slots found in the next 30 days');
+      const res = await fetch(`/api/calendar/availability/next?startDate=${startDate.toISOString()}`);
+      if (!res.ok) throw new Error('Failed to query next availability');
+      const data = await res.json();
+      if (!data?.next) return;
+      const nextStart = new Date(data.next.start);
+      setCurrentMonth(nextStart);
+      onDateSelect(nextStart);
     } catch (err) {
       console.error('Failed to search next available date:', err);
     } finally {

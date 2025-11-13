@@ -154,39 +154,16 @@ export async function POST(request: NextRequest) {
 
     const calendarService = new EnhancedCalendarService();
 
-    // Block booking if admin has any events on the same day
-    const startOfDay = new Date(bookingDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(bookingDate);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const adminEventsOnDay = await calendarService.getAdminEvents(
-      startOfDay.toISOString(),
-      endOfDay.toISOString()
-    );
-
-    if (adminEventsOnDay.length > 0) {
-      return NextResponse.json(
-        { error: 'Admin is unavailable on this day due to existing events. Please choose another date.' },
-        { status: 409 }
-      );
-    }
-
-    // Check for conflicts with admin calendar
-    const adminEvents = await calendarService.getAdminEvents(
+    // Precise conflict detection using free/busy with buffer
+    const { bufferTimeMinutes } = await calendarService.getSettings();
+    const isBusy = await calendarService.isAdminBusy(
       startDateTime.toISOString(),
-      endDateTime.toISOString()
+      endDateTime.toISOString(),
+      bufferTimeMinutes
     );
-
-    const hasConflict = adminEvents.some(event => {
-      const eventStart = new Date(event.start);
-      const eventEnd = new Date(event.end);
-      return startDateTime < eventEnd && endDateTime > eventStart;
-    });
-
-    if (hasConflict) {
+    if (isBusy) {
       return NextResponse.json(
-        { error: 'Time slot is no longer available due to a scheduling conflict' },
+        { error: 'Time slot is unavailable due to an admin calendar conflict' },
         { status: 409 }
       );
     }
@@ -210,7 +187,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Calculate hours used (duration in minutes -> hours)
-    const hoursUsed = parseFloat(((duration || 60) / 60).toFixed(2));
+    const hoursUsed = Math.ceil((duration || 60) / 60);
 
     // Pre-check quota before creating calendar events
     try {
@@ -237,23 +214,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to verify quota' }, { status: 500 });
     }
 
-    // Create booking in admin calendar
-    const adminEvent = await calendarService.createBooking(bookingRequest);
-
-    // Also create event in user's calendar if they have Google Calendar connected
-    let userEvent = null;
-    try {
-      userEvent = await calendarService.createEvent({
-        title: `Driving Lesson - ${lessonType}`,
-        start: startDateTime.toISOString(),
-        end: endDateTime.toISOString(),
-        description: `Lesson Type: ${lessonType}\nNotes: ${notes || 'No additional notes'}`,
-        location: location || 'TBD'
-      });
-    } catch (userEventError) {
-      console.warn('Could not create event in user calendar:', userEventError);
-      // Continue even if user event creation fails
-    }
+    // Create events in admin and user calendars
+    const { adminEvent, userEvent } = await calendarService.createDualEvents(userId, {
+      title: `Driving Lesson - ${lessonType}`,
+      start: startDateTime.toISOString(),
+      end: endDateTime.toISOString(),
+      description: `Lesson Type: ${lessonType}\nNotes: ${notes || 'No additional notes'}`,
+      location: location || 'TBD'
+    });
 
     // Save booking to database
     const { data: booking, error: dbError } = await supabase

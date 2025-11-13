@@ -118,8 +118,11 @@ export class EnhancedCalendarService {
   }
   // Resolve a single calendar ID to use consistently across reads/writes
   private getCalendarId(): string {
-    // Prefer explicit calendar ID, otherwise fall back to admin email, then primary
-    return process.env.GOOGLE_CALENDAR_ID || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'primary';
+    const id = process.env.GOOGLE_CALENDAR_ID;
+    if (!id) {
+      throw new Error('GOOGLE_CALENDAR_ID is not configured');
+    }
+    return id;
   }
 
   // Default booking settings
@@ -213,16 +216,16 @@ export class EnhancedCalendarService {
 
       // Test connection with a simple calendar info call using service account
       const calendar = await this.getCalendarClient();
-      const response = await calendar.calendarList.get({ calendarId: 'primary' });
+      const response = await calendar.calendars.get({ calendarId: this.getCalendarId() });
 
       return {
         connected: true,
         message: 'Calendar successfully connected via service account',
         calendar: {
-          id: response.data.id || 'primary',
-          summary: response.data.summary || 'Primary Calendar',
+          id: response.data.id || this.getCalendarId(),
+          summary: response.data.summary || 'Admin Calendar',
           timeZone: response.data.timeZone || this.DEFAULT_TIMEZONE,
-          accessRole: response.data.accessRole || 'owner'
+          accessRole: 'owner'
         }
       };
     } catch (error) {
@@ -252,7 +255,7 @@ export class EnhancedCalendarService {
   /**
    * Get available time slots for a specific date
    */
-  async getAvailableSlots(date: string, bufferMinutes: number = 15): Promise<TimeSlot[]> {
+  async getAvailableSlots(date: string, bufferMinutes?: number): Promise<TimeSlot[]> {
     await this.ensureSettingsLoaded();
     const targetDate = new Date(date);
 
@@ -413,6 +416,39 @@ Booked via Driving School System
     } catch (error) {
       console.error('Error fetching calendar events:', error);
       return [];
+    }
+  }
+
+  /**
+   * Check admin calendar free/busy for a time range, optionally applying buffer
+   */
+  async isAdminBusy(startISO: string, endISO: string, bufferMinutes?: number): Promise<boolean> {
+    const authClient = await TokenManager.getAuthClient();
+    if (!authClient) {
+      return true;
+    }
+    const { google } = await import('googleapis');
+    const calendar = google.calendar({ version: 'v3', auth: authClient });
+    const calendarId = this.getCalendarId();
+
+    const buffer = typeof bufferMinutes === 'number' ? bufferMinutes : this.settings?.bufferTimeMinutes ?? this.DEFAULT_SETTINGS.bufferTimeMinutes;
+    const start = new Date(new Date(startISO).getTime() - buffer * 60000).toISOString();
+    const end = new Date(new Date(endISO).getTime() + buffer * 60000).toISOString();
+
+    try {
+      const response = await calendar.freebusy.query({
+        requestBody: {
+          timeMin: start,
+          timeMax: end,
+          items: [{ id: calendarId }],
+        } as any,
+      });
+      const calendars = response.data.calendars || {};
+      const cal = calendars[calendarId] || calendars['primary'];
+      const busy = Array.isArray(cal?.busy) ? cal.busy : [];
+      return busy.length > 0;
+    } catch (_err) {
+      return true;
     }
   }
 
@@ -739,6 +775,108 @@ Booked via Driving School System
         reason: isUnavailable ? 'Time slot conflicts with an existing booking.' : undefined
       };
     });
+  }
+
+  async createUserEvent(userId: string, eventData: {
+    title: string;
+    start: string;
+    end: string;
+    description?: string;
+    location?: string;
+  }): Promise<CalendarEvent | null> {
+    try {
+      const tokens = await (await import('@/lib/oauth/token-manager')).TokenManager.getTokens(userId, 'google');
+      if (!tokens?.access_token) {
+        return null;
+      }
+      const { google } = await import('googleapis');
+      const oauth2 = new google.auth.OAuth2();
+      oauth2.setCredentials({ access_token: tokens.access_token });
+      const calendar = google.calendar({ version: 'v3', auth: oauth2 });
+      const response = await calendar.events.insert({
+        calendarId: 'primary',
+        requestBody: {
+          summary: eventData.title,
+          start: { dateTime: eventData.start, timeZone: this.DEFAULT_TIMEZONE },
+          end: { dateTime: eventData.end, timeZone: this.DEFAULT_TIMEZONE },
+          description: eventData.description || null,
+          location: eventData.location || null,
+        } as any,
+      });
+      return this.transformGoogleEvent(response.data);
+    } catch {
+      return null;
+    }
+  }
+
+  async createDualEvents(userId: string, eventData: {
+    title: string;
+    start: string;
+    end: string;
+    description?: string;
+    location?: string;
+  }): Promise<{ adminEvent: CalendarEvent; userEvent: CalendarEvent | null }> {
+    const adminEvent = await this.createEvent(eventData);
+    let userEvent: CalendarEvent | null = null;
+    try {
+      userEvent = await this.createUserEvent(userId, eventData);
+    } catch {}
+    return { adminEvent, userEvent };
+  }
+
+  /**
+   * Find the first contiguous available window that satisfies durationMinutes
+   */
+  async getNextAvailableSlot(
+    startDateISO: string,
+    durationMinutes: number,
+    bufferMinutes?: number,
+    horizonDays: number = 30
+  ): Promise<{ start: string; end: string } | null> {
+    await this.ensureSettingsLoaded();
+    const effectiveBuffer = typeof bufferMinutes === 'number' ? bufferMinutes : this.settings.bufferTimeMinutes;
+    const lessonLen = this.settings.lessonDurationMinutes;
+    const requiredSlots = Math.max(1, Math.ceil(durationMinutes / lessonLen));
+
+    const startDate = new Date(startDateISO);
+    for (let d = 0; d < horizonDays; d++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + d);
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      const isoDate = `${yyyy}-${mm}-${dd}`;
+
+      const eventsForDay = await this.getEventsForDate(isoDate);
+      try {
+        const adminEventsForDay = await this.getAdminEvents(
+          new Date(`${isoDate}T00:00:00.000Z`).toISOString(),
+          new Date(`${isoDate}T23:59:59.999Z`).toISOString()
+        );
+        if (adminEventsForDay?.length) eventsForDay.push(...adminEventsForDay);
+      } catch {}
+
+      const slots = this.filterAvailableSlots(this.generateTimeSlotsInternal(isoDate), eventsForDay, effectiveBuffer);
+
+      // Find contiguous run of available slots
+      let runStartIndex: number | null = null;
+      let runCount = 0;
+      for (let i = 0; i < slots.length; i++) {
+        if (slots[i].available) {
+          if (runStartIndex === null) runStartIndex = i;
+          runCount++;
+          if (runCount >= requiredSlots) {
+            const start = slots[runStartIndex].start;
+            const end = new Date(new Date(start).getTime() + durationMinutes * 60000).toISOString();
+            return { start, end };
+          }
+        } else {
+          runStartIndex = null;
+          runCount = 0;
+        }
+      }
+    }
+    return null;
   }
 
   private transformGoogleEvent(googleEvent: any): CalendarEvent {

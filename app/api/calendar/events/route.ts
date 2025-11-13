@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
       // For availability, get events and generate slots
       const adminEvents = await calendarService.getAdminEvents(startDate, endDate);
       const bufferMinutesParam = searchParams.get('bufferMinutes');
-      const bufferMinutes = bufferMinutesParam ? parseInt(bufferMinutesParam, 10) : 15;
+      const settings = await calendarService.getSettings();
+      const bufferMinutes = bufferMinutesParam ? parseInt(bufferMinutesParam, 10) : settings.bufferTimeMinutes;
       const dateOnly = date || startDate.split('T')[0];
 
       // Use the same availability logic as the dedicated availability endpoint

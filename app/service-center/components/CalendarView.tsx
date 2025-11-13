@@ -147,33 +147,25 @@ export default function CalendarView({
     try {
       const start = new Date();
       const startDate = selectedDate && selectedDate > start ? selectedDate : start;
-      // Search up to 30 days ahead
-      for (let i = 0; i < 30; i++) {
-        const checkDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
-        const dateStr = format(checkDate, 'yyyy-MM-dd');
-        const res = await fetch(`/api/calendar/events?eventType=availability&date=${dateStr}`);
-        if (!res.ok) continue;
-        const data = await res.json();
-        const slots: TimeSlot[] = Array.isArray(data) ? data : (data.slots || []);
-        const available = slots.filter(s => s.available);
-        if (available.length > 0) {
-          // Jump calendar to this date and select it
-          setCurrentMonth(checkDate);
-          onDateSelect(checkDate);
-          // Preload slots into side panel
-          setAvailableSlots(available);
-          toast.success(`Next available: ${format(checkDate, 'EEE, MMM d')} at ${format(new Date(available[0].start), 'h:mm a')}`);
-          return;
-        }
+      const res = await fetch(`/api/calendar/availability/next?startDate=${startDate.toISOString()}`);
+      if (!res.ok) throw new Error('Failed to query next availability');
+      const data = await res.json();
+      if (!data?.next) {
+        toast.error('No available slots found');
+        return;
       }
-      toast.error('No available slots found in the next 30 days');
+      const nextStart = new Date(data.next.start);
+      setCurrentMonth(nextStart);
+      onDateSelect(nextStart);
+      await fetchAvailableSlots(nextStart);
+      toast.success(`Next available: ${format(nextStart, 'EEE, MMM d')} at ${format(nextStart, 'h:mm a')}`);
     } catch (err) {
       console.error('Error searching for next available slot:', err);
       toast.error('Failed to search for available slots');
     } finally {
       setFindingNext(false);
     }
-  }, [showBookingInterface, selectedDate, onDateSelect]);
+  }, [showBookingInterface, selectedDate, onDateSelect, fetchAvailableSlots]);
 
   // Generate calendar days
   const monthStart = startOfMonth(currentMonth);

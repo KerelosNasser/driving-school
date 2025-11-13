@@ -125,6 +125,7 @@ const getServiceAccountAuthClient = async (config?: JWTConfig): Promise<any | nu
         'https://www.googleapis.com/auth/calendar.events',
         'https://www.googleapis.com/auth/calendar.readonly'
       ],
+      subject: process.env.GOOGLE_IMPERSONATE_SUBJECT || undefined,
       additionalClaims: {
         ...config?.additionalClaims,
         iat: Math.floor(Date.now() / 1000),
