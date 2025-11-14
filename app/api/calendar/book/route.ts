@@ -332,38 +332,41 @@ export async function POST(request: NextRequest) {
 
     // Send confirmation emails
     try {
-      const ics = userEvent ? undefined : new (await import('@/lib/calendar/enhanced-calendar-service')).EnhancedCalendarService().buildICS(
-        `Driving Lesson - ${lessonType}`,
-        startDateTime.toISOString(),
-        endDateTime.toISOString(),
-        `Lesson Type: ${lessonType}\nNotes: ${notes || ''}`,
-        location || undefined
-      );
-      await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-booking-email`, {
+      const emailPayload = {
+        type: 'confirmation',
+        userName: userData?.full_name || studentName || 'Student',
+        userEmail: userData?.email || studentEmail || '',
+        userPhone: userData?.phone || '',
+        date: date,
+        time: time,
+        duration: duration,
+        lessonType: lessonType,
+        location: location || 'TBD',
+        notes: notes || '',
+        hoursConsumed: hoursUsed,
+        remainingHours: updatedQuota?.available_hours || 0,
+        bookingId: booking.id || 'unknown',
+        experienceLevel: userData?.experience_level || '',
+        address: userData?.address || '',
+        suburb: userData?.suburb || ''
+      };
+
+      console.log('📧 [Booking API] Sending email with payload:', emailPayload);
+
+      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-booking-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'confirmation',
-          userName: userData?.full_name || studentName,
-          userEmail: userData?.email || studentEmail,
-          userPhone: userData?.phone,
-          date: date,
-          time: time,
-          duration: duration,
-          lessonType: lessonType,
-          location: location,
-          notes: notes,
-          hoursConsumed: hoursUsed,
-          remainingHours: updatedQuota?.available_hours || 0,
-          bookingId: booking.id,
-          experienceLevel: userData?.experience_level,
-          address: userData?.address,
-          suburb: userData?.suburb,
-          ics
-        })
+        body: JSON.stringify(emailPayload)
       });
+
+      if (!emailResponse.ok) {
+        const errorData = await emailResponse.json();
+        console.error('❌ [Booking API] Email sending failed:', errorData);
+      } else {
+        console.log('✅ [Booking API] Emails sent successfully');
+      }
     } catch (emailError) {
-      console.error('Failed to send confirmation emails:', emailError);
+      console.error('❌ [Booking API] Failed to send confirmation emails:', emailError);
       // Don't fail the booking if email fails
     }
 
@@ -379,13 +382,33 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error creating booking:', error);
+    
+    // Provide user-friendly error messages based on error type
+    let userMessage = 'Failed to create booking';
+    let statusCode = 500;
+    
+    if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
+      userMessage = 'Unable to connect to Google Calendar. Please check your internet connection and try again.';
+      statusCode = 503; // Service Unavailable
+    } else if (error.message?.includes('quota')) {
+      userMessage = 'Insufficient hours available for this booking';
+      statusCode = 400;
+    } else if (error.message?.includes('conflict')) {
+      userMessage = 'This time slot is no longer available';
+      statusCode = 409;
+    } else if (error.response?.status === 401 || error.response?.status === 403) {
+      userMessage = 'Calendar authentication failed. Please contact support.';
+      statusCode = 500;
+    }
+    
     return NextResponse.json(
       { 
-        error: 'Failed to create booking', 
+        error: userMessage,
         details: error.message,
+        code: error.code,
         type: error.constructor.name
       },
-      { status: 500 }
+      { status: statusCode }
     );
   }
 }

@@ -225,7 +225,7 @@ export default function ServiceCenterPage() {
         <div className="absolute bottom-20 right-10 w-40 h-40 bg-blue-400/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-teal-400/20 rounded-full blur-2xl"></div>
 
-        <div className="container mx-auto px-4 py-6 relative z-10">
+        <div className="container mx-auto px-4 py-12 mt-10 relative z-10">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex flex-col items-center justify-center mb-6">
@@ -381,27 +381,17 @@ export default function ServiceCenterPage() {
           <div className="max-w-6xl mx-auto">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <div className="flex justify-center mb-6">
-                <TabsList className="grid grid-cols-6 h-12 w-full max-w-3xl bg-gradient-to-r from-emerald-50/90 via-teal-50/90 to-blue-50/90 backdrop-blur-sm border border-emerald-200/50 shadow-lg rounded-lg p-1">
+                <TabsList variant="service" size="lg" className="grid grid-cols-6 w-full max-w-3xl">
                   <TabsTrigger
                     value="quota"
-                    className="flex items-center justify-center space-x-1 rounded-md font-medium text-xs
-                      data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600 
-                      data-[state=active]:text-white data-[state=active]:shadow-md
-                      data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-emerald-600 
-                      data-[state=inactive]:hover:bg-emerald-50
-                      transition-all duration-200"
+                    variant="service" size="sm"
                   >
                     <Car className="h-4 w-4" />
                     <span className="hidden sm:inline">Quota</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="negotiation"
-                    className="flex items-center justify-center space-x-1 rounded-md font-medium text-xs
-                      data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600 
-                      data-[state=active]:text-white data-[state=active]:shadow-md
-                      data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-emerald-600 
-                      data-[state=inactive]:hover:bg-emerald-50
-                      transition-all duration-200"
+                    variant="service" size="sm"
                   >
                     <MessageSquare className="h-4 w-4" />
                     <span className="hidden sm:inline">Chat</span>
@@ -409,36 +399,21 @@ export default function ServiceCenterPage() {
 
                   <TabsTrigger
                     value="history"
-                    className="flex items-center justify-center space-x-1 rounded-md font-medium text-xs
-                      data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600 
-                      data-[state=active]:text-white data-[state=active]:shadow-md
-                      data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-emerald-600 
-                      data-[state=inactive]:hover:bg-emerald-50
-                      transition-all duration-200"
+                    variant="service" size="sm"
                   >
                     <Gauge className="h-4 w-4" />
                     <span className="hidden sm:inline">History</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="profile"
-                    className="flex items-center justify-center space-x-1 rounded-md font-medium text-xs
-                      data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600 
-                      data-[state=active]:text-white data-[state=active]:shadow-md
-                      data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-emerald-600 
-                      data-[state=inactive]:hover:bg-emerald-50
-                      transition-all duration-200"
+                    variant="service" size="sm"
                   >
                     <Shield className="h-4 w-4" />
                     <span className="hidden sm:inline">Profile</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="referrals"
-                    className="flex items-center justify-center space-x-1 rounded-md font-medium text-xs
-                      data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600 
-                      data-[state=active]:text-white data-[state=active]:shadow-md
-                      data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-emerald-600 
-                      data-[state=inactive]:hover:bg-emerald-50
-                      transition-all duration-200"
+                    variant="service" size="sm"
                   >
                     <Users className="h-4 w-4" />
                     <span className="hidden sm:inline">Referrals</span>

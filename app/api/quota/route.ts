@@ -19,12 +19,23 @@ async function handleQuotaGetRequest(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Verify Supabase connection
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Supabase credentials not configured');
+      return NextResponse.json({ error: 'Database configuration error' }, { status: 500 });
+    }
+
     // Get user from database using clerk_id
-    const { data: user } = await supabase
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
       .eq('clerk_id', clerkUserId)
       .single();
+
+    if (userError) {
+      console.error('Error fetching user:', userError);
+      return NextResponse.json({ error: 'Failed to fetch user', details: userError.message }, { status: 500 });
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -41,7 +52,7 @@ async function handleQuotaGetRequest(_request: NextRequest) {
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
       console.error('Error fetching quota:', error);
-      return NextResponse.json({ error: 'Failed to fetch quota' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch quota', details: error.message }, { status: 500 });
     }
 
     // If no quota exists, return default values
@@ -67,7 +78,14 @@ async function handleQuotaGetRequest(_request: NextRequest) {
     return NextResponse.json({ quota: quotaWithRemaining });
   } catch (error) {
     console.error('Quota API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('Error fetching quota:', { message: errorMessage, details: errorStack });
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: errorMessage,
+      details: errorStack
+    }, { status: 500 });
   }
 }
 

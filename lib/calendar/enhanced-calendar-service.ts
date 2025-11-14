@@ -457,17 +457,29 @@ Booked via Driving School System
    * Get admin events (for admin calendar) using service account
    */
   async getAdminEvents(startDate: string, endDate: string): Promise<CalendarEvent[]> {
+    console.log('🔍 [getAdminEvents] Starting fetch:', { startDate, endDate });
+    
     const authClient = await TokenManager.getAuthClient();
     if (!authClient) {
+      console.log('❌ [getAdminEvents] No auth client available');
       return [];
     }
+    
     const { google } = await import('googleapis');
     const calendar = google.calendar({ version: 'v3', auth: authClient });
     const calendarId = this.getCalendarId();
+    
+    console.log('🔍 [getAdminEvents] Using calendar ID:', calendarId);
+    
     try {
       let pageToken: string | undefined;
       const all: any[] = [];
+      let pageCount = 0;
+      
       do {
+        pageCount++;
+        console.log(`🔍 [getAdminEvents] Fetching page ${pageCount}...`);
+        
         const response = await calendar.events.list({
           calendarId,
           timeMin: startDate,
@@ -477,13 +489,44 @@ Booked via Driving School System
           timeZone: this.DEFAULT_TIMEZONE,
           pageToken,
         });
+        
+        console.log(`🔍 [getAdminEvents] Page ${pageCount} response:`, {
+          itemsCount: response.data.items?.length || 0,
+          hasNextPage: !!response.data.nextPageToken
+        });
+        
         if (Array.isArray(response.data.items)) {
+          console.log(`🔍 [getAdminEvents] Page ${pageCount} events:`, 
+            response.data.items.map(item => ({
+              id: item.id,
+              summary: item.summary,
+              start: item.start?.dateTime || item.start?.date,
+              end: item.end?.dateTime || item.end?.date
+            }))
+          );
           all.push(...response.data.items);
         }
+        
         pageToken = response.data.nextPageToken || undefined;
       } while (pageToken);
-      return all.map(this.transformGoogleEvent);
-    } catch {
+      
+      console.log(`✅ [getAdminEvents] Total events fetched: ${all.length}`);
+      console.log(`✅ [getAdminEvents] All events:`, 
+        all.map(item => ({
+          id: item.id,
+          summary: item.summary,
+          start: item.start?.dateTime || item.start?.date,
+          end: item.end?.dateTime || item.end?.date,
+          timestamp: new Date(item.start?.dateTime || item.start?.date).toLocaleString()
+        }))
+      );
+      
+      const transformed = all.map(this.transformGoogleEvent);
+      console.log(`✅ [getAdminEvents] Transformed events: ${transformed.length}`);
+      
+      return transformed;
+    } catch (error) {
+      console.error('❌ [getAdminEvents] Error fetching events:', error);
       return [];
     }
   }
@@ -649,15 +692,43 @@ Booked via Driving School System
       location: eventData.location || null,
     };
 
-    // Create event in resolved admin calendar
-    const response = await calendar.events.insert({
-      calendarId: calendarId,
-      requestBody: createEventData,
-    });
+    // Create event in resolved admin calendar with retry logic
+    let lastError: any = null;
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await calendar.events.insert({
+          calendarId: calendarId,
+          requestBody: createEventData,
+        });
 
-    // Event created successfully
-
-    return this.transformGoogleEvent(response.data);
+        // Event created successfully
+        return this.transformGoogleEvent(response.data);
+      } catch (error: any) {
+        lastError = error;
+        
+        // Check if it's a retryable error
+        const isRetryable = 
+          error.code === 'ECONNRESET' || 
+          error.code === 'ETIMEDOUT' ||
+          error.code === 'ENOTFOUND' ||
+          (error.response?.status >= 500 && error.response?.status < 600);
+        
+        if (isRetryable && attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+          console.warn(`Calendar API attempt ${attempt} failed, retrying in ${delay}ms:`, error.message);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        // Non-retryable error or max retries reached
+        throw error;
+      }
+    }
+    
+    // Should never reach here, but just in case
+    throw lastError || new Error('Failed to create calendar event after retries');
   }
 
   // Private helper methods

@@ -238,21 +238,59 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 // Time Slots View Component
 interface TimeSlotsViewProps {
   selectedDate: Date;
-  selectedTimeSlot: string | null;
-  onTimeSlotSelect: (time: string) => void;
+  selectedTimeSlots: string[];
+  onTimeSlotsChange: (times: string[]) => void;
   calendarSettings?: any;
   remainingHours: number;
 }
 
 const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
   selectedDate,
-  selectedTimeSlot,
-  onTimeSlotSelect,
+  selectedTimeSlots,
+  onTimeSlotsChange,
   calendarSettings,
   remainingHours
 }) => {
   const [timeSlots, setTimeSlots] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Check if time slots are consecutive
+  const areConsecutive = (slots: string[]): boolean => {
+    if (slots.length <= 1) return true;
+    const sorted = slots.sort();
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const current = parseInt(sorted[i].split(':')[0]);
+      const next = parseInt(sorted[i + 1].split(':')[0]);
+      if (next - current !== 1) return false;
+    }
+    return true;
+  };
+
+  // Handle slot click
+  const handleSlotClick = (time: string) => {
+    const slot = timeSlots.find(s => s.time === time);
+    if (!slot?.available) return;
+
+    const isSelected = selectedTimeSlots.includes(time);
+
+    if (isSelected) {
+      // Deselect
+      onTimeSlotsChange(selectedTimeSlots.filter(t => t !== time));
+    } else {
+      // Check consecutive
+      const newSlots = [...selectedTimeSlots, time];
+      if (!areConsecutive(newSlots)) {
+        alert('Please select consecutive time slots only');
+        return;
+      }
+      // Check hours
+      if (newSlots.length > remainingHours) {
+        alert(`You only have ${remainingHours} hours remaining`);
+        return;
+      }
+      onTimeSlotsChange(newSlots);
+    }
+  };
 
   // Fetch available time slots from admin calendar
   useEffect(() => {
@@ -363,37 +401,39 @@ const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
   }
 
   return (
-    <div className="space-y-3">
-      {timeSlots.map((slot, index) => (
-        <button
-          key={index}
-          disabled={!slot.available || remainingHours < 1}
-          onClick={() => onTimeSlotSelect(slot.time)}
-          className={`w-full p-3 rounded-lg border text-left transition-all duration-200 ${
-            selectedTimeSlot === slot.time
-              ? 'border-emerald-400 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-200'
-              : slot.available && remainingHours >= 1
-              ? 'border-emerald-200 bg-white hover:bg-emerald-50 text-emerald-700 hover:border-emerald-300'
-              : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium">{slot.time}</div>
-              <div className="text-xs text-gray-500">1 hour lesson</div>
-            </div>
-            <div className="text-right">
-              {slot.available && remainingHours >= 1 ? (
-                <div className="text-emerald-600 text-sm">Available</div>
-              ) : !slot.available ? (
-                <div className="text-gray-500 text-sm">{slot.reason}</div>
-              ) : (
-                <div className="text-red-500 text-sm">No quota</div>
+    <div>
+      <div className="text-xs text-gray-600 mb-3">
+        💡 Tip: Select multiple consecutive hours for longer lessons
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {timeSlots.map((slot, index) => {
+          const isSelected = selectedTimeSlots.includes(slot.time);
+          const isDisabled = !slot.available || remainingHours < 1;
+          
+          return (
+            <button
+              key={index}
+              disabled={isDisabled}
+              onClick={() => handleSlotClick(slot.time)}
+              className={`p-3 rounded-lg border-2 text-center transition-all duration-200 ${
+                isSelected
+                  ? 'border-emerald-500 bg-emerald-500 text-white shadow-md'
+                  : isDisabled
+                  ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
+              }`}
+            >
+              <div className="font-semibold text-lg">{slot.time}</div>
+              {!slot.available && slot.reason && (
+                <div className="text-xs mt-1 opacity-75">{slot.reason}</div>
               )}
-            </div>
-          </div>
-        </button>
-      ))}
+              {isSelected && (
+                <div className="text-xs mt-1">✓ Selected</div>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -408,7 +448,7 @@ export default function QuotaManagementTab({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [booking, setBooking] = useState(false);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   // Fetch user quota from API
@@ -494,20 +534,10 @@ export default function QuotaManagementTab({
   const progressPercentage =
     totalHours > 0 ? (usedHours / totalHours) * 100 : 0;
 
-  // Handle time slot selection
-  const handleTimeSlotClick = (time: string) => {
-    if (remainingHours < 1) {
-      setError('Insufficient quota. You need at least 1 hour remaining to book a lesson.');
-      return;
-    }
-    setSelectedTimeSlot(time);
-    setError(null);
-  };
-
   // Handle booking submission
   const handleBooking = async () => {
-    if (!selectedTimeSlot || !selectedDate) {
-      setError('Please select a date and time slot first');
+    if (selectedTimeSlots.length === 0 || !selectedDate) {
+      setError('Please select a date and time slots first');
       return;
     }
 
@@ -518,6 +548,8 @@ export default function QuotaManagementTab({
     try {
       // Format date as YYYY-MM-DD
       const dateStr = selectedDate.toISOString().split('T')[0];
+      const startTime = selectedTimeSlots.sort()[0];
+      const duration = selectedTimeSlots.length * 60; // minutes
 
       const response = await fetch('/api/calendar/book', {
         method: 'POST',
@@ -526,19 +558,19 @@ export default function QuotaManagementTab({
         },
         body: JSON.stringify({
           date: dateStr,
-          time: selectedTimeSlot,
-          duration: 60,
+          time: startTime,
+          duration: duration,
           lessonType: 'Standard',
-          location: 'Brisbane CBD', // Default location
-          notes: 'Booked via Service Center'
+          location: 'Brisbane CBD',
+          notes: `${selectedTimeSlots.length} hour lesson - Booked via Service Center`
         }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(`Lesson booked successfully for ${selectedDate.toLocaleDateString()} at ${selectedTimeSlot}! 1 hour deducted from your quota.`);
-        setSelectedTimeSlot(null);
+        setSuccess(`Lesson booked successfully for ${selectedDate.toLocaleDateString()} at ${startTime}! ${selectedTimeSlots.length} hour(s) deducted from your quota.`);
+        setSelectedTimeSlots([]);
         setSelectedDate(undefined);
 
         // Refresh quota data
@@ -625,8 +657,8 @@ export default function QuotaManagementTab({
                 {selectedDate ? (
                   <TimeSlotsView
                     selectedDate={selectedDate}
-                    selectedTimeSlot={selectedTimeSlot}
-                    onTimeSlotSelect={handleTimeSlotClick}
+                    selectedTimeSlots={selectedTimeSlots}
+                    onTimeSlotsChange={setSelectedTimeSlots}
                     calendarSettings={calendarSettings}
                     remainingHours={remainingHours}
                   />
@@ -638,7 +670,7 @@ export default function QuotaManagementTab({
                 )}
 
                 {/* Selected Booking Confirmation */}
-                {selectedTimeSlot && selectedDate && (
+                {selectedTimeSlots.length > 0 && selectedDate && (
                   <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -646,10 +678,10 @@ export default function QuotaManagementTab({
                           Confirm Booking
                         </div>
                         <div className="text-sm text-emerald-700">
-                          {selectedDate.toLocaleDateString()} at {selectedTimeSlot} • 1 hour lesson
+                          {selectedDate.toLocaleDateString()} at {selectedTimeSlots.sort()[0]} • {selectedTimeSlots.length} hour lesson
                         </div>
                         <div className="text-xs text-emerald-600 mt-1">
-                          Will consume 1 hour from quota
+                          Will consume {selectedTimeSlots.length} hour(s) from quota
                         </div>
                       </div>
                       <button

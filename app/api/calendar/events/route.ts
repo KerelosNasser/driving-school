@@ -9,6 +9,14 @@ export async function GET(request: NextRequest) {
     const admin = searchParams.get('admin') === 'true';
     const eventType = searchParams.get('eventType') ?? 'events';
 
+    console.log('📅 [CALENDAR EVENTS API] Request received:', {
+      date,
+      month,
+      admin,
+      eventType,
+      url: request.url
+    });
+
     const calendarService = new EnhancedCalendarService();
 
     let events: any[];
@@ -24,20 +32,34 @@ export async function GET(request: NextRequest) {
       const firstOfNextMonth = new Date(yyyy, mm + 1, 1);
       startDate = firstOfMonth.toISOString();
       endDate = firstOfNextMonth.toISOString();
+      console.log('📅 [CALENDAR EVENTS API] Month range:', { month, startDate, endDate });
     } else if (date) {
       // Day range: exact day
       const targetDate = new Date(date);
       startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).toISOString();
       endDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1).toISOString();
+      console.log('📅 [CALENDAR EVENTS API] Day range:', { date, startDate, endDate });
     } else {
       // Generic range from provided params or default 30 days
       startDate = searchParams.get('startDate') || new Date().toISOString();
       endDate = searchParams.get('endDate') || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      console.log('📅 [CALENDAR EVENTS API] Generic range:', { startDate, endDate });
     }
 
     if (eventType === 'availability') {
+      console.log('📅 [CALENDAR EVENTS API] Fetching availability...');
       // For availability, get events and generate slots
       const adminEvents = await calendarService.getAdminEvents(startDate, endDate);
+      console.log('📅 [CALENDAR EVENTS API] Admin events fetched:', {
+        count: adminEvents.length,
+        events: adminEvents.map(e => ({
+          id: e.id,
+          title: e.title,
+          start: e.start,
+          end: e.end
+        }))
+      });
+      
       const bufferMinutesParam = searchParams.get('bufferMinutes');
       const settings = await calendarService.getSettings();
       const bufferMinutes = bufferMinutesParam ? parseInt(bufferMinutesParam, 10) : settings.bufferTimeMinutes;
@@ -50,17 +72,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ events: adminEvents, slots });
     } else if (admin) {
       // For admin events
+      console.log('📅 [CALENDAR EVENTS API] Fetching admin events...');
       events = await calendarService.getAdminEvents(startDate, endDate);
+      console.log('📅 [CALENDAR EVENTS API] Admin events fetched:', {
+        count: events.length,
+        events: events.map(e => ({
+          id: e.id,
+          title: e.title,
+          start: e.start,
+          end: e.end,
+          timestamp: new Date(e.start).toLocaleString()
+        }))
+      });
     } else {
       // Public events (anonymized)
+      console.log('📅 [CALENDAR EVENTS API] Fetching public events...');
       events = await calendarService.getPublicEvents(startDate, endDate);
+      console.log('📅 [CALENDAR EVENTS API] Public events fetched:', {
+        count: events.length
+      });
     }
+
+    console.log('📅 [CALENDAR EVENTS API] Returning response:', {
+      success: true,
+      eventCount: events.length
+    });
 
     return NextResponse.json({
       success: true,
       events
     });
   } catch (error) {
+    console.error('❌ [CALENDAR EVENTS API] Error:', error);
     return NextResponse.json({
       error: 'Failed to fetch calendar events',
       details: error instanceof Error ? error.message : 'Unknown error'

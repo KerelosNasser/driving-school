@@ -12,6 +12,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { type } = body;
 
+    console.log('📧 [Send Booking Email] Request received:', { type, body });
+
     if (type === 'confirmation') {
       // Send booking confirmation to user and notification to admin
       const {
@@ -32,9 +34,31 @@ export async function POST(request: NextRequest) {
         suburb
       } = body;
 
+      console.log('📧 [Send Booking Email] Extracted fields:', {
+        userName,
+        userEmail,
+        date,
+        time,
+        bookingId
+      });
+
       if (!userEmail || !userName || !date || !time) {
+        console.error('❌ [Send Booking Email] Missing required fields:', {
+          hasUserEmail: !!userEmail,
+          hasUserName: !!userName,
+          hasDate: !!date,
+          hasTime: !!time
+        });
         return NextResponse.json(
-          { error: 'Missing required fields' },
+          { 
+            error: 'Missing required fields',
+            details: {
+              userEmail: !!userEmail,
+              userName: !!userName,
+              date: !!date,
+              time: !!time
+            }
+          },
           { status: 400 }
         );
       }

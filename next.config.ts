@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.sentry-cdn.com https://browser.sentry-cdn.com https://harmless-molly-4.clerk.accounts.dev; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://r2cdn.perplexity.ai; img-src 'self' data: https:; connect-src 'self' https://api.sentry.io https://sentry.io https://*.googleapis.com https://*.google.com https://o4509815350951936.ingest.de.sentry.io https://harmless-molly-4.clerk.accounts.dev; worker-src 'self' 'unsafe-eval' blob:; frame-src 'self' https://accounts.google.com;",
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.sentry-cdn.com https://browser.sentry-cdn.com https://harmless-molly-4.clerk.accounts.dev; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://r2cdn.perplexity.ai; img-src 'self' data: https:; connect-src 'self' https://api.sentry.io https://sentry.io https://*.googleapis.com https://*.google.com https://o4509815350951936.ingest.de.sentry.io https://harmless-molly-4.clerk.accounts.dev https://*.supabase.co wss://*.supabase.co; worker-src 'self' 'unsafe-eval' blob:; frame-src 'self' https://accounts.google.com;",
           },
           {
             key: 'Permissions-Policy',

@@ -20,26 +20,60 @@ export default function PostSignupWrapper({ children }: PostSignupWrapperProps) 
   useEffect(() => {
     if (!isLoaded) return;
 
-    if (user) {
-      // Check if user has completed profile
-      const profileCompleted = user.publicMetadata?.profileCompleted;
-      const isAdmin = user.publicMetadata?.role === 'admin';
-      
-      // Show post-signup form as popup on service center page if profile not completed
-      const isServiceCenterPage = pathname === '/service-center';
-      const shouldShowPopup = !isAdmin && !profileCompleted && isServiceCenterPage;
-      
-      if (shouldShowPopup) {
-        // Small delay to ensure page is loaded
-        setTimeout(() => {
-          setShowPostSignup(true);
-        }, 500);
-      } else {
-        setShowPostSignup(false);
+    const checkProfileStatus = async () => {
+      if (user) {
+        // Check if user has completed profile in Clerk
+        const profileCompleted = user.publicMetadata?.profileCompleted;
+        const isAdmin = user.publicMetadata?.role === 'admin';
+        
+        console.log('🔍 [PostSignupWrapper] Profile check:', {
+          userId: user.id,
+          profileCompleted,
+          isAdmin,
+          pathname,
+          metadata: user.publicMetadata
+        });
+        
+        // Also check Supabase for user data
+        let hasSupabaseData = false;
+        try {
+          const response = await fetch('/api/user/profile-status');
+          if (response.ok) {
+            const data = await response.json();
+            hasSupabaseData = data.hasProfile;
+            console.log('🔍 [PostSignupWrapper] Supabase profile status:', data);
+          }
+        } catch (error) {
+          console.error('Error checking Supabase profile:', error);
+        }
+        
+        // Show post-signup form as popup on service center page if profile not completed
+        const isServiceCenterPage = pathname === '/service-center';
+        const shouldShowPopup = !isAdmin && !profileCompleted && !hasSupabaseData && isServiceCenterPage;
+        
+        console.log('🔍 [PostSignupWrapper] Should show popup?', {
+          shouldShowPopup,
+          isServiceCenterPage,
+          isAdmin,
+          profileCompleted,
+          hasSupabaseData
+        });
+        
+        if (shouldShowPopup) {
+          // Small delay to ensure page is loaded
+          setTimeout(() => {
+            console.log('✅ [PostSignupWrapper] Showing profile form');
+            setShowPostSignup(true);
+          }, 500);
+        } else {
+          setShowPostSignup(false);
+        }
       }
-    }
-    
-    setIsChecking(false);
+      
+      setIsChecking(false);
+    };
+
+    checkProfileStatus();
   }, [user, isLoaded, pathname]);
 
   const handlePostSignupComplete = () => {
