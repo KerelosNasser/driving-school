@@ -98,7 +98,8 @@ async function handleRewardsApplyPostRequest(request: NextRequest) {
     let appliedValue = 0;
     let description = '';
 
-    if (reward.reward_type === 'discount_30_percent') {
+    // Handle discount rewards (generic)
+    if (reward.reward_type === 'discount' || reward.reward_type === 'discount_30_percent') {
       if (context !== 'booking' || !amount) {
         return NextResponse.json(
           { message: 'Discount rewards can only be applied to bookings with an amount' },
@@ -106,52 +107,46 @@ async function handleRewardsApplyPostRequest(request: NextRequest) {
         );
       }
 
-      appliedValue = Math.round((amount * 30) / 100 * 100) / 100; // 30% discount, rounded to 2 decimal places
-      description = `30% discount applied to booking`;
+      appliedValue = Math.round((amount * reward.reward_value) / 100 * 100) / 100;
+      description = `${reward.reward_value}% discount applied to booking`;
 
-    } else if (reward.reward_type === 'free_hours_2') {
-      if (context === 'booking') {
-        // For bookings: apply as discount equivalent to 2 hours at average rate
-        const averageHourRate = 50; // You might want to fetch this dynamically
-        appliedValue = 2 * averageHourRate;
-        description = `2 free hours applied as ${appliedValue} discount`;
-      } else if (context === 'quota_purchase') {
-        // For quota: directly add hours
-        appliedValue = 2;
-        description = `2 free hours added to quota`;
-        
-        // Add hours to user quota
-        try {
-          const { error: quotaError } = await supabase
-            .rpc('update_user_quota', {
-              p_user_id: user.id,
-              p_hours_change: appliedValue,
-              p_transaction_type: 'free_credit',
-              p_description: 'Referral reward: 2 free hours',
-              p_booking_id: null,
-              p_payment_intent_id: null,
-              p_amount: null,
-              p_currency: null,
-              p_metadata: JSON.stringify({
-                reward_id: rewardId,
-                reward_type: reward.reward_type
-              })
-            });
+    // Handle free package/hours rewards (generic)
+    } else if (reward.reward_type === 'free_package' || reward.reward_type === 'free_hours_2') {
+      // Free packages are automatically added to quota, no need for context
+      appliedValue = reward.reward_value;
+      description = `${reward.reward_value} hours added to quota`;
+      
+      // Add hours to user quota
+      try {
+        const { error: quotaError } = await supabase
+          .rpc('update_user_quota', {
+            p_user_id: user.id,
+            p_hours_change: appliedValue,
+            p_transaction_type: 'free_credit',
+            p_description: `Referral reward: ${reward.reward_value} hours`,
+            p_booking_id: null,
+            p_payment_intent_id: null,
+            p_amount: null,
+            p_currency: null,
+            p_metadata: JSON.stringify({
+              reward_id: rewardId,
+              reward_type: reward.reward_type
+            })
+          });
 
-          if (quotaError) {
-            throw new Error('Failed to update quota: ' + quotaError.message);
-          }
-        } catch (quotaErr) {
-          console.error('Quota update error:', quotaErr);
-          return NextResponse.json(
-            { message: 'Failed to apply reward to quota' },
-            { status: 500 }
-          );
+        if (quotaError) {
+          throw new Error('Failed to update quota: ' + quotaError.message);
         }
+      } catch (quotaErr) {
+        console.error('Quota update error:', quotaErr);
+        return NextResponse.json(
+          { message: 'Failed to apply reward to quota' },
+          { status: 500 }
+        );
       }
     } else {
       return NextResponse.json(
-        { message: 'Unknown reward type' },
+        { message: `Unknown reward type: ${reward.reward_type}` },
         { status: 400 }
       );
     }
@@ -268,23 +263,17 @@ async function handleRewardsApplyGetRequest(request: NextRequest) {
       message = 'Reward has expired';
     } else {
       // Calculate expected value
-      if (reward.reward_type === 'discount_30_percent') {
+      if (reward.reward_type === 'discount' || reward.reward_type === 'discount_30_percent') {
         if (context === 'booking' && amount) {
-          expectedValue = Math.round((parseFloat(amount) * 30) / 100 * 100) / 100;
-          message = `30% discount (${expectedValue}) will be applied`;
+          expectedValue = Math.round((parseFloat(amount) * reward.reward_value) / 100 * 100) / 100;
+          message = `${reward.reward_value}% discount (${expectedValue}) will be applied`;
         } else {
           canApply = false;
           message = 'Discount rewards can only be applied to bookings';
         }
-      } else if (reward.reward_type === 'free_hours_2') {
-        if (context === 'booking') {
-          const averageHourRate = 50;
-          expectedValue = 2 * averageHourRate;
-          message = `2 free hours (${expectedValue} discount) will be applied`;
-        } else if (context === 'quota_purchase') {
-          expectedValue = 2;
-          message = '2 free hours will be added to your quota';
-        }
+      } else if (reward.reward_type === 'free_package' || reward.reward_type === 'free_hours_2') {
+        expectedValue = reward.reward_value;
+        message = `${reward.reward_value} hours will be added to your quota`;
       }
     }
 

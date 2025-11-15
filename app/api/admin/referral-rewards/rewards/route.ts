@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 async function isUserAdmin(userId: string): Promise<boolean> {
   try {
+    // In development, allow all authenticated users
+    if (process.env.NODE_ENV === 'development') {
+      return true;
+    }
+    
     const client = await clerkClient()
     const user = await client.users.getUser(userId);
-    return user.publicMetadata?.role === 'admin' || process.env.NODE_ENV === 'development';
+    return user.publicMetadata?.role === 'admin';
   } catch (error) {
     console.error('Error checking admin status:', error);
-    return false;
+    // In development, allow access even if Clerk check fails
+    return process.env.NODE_ENV === 'development';
   }
 }
 
@@ -26,8 +36,6 @@ export async function GET(_request: NextRequest) {
     if (!isAdmin) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
-
-    const supabase = await createServerComponentClient({ cookies });
 
     const { data: rewards, error } = await supabase
       .from('referral_rewards')
@@ -67,8 +75,8 @@ export async function GET(_request: NextRequest) {
       source: reward.source || 'referral',
       users: reward.users ? {
         email: reward.users.email,
-        first_name: reward.users.first_name,
-        last_name: reward.users.last_name
+        first_name: reward.users.first_name || reward.users.full_name?.split(' ')[0] || '',
+        last_name: reward.users.last_name || reward.users.full_name?.split(' ').slice(1).join(' ') || ''
       } : null,
       packages: reward.packages ? {
         name: reward.packages.name,

@@ -5,11 +5,13 @@ import { formatForDisplay } from '@/lib/phone';
 import { AdminDashboardClient } from './components/AdminDashboardClient';
 import { Review, Package, Booking as LibBooking, } from '@/lib/types';
 
-// Create a server-side Supabase client for admin operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Helper function to create Supabase client
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 // Define the new, merged user type
 export interface MergedUser {
@@ -60,6 +62,7 @@ async function getMergedUsers(): Promise<MergedUser[]> {
     if (!process.env.CLERK_SECRET_KEY) {
       console.warn("CLERK_SECRET_KEY not configured, skipping Clerk user fetch");
       // Fetch only from Supabase
+      const supabaseAdmin = getSupabaseAdmin();
       const { data: supabaseUsers, error: supabaseError } = await supabaseAdmin
         .from('users')
         .select('*');
@@ -101,6 +104,7 @@ async function getMergedUsers(): Promise<MergedUser[]> {
     }
 
     // Fetch users from Supabase
+    const supabaseAdmin = getSupabaseAdmin();
     const { data: supabaseUsers, error: supabaseError } = await supabaseAdmin
       .from('users')
       .select('*');
@@ -241,6 +245,7 @@ function transformBookings(serverBookings: ServerBooking[]): LibBooking[] {
 // Main Admin Page (Server Component)
 export default async function AdminDashboardPage() {
   // Fetch all data on the server
+  const supabaseAdmin = getSupabaseAdmin();
   const [users, reviews, bookings, packages] = await Promise.all([
     getMergedUsers(),
     supabaseAdmin.from('reviews').select('*'),

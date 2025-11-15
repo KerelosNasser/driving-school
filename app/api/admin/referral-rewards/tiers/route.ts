@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 async function isUserAdmin(userId: string): Promise<boolean> {
   try {
+    // In development, allow all authenticated users
+    if (process.env.NODE_ENV === 'development') {
+      return true;
+    }
+    
     const client = await clerkClient()
     const user = await client.users.getUser(userId);
-    return user.publicMetadata?.role === 'admin' || process.env.NODE_ENV === 'development';
+    return user.publicMetadata?.role === 'admin';
   } catch (error) {
     console.error('Error checking admin status:', error);
-    return false;
+    // In development, allow access even if Clerk check fails
+    return process.env.NODE_ENV === 'development';
   }
 }
 
@@ -26,8 +36,6 @@ export async function GET(_request: NextRequest) {
     if (!isAdmin) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
-
-    const supabase = await createServerComponentClient({ cookies });
 
     const { data: tiers, error } = await supabase
       .from('reward_tiers')
@@ -60,7 +68,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const supabase = await createServerComponentClient({ cookies });
     const body = await request.json();
     const {
       tier_name,
@@ -100,11 +107,11 @@ export async function POST(request: NextRequest) {
     const { data: newTier, error } = await supabase
       .from('reward_tiers')
       .insert({
-        name: tier_name,
+        tier_name: tier_name,
         required_referrals,
         reward_type,
         reward_value,
-        package_id,
+        package_id: package_id || null, // Convert empty string to null
         is_active,
         created_by: userData?.id
       })
@@ -137,7 +144,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const supabase = await createServerComponentClient({ cookies });
     const body = await request.json();
     const {
       id,
@@ -173,11 +179,11 @@ export async function PUT(request: NextRequest) {
     const { data: updatedTier, error } = await supabase
       .from('reward_tiers')
       .update({
-        name: tier_name,
+        tier_name: tier_name,
         required_referrals,
         reward_type,
         reward_value,
-        package_id,
+        package_id: package_id || null, // Convert empty string to null
         is_active,
         updated_at: new Date().toISOString()
       })
@@ -211,7 +217,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const supabase = await createServerComponentClient({ cookies });
     const { searchParams } = new URL(request.url);
     const tierId = searchParams.get('id');
 

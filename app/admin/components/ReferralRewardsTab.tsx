@@ -292,8 +292,43 @@ export function ReferralRewardsTab() {
     setShowTierDialog(true);
   };
 
+  // Handle manual reward distribution
+  const handleDistributeRewards = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/admin/referral-rewards/distribute', {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || 'Rewards distributed successfully');
+        fetchUserRewards();
+        fetchReferralStats();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to distribute rewards');
+      }
+    } catch (error) {
+      toast.error('An error occurred while distributing rewards');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderOverviewTab = () => (
     <div className="space-y-6">
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-2">
+        <Button
+          onClick={handleDistributeRewards}
+          disabled={loading}
+          variant="outline"
+        >
+          {loading ? 'Distributing...' : 'Distribute Rewards to All Users'}
+        </Button>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>

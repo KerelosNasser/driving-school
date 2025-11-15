@@ -138,34 +138,48 @@ async function checkAndDistributeRewards(userId: string) {
 
     if (!referralCount) return;
 
+    console.log(`Checking rewards for user ${userId} with ${referralCount} referrals`);
+
     // Get active reward tiers that the user qualifies for
-    const { data: eligibleTiers } = await supabase
+    const { data: eligibleTiers, error: tiersError } = await supabase
       .from('reward_tiers')
       .select('*')
       .eq('is_active', true)
       .lte('required_referrals', referralCount)
-      .order('required_referrals', { ascending: false });
+      .order('required_referrals', { ascending: true });
 
-    if (!eligibleTiers || eligibleTiers.length === 0) return;
+    if (tiersError) {
+      console.error('Error fetching reward tiers:', tiersError);
+      return;
+    }
 
-    // Check which rewards the user has already received
+    if (!eligibleTiers || eligibleTiers.length === 0) {
+      console.log('No eligible reward tiers found');
+      return;
+    }
+
+    console.log(`Found ${eligibleTiers.length} eligible tiers`);
+
+    // Check which rewards the user has already received (by tier_id)
     const { data: receivedRewards } = await supabase
       .from('referral_rewards')
-      .select('tier_id, reward_type, reward_value')
+      .select('tier_id')
       .eq('user_id', userId)
       .eq('source', 'referral')
       .not('tier_id', 'is', null);
 
-    const receivedRewardKeys = new Set(
-      (receivedRewards || []).map(r => `${r.tier_id}-${r.reward_type}-${r.reward_value}`)
+    const receivedTierIds = new Set(
+      (receivedRewards || []).map(r => r.tier_id)
     );
+
+    console.log(`User has already received rewards for ${receivedTierIds.size} tiers`);
 
     // Distribute new rewards for newly qualified tiers
     for (const tier of eligibleTiers) {
-      const rewardKey = `${tier.id}-${tier.reward_type}-${tier.reward_value}`;
-
-      if (!receivedRewardKeys.has(rewardKey)) {
+      if (!receivedTierIds.has(tier.id)) {
         // User qualifies for this tier reward and hasn't received it yet
+        console.log(`Distributing reward for tier: ${tier.tier_name} (${tier.required_referrals} referrals)`);
+        
         const { error: rewardError } = await supabase
           .from('referral_rewards')
           .insert({
@@ -175,20 +189,52 @@ async function checkAndDistributeRewards(userId: string) {
             package_id: tier.package_id,
             tier_id: tier.id,
             source: 'referral',
-            reason: `Earned ${tier.name} - ${referralCount} referrals`,
-            earned_at: new Date().toISOString()
+            reason: `Earned ${tier.tier_name} - ${referralCount} referrals`,
+            earned_at: new Date().toISOString(),
+            created_at: new Date().toISOString()
           });
 
         if (rewardError) {
           console.error('Error distributing reward:', rewardError);
         } else {
-          console.log(`Distributed ${tier.reward_type} reward to user ${userId} for tier ${tier.name}`);
-
-          // Update user's referral progress tracking
-          await updateUserReferralProgress(userId, referralCount);
+          console.log(`✅ Successfully distributed ${tier.reward_type} reward (${tier.reward_value}) to user ${userId} for tier ${tier.tier_name}`);
+          
+          // Send milestone notification email
+          try {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('email, full_name')
+              .eq('id', userId)
+              .single();
+            
+            if (userData) {
+              const { sendReferralMilestoneNotification } = await import('@/lib/email/reward-notification');
+              
+              const rewardDisplay = tier.reward_type === 'discount' 
+                ? `${tier.reward_value}% discount`
+                : `Free package worth $${tier.reward_value}`;
+              
+              await sendReferralMilestoneNotification({
+                recipientEmail: userData.email,
+                recipientName: userData.full_name || userData.email.split('@')[0],
+                referralCount: referralCount || 0,
+                rewardEarned: rewardDisplay
+              });
+              
+              console.log(`✅ Milestone notification sent to ${userData.email}`);
+            }
+          } catch (emailError) {
+            console.warn('Failed to send milestone notification:', emailError);
+            // Don't fail the request if email fails
+          }
         }
+      } else {
+        console.log(`User already has reward for tier: ${tier.tier_name}`);
       }
     }
+
+    // Update user's referral progress tracking
+    await updateUserReferralProgress(userId, referralCount);
 
   } catch (error) {
     console.error('Error in checkAndDistributeRewards:', error);

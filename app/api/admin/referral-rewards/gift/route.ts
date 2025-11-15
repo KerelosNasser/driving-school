@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 async function isUserAdmin(userId: string): Promise<boolean> {
   try {
+    // In development, allow all authenticated users
+    if (process.env.NODE_ENV === 'development') {
+      return true;
+    }
+    
     const client = await clerkClient()
     const user = await client.users.getUser(userId);
-    return user.publicMetadata?.role === 'admin' || process.env.NODE_ENV === 'development';
+    return user.publicMetadata?.role === 'admin';
   } catch (error) {
     console.error('Error checking admin status:', error);
-    return false;
+    // In development, allow access even if Clerk check fails
+    return process.env.NODE_ENV === 'development';
   }
 }
 
@@ -27,7 +37,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const supabase = await createServerComponentClient({ cookies });
     const body = await request.json();
     const {
       recipient_user_id,
@@ -103,6 +112,8 @@ export async function POST(request: NextRequest) {
           gifted_by: adminUser.id,
           reason: reason || 'Admin gifted reward',
           expires_at: expires_at || null,
+          created_at: new Date().toISOString(),
+          earned_at: new Date().toISOString(),
           metadata: {
             gifted_via: 'admin_panel'
           }
@@ -118,13 +129,24 @@ export async function POST(request: NextRequest) {
       rewardResult = directReward;
     }
 
-    // Send notification if requested (you can implement email notification here)
+    // Send notification if requested
     if (notify_user) {
       try {
-        // TODO: Implement email notification
-        console.log(`Notification: Reward gifted to ${recipientUser.email} - ${reward_type} ${reward_value}`);
+        const { sendRewardNotification } = await import('@/lib/email/reward-notification');
+        
+        await sendRewardNotification({
+          recipientEmail: recipientUser.email,
+          recipientName: recipientUser.full_name || recipientUser.email.split('@')[0],
+          rewardType: reward_type,
+          rewardValue: reward_value,
+          reason: reason || 'Admin gifted reward',
+          expiresAt: expires_at
+        });
+        
+        console.log(`✅ Notification email sent to ${recipientUser.email}`);
       } catch (notificationError) {
-        console.warn('Failed to send notification:', notificationError);
+        console.warn('Failed to send notification email:', notificationError);
+        // Don't fail the request if email fails
       }
     }
 

@@ -159,6 +159,27 @@ export default function InvitationDashboard() {
   };
 
   const getRewardDisplay = (reward: any) => {
+    // Handle discount rewards
+    if (reward.type === 'discount' || reward.type.includes('discount')) {
+      return {
+        icon: <Percent className="h-4 w-4" />,
+        title: `${reward.value}% Discount`,
+        description: 'Off your next booking',
+        color: 'text-blue-600 bg-blue-50 border-blue-200'
+      };
+    }
+    
+    // Handle free package/hours rewards
+    if (reward.type === 'free_package' || reward.type.includes('free_hours')) {
+      return {
+        icon: <Gift className="h-4 w-4" />,
+        title: `Free Package`,
+        description: `Value: ${reward.value}`,
+        color: 'text-green-600 bg-green-50 border-green-200'
+      };
+    }
+    
+    // Legacy support for old reward types
     switch (reward.type) {
       case 'discount_30_percent':
         return {
@@ -178,8 +199,8 @@ export default function InvitationDashboard() {
         return {
           icon: <Gift className="h-4 w-4" />,
           title: 'Reward',
-          description: 'Unknown reward type',
-          color: 'text-gray-600 bg-gray-50 border-gray-200'
+          description: `${reward.type} - Value: ${reward.value}`,
+          color: 'text-purple-600 bg-purple-50 border-purple-200'
         };
     }
   };
@@ -418,25 +439,66 @@ export default function InvitationDashboard() {
                 <div className="space-y-2">
                   {stats.rewards.map((reward) => {
                     const rewardDisplay = getRewardDisplay(reward);
+                    const canClaim = !reward.isUsed && (!reward.expiresAt || new Date(reward.expiresAt) > new Date());
+                    
                     return (
                       <div
                         key={reward.id}
                         className={`flex items-center justify-between p-3 rounded-lg border ${rewardDisplay.color}`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           <div className="p-1 rounded-full">
                             {rewardDisplay.icon}
                           </div>
-                          <div>
+                          <div className="flex-1">
                             <p className="text-sm font-medium">{rewardDisplay.title}</p>
                             <p className="text-xs opacity-80">{rewardDisplay.description}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <Badge variant="outline" className="text-xs mb-1">Available</Badge>
-                          <p className="text-xs opacity-70">
-                            Exp {format(new Date(reward.expiresAt), 'MMM d')}
-                          </p>
+                        <div className="flex items-center gap-2">
+                          {canClaim && reward.type === 'free_package' && (
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch('/api/rewards/apply', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      rewardId: reward.id,
+                                      context: 'quota_purchase'
+                                    })
+                                  });
+                                  
+                                  const data = await response.json();
+                                  
+                                  if (response.ok) {
+                                    toast.success(data.message || 'Reward claimed successfully!');
+                                    // Refresh the page to show updated quota and reward status
+                                    window.location.reload();
+                                  } else {
+                                    toast.error(data.message || 'Failed to claim reward');
+                                  }
+                                } catch (error) {
+                                  toast.error('An error occurred while claiming reward');
+                                }
+                              }}
+                              className="text-xs px-3 py-1 h-7"
+                            >
+                              Claim
+                            </Button>
+                          )}
+                          <div className="text-right">
+                            <Badge variant="outline" className="text-xs mb-1">
+                              {reward.isUsed ? 'Used' : 'Available'}
+                            </Badge>
+                            <p className="text-xs opacity-70">
+                              {reward.expiresAt ? 
+                                `Exp ${format(new Date(reward.expiresAt), 'MMM d, yyyy')}` : 
+                                'No expiry'
+                              }
+                            </p>
+                          </div>
                         </div>
                       </div>
                     );

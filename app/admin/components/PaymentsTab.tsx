@@ -79,48 +79,95 @@ export function PaymentsTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 p-2 md:p-0">
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg md:text-xl">Filters</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div>
-            <Label htmlFor="paymentId">Payment ID</Label>
-            <Input id="paymentId" value={paymentId} onChange={e => setPaymentId(e.target.value)} placeholder="PAY_..." />
+        <CardContent className="space-y-4">
+          {/* Input Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="paymentId" className="text-xs md:text-sm">Payment ID</Label>
+              <Input 
+                id="paymentId" 
+                value={paymentId} 
+                onChange={e => setPaymentId(e.target.value)} 
+                placeholder="PAY_..." 
+                className="h-9 md:h-10"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="status" className="text-xs md:text-sm">Status</Label>
+              <Input 
+                id="status" 
+                value={status} 
+                onChange={e => setStatus(e.target.value)} 
+                placeholder="completed/pending" 
+                className="h-9 md:h-10"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="dateFrom" className="text-xs md:text-sm">From</Label>
+              <Input 
+                id="dateFrom" 
+                type="date" 
+                value={dateFrom} 
+                onChange={e => setDateFrom(e.target.value)} 
+                className="h-9 md:h-10"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="dateTo" className="text-xs md:text-sm">To</Label>
+              <Input 
+                id="dateTo" 
+                type="date" 
+                value={dateTo} 
+                onChange={e => setDateTo(e.target.value)} 
+                className="h-9 md:h-10"
+              />
+            </div>
           </div>
-          <div>
-            <Label htmlFor="status">Status</Label>
-            <Input id="status" value={status} onChange={e => setStatus(e.target.value)} placeholder="completed/pending" />
-          </div>
-          <div>
-            <Label htmlFor="dateFrom">From</Label>
-            <Input id="dateFrom" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="dateTo">To</Label>
-            <Input id="dateTo" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-          </div>
-          <div className="flex items-end gap-2">
-            <Button onClick={loadData} disabled={loading}>Apply</Button>
-            <Button variant="secondary" onClick={() => setOnlyBrisbane(v => !v)}>{onlyBrisbane ? 'Brisbane: ON' : 'Brisbane: OFF'}</Button>
-            <Button variant="outline" onClick={exportCsv}>Export AU CSV</Button>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-2 md:gap-3 pt-2">
+            <Button 
+              onClick={loadData} 
+              disabled={loading} 
+              className="w-full sm:w-auto h-9 md:h-10 text-sm"
+            >
+              {loading ? 'Loading...' : 'Apply Filters'}
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={() => setOnlyBrisbane(v => !v)}
+              className="w-full sm:w-auto h-9 md:h-10 text-sm"
+            >
+              {onlyBrisbane ? 'Brisbane: ON' : 'Brisbane: OFF'}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={exportCsv}
+              className="w-full sm:w-auto h-9 md:h-10 text-sm"
+            >
+              Export CSV
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Success vs Failure</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base md:text-lg">Success vs Failure</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
+          <CardContent className="px-2 md:px-6">
+            <div className="h-[200px] md:h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[{ name: 'Payments', success: metrics?.successFailure.success || 0, failure: metrics?.successFailure.failure || 0 }]}> 
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Bar dataKey="success" fill="#10b981" />
                   <Bar dataKey="failure" fill="#ef4444" />
@@ -131,16 +178,16 @@ export function PaymentsTab() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Geographic Distribution (AU)</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base md:text-lg">Geographic Distribution (AU)</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
+          <CardContent className="px-2 md:px-6">
+            <div className="h-[200px] md:h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={(metrics?.geographicDistribution || []).map(d => ({ city: d.city, count: d.count }))}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="city" />
-                  <YAxis />
+                  <XAxis dataKey="city" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={60} />
+                  <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Bar dataKey="count" fill="#3b82f6" />
                 </BarChart>
@@ -150,20 +197,20 @@ export function PaymentsTab() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Transaction Volume Trends</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base md:text-lg">Transaction Volume Trends</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
+          <CardContent className="px-2 md:px-6">
+            <div className="h-[200px] md:h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={metrics?.volumeTrends || []}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={60} />
+                  <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="#f59e0b" />
+                  <Line type="monotone" dataKey="count" stroke="#f59e0b" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -171,16 +218,16 @@ export function PaymentsTab() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Revenue Analytics</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base md:text-lg">Revenue Analytics</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
+          <CardContent className="px-2 md:px-6">
+            <div className="h-[200px] md:h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueByGatewayData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="gateway" />
-                  <YAxis />
+                  <XAxis dataKey="gateway" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Bar dataKey="amount" fill="#22c55e" />
                 </BarChart>
@@ -191,39 +238,63 @@ export function PaymentsTab() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Transactions</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base md:text-lg">Transactions</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
+            <table className="min-w-full text-xs md:text-sm">
+              <thead className="bg-muted/50">
                 <tr className="text-left">
-                  <th className="p-2">Payment ID</th>
-                  <th className="p-2">Status</th>
-                  <th className="p-2">Amount</th>
-                  <th className="p-2">Gateway</th>
-                  <th className="p-2">Created</th>
-                  <th className="p-2">User</th>
-                  <th className="p-2">Location</th>
+                  <th className="p-2 md:p-3 font-medium whitespace-nowrap">Payment ID</th>
+                  <th className="p-2 md:p-3 font-medium whitespace-nowrap">Status</th>
+                  <th className="p-2 md:p-3 font-medium whitespace-nowrap">Amount</th>
+                  <th className="p-2 md:p-3 font-medium whitespace-nowrap">Gateway</th>
+                  <th className="p-2 md:p-3 font-medium whitespace-nowrap">Created</th>
+                  <th className="p-2 md:p-3 font-medium whitespace-nowrap">User</th>
+                  <th className="p-2 md:p-3 font-medium whitespace-nowrap">Location</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTransactions.map(r => (
-                  <tr key={r.sessionId} className="border-t">
-                    <td className="p-2 font-mono">{r.paymentId}</td>
-                    <td className="p-2">{r.status}</td>
-                    <td className="p-2">${r.amount.toFixed(2)} {r.currency}</td>
-                    <td className="p-2">{r.gateway}</td>
-                    <td className="p-2">{new Date(r.createdAt).toLocaleString()}</td>
-                    <td className="p-2">{r.user.name} ({r.user.email})</td>
-                    <td className="p-2">{r.user.address}</td>
+                  <tr key={r.sessionId} className="border-t hover:bg-muted/30 transition-colors">
+                    <td className="p-2 md:p-3 font-mono text-xs whitespace-nowrap">{r.paymentId}</td>
+                    <td className="p-2 md:p-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        r.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                        r.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="p-2 md:p-3 font-medium whitespace-nowrap">
+                      ${r.amount.toFixed(2)} {r.currency}
+                    </td>
+                    <td className="p-2 md:p-3 capitalize whitespace-nowrap">{r.gateway}</td>
+                    <td className="p-2 md:p-3 whitespace-nowrap text-xs md:text-sm">
+                      {new Date(r.createdAt).toLocaleString('en-AU', { 
+                        dateStyle: 'short', 
+                        timeStyle: 'short' 
+                      })}
+                    </td>
+                    <td className="p-2 md:p-3">
+                      <div className="flex flex-col">
+                        <span className="font-medium">{r.user.name}</span>
+                        <span className="text-xs text-muted-foreground">{r.user.email}</span>
+                      </div>
+                    </td>
+                    <td className="p-2 md:p-3 max-w-[200px] truncate" title={r.user.address}>
+                      {r.user.address}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
             {filteredTransactions.length === 0 && (
-              <div className="p-4 text-gray-500">No transactions found</div>
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No transactions found
+              </div>
             )}
           </div>
         </CardContent>

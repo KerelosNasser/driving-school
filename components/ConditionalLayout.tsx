@@ -7,16 +7,19 @@ import { Footer } from './footer';
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  // Hide navigation and footer in admin dashboard and service center
-  const hideLayout = pathname?.startsWith('/admin') || pathname?.startsWith('/service-center');
+  // Show navigation ONLY on service center page
+  const showNavigation = pathname?.startsWith('/service-center');
+  
+  // Hide footer in admin dashboard and service center
+  const hideFooter = pathname?.startsWith('/admin') || pathname?.startsWith('/service-center');
 
   return (
     <>
-      {!hideLayout && <Navigation />}
+      {showNavigation && <Navigation />}
       <main className="min-h-screen">
         {children}
       </main>
-      {!hideLayout && <Footer />}
+      {!hideFooter && <Footer />}
     </>
   );
 }

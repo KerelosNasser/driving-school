@@ -68,8 +68,8 @@ export const UsersTab = ({ users, loading }: UsersTabProps) => {
           </div>
           <div className="space-y-4">
             {filteredUsers && filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => (
-                <div key={user.clerkId} className="border p-4 rounded-lg">
+              filteredUsers.map((user, index) => (
+                <div key={user.clerkId || user.supabaseUserId || `user-${index}`} className="border p-4 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <span className="font-medium">{user.fullName || 'No Name in DB'}</span>
