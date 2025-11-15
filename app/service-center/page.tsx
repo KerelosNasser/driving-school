@@ -17,9 +17,10 @@ import TransactionHistoryTab from './components/TransactionHistoryTab';
 import InvitationDashboard from '@/components/InvitationDashboard';
 
 
-import UserDataDisplay from './components/UserDataDisplay';
 import UserDataReview from './components/UserDataReview';
 import { LoadingIndicator } from '@/components/ui/loading-indicator';
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
+import ProfileCompletionBadge from '@/components/ProfileCompletionBadge';
 
 interface UserQuota {
   user_id: string;
@@ -46,6 +47,9 @@ export default function ServiceCenterPage() {
   const [lastRefreshAttempt, setLastRefreshAttempt] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const hasFetchedRef = useRef(false);
+  
+  // Profile completion status
+  const { completionPercentage = 0, canBook = false } = useProfileCompletion();
 
   // Smart error handling with suppression for internal server errors
   const handleError = useCallback((errorMessage: string, isRetry: boolean = false) => {
@@ -236,7 +240,12 @@ export default function ServiceCenterPage() {
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white via-emerald-100 to-teal-200 bg-clip-text text-transparent mb-2">
                   Service Center
                 </h1>
-                <div className="h-1 w-20 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full mx-auto"></div>
+                <div className="h-1 w-20 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full mx-auto mb-3"></div>
+                <ProfileCompletionBadge 
+                  completionPercentage={completionPercentage} 
+                  canBook={canBook}
+                  className="mt-2"
+                />
               </div>
             </div>
             <p className="text-base sm:text-lg text-blue-100 max-w-2xl mx-auto leading-relaxed px-4">
@@ -346,7 +355,7 @@ export default function ServiceCenterPage() {
                       </div>
                       <div className="text-emerald-100 font-medium text-sm sm:text-base">Available</div>
                       <div className="text-emerald-200 text-xs mt-1">Ready</div>
-                      <div className="mt-2 p-2 bg-white/10 rounded-lg">
+                      <div className="mt-2 p-2 bg-white rounded-lg">
                         <Zap className="h-4 w-4 mx-auto text-teal-300" />
                       </div>
                     </div>
@@ -380,49 +389,33 @@ export default function ServiceCenterPage() {
           {/* Main Content Tabs */}
           <div className="max-w-6xl mx-auto">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <div className="flex justify-center mb-6">
-                <TabsList variant="service" size="lg" className="grid grid-cols-6 w-full max-w-3xl">
-                  <TabsTrigger
-                    value="quota"
-                    variant="service" size="sm"
-                  >
-                    <Car className="h-4 w-4" />
+              <div className="flex justify-center mb-8">
+                <TabsList variant="service" size="lg" className="grid grid-cols-5 w-full max-w-4xl gap-1">
+                  <TabsTrigger value="quota" variant="service" size="lg">
+                    <Car className="h-5 w-5" />
                     <span className="hidden sm:inline">Quota</span>
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="negotiation"
-                    variant="service" size="sm"
-                  >
-                    <MessageSquare className="h-4 w-4" />
+                  <TabsTrigger value="negotiation" variant="service" size="lg">
+                    <MessageSquare className="h-5 w-5" />
                     <span className="hidden sm:inline">Chat</span>
                   </TabsTrigger>
-
-                  <TabsTrigger
-                    value="history"
-                    variant="service" size="sm"
-                  >
-                    <Gauge className="h-4 w-4" />
+                  <TabsTrigger value="history" variant="service" size="lg">
+                    <Gauge className="h-5 w-5" />
                     <span className="hidden sm:inline">History</span>
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="profile"
-                    variant="service" size="sm"
-                  >
-                    <Shield className="h-4 w-4" />
+                  <TabsTrigger value="profile" variant="service" size="lg">
+                    <Shield className="h-5 w-5" />
                     <span className="hidden sm:inline">Profile</span>
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="referrals"
-                    variant="service" size="sm"
-                  >
-                    <Users className="h-4 w-4" />
+                  <TabsTrigger value="referrals" variant="service" size="lg">
+                    <Users className="h-5 w-5" />
                     <span className="hidden sm:inline">Referrals</span>
                   </TabsTrigger>
                 </TabsList>
               </div>
 
               <TabsContent value="quota" className="mt-0">
-                <div className="bg-white/95 backdrop-blur-sm rounded-lg border border-emerald-200/50 shadow-lg p-4">
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-emerald-200/60 shadow-xl p-6">
                   <QuotaManagementTab
                     userId={user?.id || ''}
                     onQuotaUpdate={refreshQuota}
@@ -432,47 +425,44 @@ export default function ServiceCenterPage() {
               </TabsContent>
 
               <TabsContent value="negotiation" className="mt-0">
-                <div className="bg-white/95 backdrop-blur-sm rounded-lg border border-emerald-200/50 shadow-lg p-4">
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-emerald-200/60 shadow-xl p-6">
                   <NegotiationTab />
                 </div>
               </TabsContent>
 
-
-
               <TabsContent value="history" className="mt-0">
-                <div className="bg-white/95 backdrop-blur-sm rounded-lg border border-emerald-200/50 shadow-lg p-4">
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-emerald-200/60 shadow-xl p-6">
                   <TransactionHistoryTab />
                 </div>
               </TabsContent>
 
               <TabsContent value="profile" className="mt-0">
-                <div className="bg-white/95 backdrop-blur-sm rounded-lg border border-emerald-200/50 shadow-lg">
-                  <div className="p-4 border-b border-emerald-100">
-                    <UserDataDisplay />
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-emerald-200/60 shadow-xl p-6">
+                  <div className="mb-6">
+                    <h2 className="text-xl font-bold flex items-center gap-3 text-emerald-700">
+                      <div className="p-2 bg-emerald-100 rounded-lg">
+                        <Shield className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      Profile Information
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-2 ml-11">
+                      Review and verify your information
+                    </p>
                   </div>
-                  <div className="p-4">
-                    <div className="mb-4">
-                      <h2 className="text-lg font-semibold flex items-center gap-2 text-emerald-700">
-                        <Shield className="h-5 w-5" />
-                        Profile Review
-                      </h2>
-                      <p className="text-sm text-emerald-600/80 mt-1">
-                        Review and verify your information
-                      </p>
-                    </div>
-                    <UserDataReview asTabContent={true} />
-                  </div>
+                  <UserDataReview asTabContent={true} />
                 </div>
               </TabsContent>
 
               <TabsContent value="referrals" className="mt-0">
-                <div className="bg-white/95 backdrop-blur-sm rounded-lg border border-emerald-200/50 shadow-lg p-4">
-                  <div className="mb-4">
-                    <h2 className="text-lg font-semibold flex items-center gap-2 text-emerald-700">
-                      <Users className="h-5 w-5" />
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-emerald-200/60 shadow-xl p-6">
+                  <div className="mb-6">
+                    <h2 className="text-xl font-bold flex items-center gap-3 text-emerald-700">
+                      <div className="p-2 bg-emerald-100 rounded-lg">
+                        <Users className="h-5 w-5 text-emerald-600" />
+                      </div>
                       Referral Program
                     </h2>
-                    <p className="text-sm text-emerald-600/80 mt-1">
+                    <p className="text-sm text-gray-600 mt-2 ml-11">
                       Invite friends and earn rewards!
                     </p>
                   </div>

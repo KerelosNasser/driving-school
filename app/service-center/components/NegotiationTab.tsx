@@ -165,15 +165,15 @@ export default function NegotiationTab() {
       )}
 
       {/* Message Composer */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white">
-          <CardTitle className="flex items-center space-x-3 text-xl font-bold">
-            <div className="p-2 bg-white/20 rounded-full">
+      <Card className="border-emerald-200/60 shadow-lg rounded-xl">
+        <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-t-xl">
+          <CardTitle className="flex items-center gap-3 text-xl font-bold">
+            <div className="p-2 bg-white/20 rounded-lg">
               <MessageSquare className="h-5 w-5" />
             </div>
             <span>Contact Instructor</span>
           </CardTitle>
-          <CardDescription className="text-emerald-100">
+          <CardDescription className="text-emerald-100 font-medium">
             Send messages for scheduling, questions, or special requests
           </CardDescription>
         </CardHeader>
@@ -276,15 +276,15 @@ export default function NegotiationTab() {
       </Card>
 
       {/* Message History */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-teal-600 to-blue-700 text-white">
-          <CardTitle className="flex items-center space-x-3 text-xl font-bold">
-            <div className="p-2 bg-white/20 rounded-full">
+      <Card className="border-emerald-200/60 shadow-lg rounded-xl">
+        <CardHeader className="bg-gradient-to-r from-teal-600 to-blue-700 text-white rounded-t-xl">
+          <CardTitle className="flex items-center gap-3 text-xl font-bold">
+            <div className="p-2 bg-white/20 rounded-lg">
               <Mail className="h-5 w-5" />
             </div>
             <span>Message History</span>
           </CardTitle>
-          <CardDescription className="text-teal-100">
+          <CardDescription className="text-teal-100 font-medium">
             Your previous messages to instructors
           </CardDescription>
         </CardHeader>
@@ -344,10 +344,10 @@ export default function NegotiationTab() {
       </Card>
 
       {/* Help Section */}
-      <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-lg">
+      <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200/60 shadow-lg rounded-xl">
         <CardContent className="p-6">
           <div className="flex items-start space-x-4">
-            <div className="p-3 bg-emerald-500 rounded-full flex-shrink-0">
+            <div className="p-3 bg-emerald-500 rounded-lg flex-shrink-0">
               <AlertCircle className="h-6 w-6 text-white" />
             </div>
             <div>

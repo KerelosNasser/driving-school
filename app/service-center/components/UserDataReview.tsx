@@ -9,14 +9,19 @@ import {
   User,
   Mail,
   Phone,
-  Calendar,
+  MapPin,
+  Users,
   FileText,
   CheckCircle,
   AlertCircle,
   Edit,
   Loader2,
   Shield,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
+import ProfileCompletionModal from "@/components/ProfileCompletionModal";
+import { useProfileCompletion } from "@/hooks/useProfileCompletion";
 
 interface UserProfile {
   id: string;
@@ -64,87 +69,73 @@ export default function UserDataReview({ trigger, asTabContent = false }: UserDa
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  
+  // Use profile completion hook
+  const { 
+    profileData, 
+    missingFields, 
+    completionPercentage,
+    refreshProfile 
+  } = useProfileCompletion();
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!isLoaded || !clerkUser) {
-        setLoading(false);
-        return;
-      }
+  const fetchUserProfile = async () => {
+    if (!isLoaded || !clerkUser) {
+      setLoading(false);
+      return;
+    }
 
-      try {
-        const response = await fetch('/api/user/profile');
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch user profile`);
-        }
-        
-        const data = await response.json();
-        setUserProfile(data);
-      } catch (err) {
-        console.error('Error fetching user profile:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load user profile';
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, [clerkUser, isLoaded]);
-
-  const calculateCompletionPercentage = () => {
-    if (!userProfile?.completionStatus) return 0;
-    const statuses = Object.values(userProfile.completionStatus);
-    const completed = statuses.filter(Boolean).length;
-    return Math.round((completed / statuses.length) * 100);
-  };
-
-  const handleEditSection = (section: string) => {
-    setEditingSection(section);
-  };
-
-  const handleSaveSection = async (section: string, data: any) => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ section, data }),
-      });
-
+      const response = await fetch('/api/user/profile');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || 'Failed to update profile');
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch user profile`);
       }
-
-      const updatedProfile = await response.json();
-      setUserProfile(updatedProfile);
-      setEditingSection(null);
+      
+      const data = await response.json();
+      setUserProfile(data);
     } catch (err) {
-      console.error('Error saving profile section:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save changes');
+      console.error('Error fetching user profile:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load user profile';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchUserProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clerkUser, isLoaded]);
+
+  const handleProfileModalComplete = async () => {
+    setShowProfileModal(false);
+    // Refresh both profile sources
+    await fetchUserProfile();
+    await refreshProfile();
+  };
+
   // If used as tab content, render directly without dialog
   if (asTabContent) {
     return (
-      <UserDataReviewContent 
-        userProfile={userProfile}
-        loading={loading}
-        error={error}
-        calculateCompletionPercentage={calculateCompletionPercentage}
-        handleEditSection={handleEditSection}
-        editingSection={editingSection}
-      />
+      <>
+        <ProfileCompletionModal
+          open={showProfileModal}
+          onOpenChange={setShowProfileModal}
+          missingFields={missingFields}
+          onComplete={handleProfileModalComplete}
+          initialData={profileData}
+        />
+        <UserDataReviewContent 
+          userProfile={userProfile}
+          profileData={profileData}
+          loading={loading}
+          error={error}
+          completionPercentage={completionPercentage}
+          onOpenProfileModal={() => setShowProfileModal(true)}
+          onRefresh={fetchUserProfile}
+        />
+      </>
     );
   }
 
@@ -172,11 +163,12 @@ export default function UserDataReview({ trigger, asTabContent = false }: UserDa
         <ScrollArea className="flex-1 p-4">
           <UserDataReviewContent 
             userProfile={userProfile}
+            profileData={profileData}
             loading={loading}
             error={error}
-            calculateCompletionPercentage={calculateCompletionPercentage}
-            handleEditSection={handleEditSection}
-            editingSection={editingSection}
+            completionPercentage={completionPercentage}
+            onOpenProfileModal={() => setShowProfileModal(true)}
+            onRefresh={fetchUserProfile}
           />
         </ScrollArea>
       </DialogContent>
@@ -186,19 +178,30 @@ export default function UserDataReview({ trigger, asTabContent = false }: UserDa
 
 // Separate component for the content
 function UserDataReviewContent({ 
-  userProfile, 
+  userProfile,
+  profileData,
   loading, 
   error, 
-  calculateCompletionPercentage, 
-  handleEditSection,
-  editingSection 
+  completionPercentage,
+  onOpenProfileModal,
+  onRefresh
 }: {
   userProfile: UserProfile | null;
+  profileData: {
+    fullName?: string;
+    phone?: string;
+    address?: string;
+    suburb?: string;
+    emergencyContact?: {
+      name?: string;
+      phone?: string;
+    } | undefined;
+  } | null;
   loading: boolean;
   error: string | null;
-  calculateCompletionPercentage: () => number;
-  handleEditSection: (section: string) => void;
-  editingSection: string | null;
+  completionPercentage: number;
+  onOpenProfileModal?: () => void;
+  onRefresh?: () => void;
 }) {
 
   if (loading) {
@@ -237,114 +240,181 @@ function UserDataReviewContent({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Completion Status - Compact */}
-      <Card className="rounded-lg shadow-sm">
+      {/* Completion Status with Better UI */}
+      <Card className="rounded-xl shadow-lg border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-teal-50">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CheckCircle className="w-4 h-4 text-green-500" />
-            Profile Completion
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-800">
+              <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-md">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              Profile Status
+            </CardTitle>
+            {onRefresh && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRefresh}
+                className="h-8 px-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-base font-semibold">{calculateCompletionPercentage()}% Complete</span>
-            <Badge variant={calculateCompletionPercentage() === 100 ? "default" : "secondary"} className="text-xs">
-              {calculateCompletionPercentage() === 100 ? "Complete" : "In Progress"}
+            <div>
+              <span className="text-2xl font-bold text-emerald-700">{completionPercentage}%</span>
+              <span className="text-sm text-gray-600 ml-2">Complete</span>
+            </div>
+            <Badge 
+              variant={completionPercentage === 100 ? "default" : completionPercentage >= 50 ? "secondary" : "destructive"} 
+              className="text-xs px-3 py-1"
+            >
+              {completionPercentage === 100 ? "✓ Complete" : completionPercentage >= 50 ? "In Progress" : "Needs Attention"}
             </Badge>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
             <div
-              className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${calculateCompletionPercentage()}%` }}
+              className="bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500 h-3 rounded-full transition-all duration-500 shadow-md"
+              style={{ width: `${completionPercentage}%` }}
             />
           </div>
-          {userProfile.lastUpdated && (
-            <p className="text-xs text-gray-500 mt-2">
-              Updated: {new Date(userProfile.lastUpdated).toLocaleDateString()}
+          {userProfile?.lastUpdated && (
+            <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" />
+              Last updated: {new Date(userProfile.lastUpdated).toLocaleDateString()}
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Compact Information Grid */}
+      {/* Enhanced Information Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Personal Information */}
-        <Card className="rounded-lg shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <User className="w-4 h-4 text-blue-500" />
-              Personal
+        <Card className="rounded-xl shadow-md border-blue-200/60 hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
+              <div className="p-2 bg-blue-500 rounded-lg shadow-sm">
+                <User className="w-4 h-4 text-white" />
+              </div>
+              Personal Information
             </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEditSection('personal')}
-              className="h-7 px-2"
-            >
-              <Edit className="w-3 h-3" />
-            </Button>
           </CardHeader>
-          <CardContent className="pt-0 space-y-2">
-            <div>
-              <label className="text-xs font-medium text-gray-500">Name</label>
-              <p className="text-sm">{userProfile.fullName || "Not provided"}</p>
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <User className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Full Name</label>
+                <p className="text-sm font-medium text-gray-900">{profileData?.fullName || userProfile?.fullName || "Not provided"}</p>
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500">Date of Birth</label>
-              <p className="text-sm">
-                {userProfile.dateOfBirth 
-                  ? new Date(userProfile.dateOfBirth).toLocaleDateString()
-                  : "Not provided"
-                }
-              </p>
+            <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Address</label>
+                <p className="text-sm font-medium text-gray-900">{profileData?.address || userProfile?.address || "Not provided"}</p>
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500">Address</label>
-              <p className="text-sm">{userProfile.address || "Not provided"}</p>
+            <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Suburb</label>
+                <p className="text-sm font-medium text-gray-900">{profileData?.suburb || "Not provided"}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Contact Information */}
-        <Card className="rounded-lg shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Mail className="w-4 h-4 text-green-500" />
-              Contact
+        <Card className="rounded-xl shadow-md border-green-200/60 hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-emerald-50">
+            <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
+              <div className="p-2 bg-green-500 rounded-lg shadow-sm">
+                <Mail className="w-4 h-4 text-white" />
+              </div>
+              Contact Details
             </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEditSection('contact')}
-              className="h-7 px-2"
-            >
-              <Edit className="w-3 h-3" />
-            </Button>
           </CardHeader>
-          <CardContent className="pt-0 space-y-2">
-            <div>
-              <label className="text-xs font-medium text-gray-500">Email</label>
-              <p className="text-sm">{userProfile.email}</p>
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <Mail className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</label>
+                <p className="text-sm font-medium text-gray-900">{userProfile?.email || "Not provided"}</p>
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500">Phone</label>
-              <p className="text-sm">{userProfile.phone || "Not provided"}</p>
+            <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <Phone className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Phone</label>
+                <p className="text-sm font-medium text-gray-900">{profileData?.phone || userProfile?.phone || "Not provided"}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <Users className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Emergency Contact</label>
+                <p className="text-sm font-medium text-gray-900">
+                  {profileData?.emergencyContact?.name || "Not provided"}
+                </p>
+                {profileData?.emergencyContact?.phone && (
+                  <p className="text-xs text-gray-500 mt-1">{profileData.emergencyContact.phone}</p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row justify-center gap-2 pt-4">
-        <Button size="sm" className="flex items-center gap-2">
-          <CheckCircle className="w-4 h-4" />
-          Confirm Information
-        </Button>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
-          <Edit className="w-4 h-4" />
-          Edit Profile
-        </Button>
+      {/* Action Buttons with Better Styling */}
+      <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
+        {completionPercentage < 100 && onOpenProfileModal && (
+          <Button 
+            size="lg" 
+            className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl transition-all"
+            onClick={onOpenProfileModal}
+          >
+            <Sparkles className="w-5 h-5" />
+            Complete Your Profile
+          </Button>
+        )}
+        {completionPercentage === 100 && (
+          <Button size="lg" className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600" disabled>
+            <CheckCircle className="w-5 h-5" />
+            Profile Complete!
+          </Button>
+        )}
+        {onOpenProfileModal && (
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="flex items-center gap-2 border-2 hover:bg-gray-50"
+            onClick={onOpenProfileModal}
+          >
+            <Edit className="w-5 h-5" />
+            Edit Information
+          </Button>
+        )}
       </div>
+
+      {/* Helpful Tips */}
+      {completionPercentage < 100 && (
+        <Card className="rounded-xl border-amber-200 bg-amber-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-semibold text-amber-900 mb-1">Complete your profile to book lessons</h4>
+                <p className="text-xs text-amber-700">
+                  We need your phone number and address to provide the best service. Emergency contact information helps keep you safe.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

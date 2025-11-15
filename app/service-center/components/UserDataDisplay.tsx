@@ -186,10 +186,13 @@ export default function UserDataDisplay() {
       {/* Compact Activity & Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent Activity - Compact */}
-        <Card className="rounded-xl shadow-sm">
+        <Card className="rounded-xl shadow-md border-emerald-200/60">
           <CardContent className="p-4">
-            <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2 mb-3">
-              <Clock className="w-4 h-4 text-blue-600" /> Recent
+            <h2 className="text-base sm:text-lg font-bold flex items-center gap-2 mb-3 text-gray-800">
+              <div className="p-1.5 bg-blue-100 rounded-lg">
+                <Clock className="w-4 h-4 text-blue-600" />
+              </div>
+              Recent
             </h2>
             <div className="space-y-2">
               {userData?.statistics?.recentActivity?.lastLessonDate ? (
@@ -226,10 +229,13 @@ export default function UserDataDisplay() {
         </Card>
 
         {/* Quick Stats */}
-        <Card className="rounded-xl shadow-sm">
+        <Card className="rounded-xl shadow-md border-emerald-200/60">
           <CardContent className="p-4">
-            <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2 mb-3">
-              <Trophy className="w-4 h-4 text-yellow-500" /> Stats
+            <h2 className="text-base sm:text-lg font-bold flex items-center gap-2 mb-3 text-gray-800">
+              <div className="p-1.5 bg-yellow-100 rounded-lg">
+                <Trophy className="w-4 h-4 text-yellow-600" />
+              </div>
+              Stats
             </h2>
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-yellow-50 text-yellow-800 p-2 rounded-lg text-center">

@@ -153,15 +153,15 @@ export default function TransactionHistoryTab() {
       {/* Transaction History Section */}
       <div className="space-y-6">
           {/* Header & Filters */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white">
-              <CardTitle className="flex items-center space-x-3 text-xl font-bold">
-                <div className="p-2 bg-white/20 rounded-full">
+          <Card className="border-emerald-200/60 shadow-lg rounded-xl">
+            <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-t-xl">
+              <CardTitle className="flex items-center gap-3 text-xl font-bold">
+                <div className="p-2 bg-white/20 rounded-lg">
                   <History className="h-6 w-6" />
                 </div>
                 <span>Transaction History</span>
               </CardTitle>
-              <CardDescription className="text-emerald-100">
+              <CardDescription className="text-emerald-100 font-medium">
                 View all changes to your quota balance
               </CardDescription>
             </CardHeader>
@@ -190,7 +190,7 @@ export default function TransactionHistoryTab() {
           </Card>
 
           {/* Transaction List */}
-          <Card className="border-0 shadow-lg">
+          <Card className="border-emerald-200/60 shadow-lg rounded-xl">
             <CardContent className="p-0">
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-16">
@@ -300,7 +300,7 @@ export default function TransactionHistoryTab() {
 
           {/* Pagination */}
           {pagination && pagination.total_pages > 1 && (
-            <Card className="border-0 shadow-lg">
+            <Card className="border-emerald-200/60 shadow-lg rounded-xl">
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="text-sm text-gray-600 font-medium">

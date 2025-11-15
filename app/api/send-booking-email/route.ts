@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Send confirmation email to user
-      const userEmailHtml = render(
+      const userEmailHtml = await render(
         BookingConfirmationEmail({
           userName,
           userEmail,
@@ -80,11 +80,13 @@ export async function POST(request: NextRequest) {
         })
       );
 
+      console.log('📧 [Send Booking Email] User email HTML type:', typeof userEmailHtml);
+
       const { error: userEmailError } = await resend.emails.send({
         from: 'EG Driving School <noreply@egdrivingschool.com>',
         to: [userEmail],
         subject: '🎉 Booking Confirmed - EG Driving School',
-        html: userEmailHtml,
+        html: String(userEmailHtml),
       });
 
       if (userEmailError) {
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
 
       // Send notification email to admin
       const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'emealghobrial@gmail.com';
-      const adminEmailHtml = render(
+      const adminEmailHtml = await render(
         AdminBookingNotificationEmail({
           userName,
           userEmail,
@@ -112,11 +114,13 @@ export async function POST(request: NextRequest) {
         })
       );
 
+      console.log('📧 [Send Booking Email] Admin email HTML type:', typeof adminEmailHtml);
+
       const { error: adminEmailError } = await resend.emails.send({
         from: 'EG Driving School <noreply@egdrivingschool.com>',
         to: [adminEmail],
         subject: `📋 New Booking: ${userName} - ${new Date(date).toLocaleDateString('en-AU')}`,
-        html: adminEmailHtml,
+        html: String(adminEmailHtml),
       });
 
       if (adminEmailError) {
@@ -150,7 +154,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const emailHtml = render(
+      const emailHtml = await render(
         BookingCancellationEmail({
           userName,
           date,
@@ -167,7 +171,7 @@ export async function POST(request: NextRequest) {
         from: 'EG Driving School <noreply@egdrivingschool.com>',
         to: [userEmail],
         subject: 'Booking Cancelled - EG Driving School',
-        html: emailHtml,
+        html: String(emailHtml),
       });
 
       if (error) {

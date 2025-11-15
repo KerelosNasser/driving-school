@@ -4,10 +4,30 @@ import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
-// Supabase admin client
+// Supabase admin client with enhanced timeout and error handling
+// For Windows compatibility with Node.js fetch
+const customFetch: typeof fetch = (url: RequestInfo | URL, init?: RequestInit) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+  
+  return fetch(url, {
+    ...init,
+    signal: init?.signal || controller.signal,
+  }).finally(() => clearTimeout(timeoutId));
+};
+
 export const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+    global: {
+      fetch: customFetch,
+    },
+  }
 );
 
 // Error types

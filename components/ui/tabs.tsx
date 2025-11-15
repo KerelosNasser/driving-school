@@ -33,12 +33,10 @@ function TabsList({
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        cn(
-          "inline-flex w-fit items-center justify-center rounded-lg",
-          size === "sm" ? "h-8 p-0.5" : size === "lg" ? "h-12 p-1" : "h-9 p-[3px]"
-        ),
+        "inline-flex w-fit items-center justify-center rounded-xl",
+        size === "sm" ? "h-10 p-1" : size === "lg" ? "h-14 p-1.5" : "h-12 p-1",
         variant === "service"
-          ? "bg-gradient-to-r from-[var(--theme-primary-50)] via-[var(--theme-secondary-100)] to-[var(--theme-accent-50)] backdrop-blur-sm border border-[var(--theme-primary-200)] text-[color:var(--theme-neutral-700)] shadow-lg"
+          ? "bg-white/95 backdrop-blur-md border border-emerald-200/60 shadow-lg"
           : "bg-muted text-muted-foreground",
         className
       )}
@@ -62,11 +60,11 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent whitespace-nowrap focus-visible:ring-[3px] focus-visible:outline-1 focus-visible:border-ring focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "inline-flex h-full flex-1 items-center justify-center gap-2 rounded-lg border border-transparent whitespace-nowrap font-medium focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 transition-all duration-200",
         variant === "service"
-          ? "data-[state=active]:bg-gradient-to-r data-[state=active]:from-[var(--theme-primary-500)] data-[state=active]:to-[var(--theme-secondary-600)] data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:text-[var(--theme-neutral-700)] data-[state=inactive]:hover:text-[var(--theme-primary-600)] data-[state=inactive]:hover:bg-[var(--theme-primary-50)] transition-all duration-200"
+          ? "data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-teal-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:text-gray-700 data-[state=inactive]:hover:text-emerald-700 data-[state=inactive]:hover:bg-emerald-50/80"
           : "data-[state=active]:bg-background data-[state=active]:shadow-sm text-foreground dark:text-muted-foreground dark:data-[state=active]:text-foreground dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 transition-[color,box-shadow]",
-        size === "sm" ? "px-2 py-1 text-xs" : size === "lg" ? "px-4 py-2 text-sm" : "px-3 py-2 text-sm",
+        size === "sm" ? "px-3 py-1.5 text-xs" : size === "lg" ? "px-6 py-3 text-base" : "px-4 py-2 text-sm",
         className
       )}
       {...props}

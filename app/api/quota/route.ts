@@ -14,7 +14,19 @@ const supabaseAdmin = supabase;
 async function handleQuotaGetRequest(_request: NextRequest) {
   try {
     // Get authenticated user (Clerk)
-    const { userId: clerkUserId } = await auth();
+    let clerkUserId: string | null = null;
+    try {
+      const authResult = await auth();
+      clerkUserId = authResult.userId;
+    } catch (authError) {
+      console.error('Clerk auth failed:', authError);
+      return NextResponse.json({ 
+        error: 'Authentication service unavailable',
+        message: 'Unable to verify authentication. Please check your internet connection and try again.',
+        hint: 'This usually happens when Clerk\'s servers are unreachable'
+      }, { status: 503 });
+    }
+    
     if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -92,7 +104,18 @@ async function handleQuotaGetRequest(_request: NextRequest) {
 // POST - Add hours to user's quota (for package purchases)
 async function handleQuotaPostRequest(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
+    let clerkUserId: string | null = null;
+    try {
+      const authResult = await auth();
+      clerkUserId = authResult.userId;
+    } catch (authError) {
+      console.error('Clerk auth failed:', authError);
+      return NextResponse.json({ 
+        error: 'Authentication service unavailable',
+        message: 'Unable to verify authentication. Please check your internet connection and try again.'
+      }, { status: 503 });
+    }
+    
     if (!clerkUserId) {
        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
      }

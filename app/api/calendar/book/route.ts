@@ -214,13 +214,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to verify quota' }, { status: 500 });
     }
 
-    // Create events in admin and user calendars
+    // Get user details for calendar event
+    const { data: userData } = await supabase
+      .from('users')
+      .select('email, full_name, phone, address, suburb, experience_level')
+      .eq('id', supabaseUserId)
+      .single();
+
+    const userName = userData?.full_name || studentName || 'Student';
+    const userEmail = userData?.email || studentEmail || '';
+    const userPhone = userData?.phone || '';
+
+    // Create events in admin and user calendars with user details
     const { adminEvent, userEvent } = await calendarService.createDualEvents(userId, {
-      title: `Driving Lesson - ${lessonType}`,
+      title: `🚗 ${lessonType} Lesson - ${userName}`,
       start: startDateTime.toISOString(),
       end: endDateTime.toISOString(),
-      description: `Lesson Type: ${lessonType}\nNotes: ${notes || 'No additional notes'}`,
-      location: location || 'TBD'
+      description: `Student: ${userName}\nEmail: ${userEmail}\nPhone: ${userPhone}\n\nLesson Type: ${lessonType}\nExperience: ${userData?.experience_level || 'Not specified'}\nPickup: ${location || userData?.address || 'TBD'}\nSuburb: ${userData?.suburb || 'Not specified'}\n\nNotes: ${notes || 'No additional notes'}`,
+      location: location || userData?.address || 'TBD'
     });
 
     // Save booking to database
@@ -317,17 +328,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to consume quota for booking' }, { status: 500 });
     }
 
-    // Get updated quota and user details for email
+    // Get updated quota for email
     const { data: updatedQuota } = await supabase
       .from('user_quotas')
       .select('available_hours')
       .eq('user_id', supabaseUserId)
-      .single();
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('email, full_name, phone, address, suburb, experience_level')
-      .eq('id', supabaseUserId)
       .single();
 
     // Send confirmation emails

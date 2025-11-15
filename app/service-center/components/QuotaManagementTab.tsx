@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Search, RefreshCw } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, isBefore, startOfDay } from "date-fns";
+import { useProfileCompletion } from "@/hooks/useProfileCompletion";
+import ProfileCompletionModal from "@/components/ProfileCompletionModal";
 
 // Compact Error Alert Component
 const ErrorAlert = ({ message }: { message: string | null }) => {
@@ -168,42 +170,42 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   return (
-    <div className="bg-white border rounded-lg p-4">
+    <div className="bg-white border border-emerald-100 rounded-xl p-5 shadow-sm">
       {/* Calendar Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-xl font-bold text-gray-900">
           {format(currentMonth, 'MMMM yyyy')}
         </h3>
       <div className="flex items-center space-x-2">
         <button
           onClick={goToToday}
-          className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="px-4 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
         >
           Today
         </button>
         <button
           onClick={goToPreviousMonth}
-          className="p-1 hover:bg-gray-100 rounded"
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-5 w-5" />
         </button>
         <button
           onClick={goToNextMonth}
-          className="p-1 hover:bg-gray-100 rounded"
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-5 w-5" />
         </button>
         <button
           onClick={findNextAvailableDate}
           disabled={findingNext}
-          className="ml-2 px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600 flex items-center"
+          className="ml-2 px-4 py-2 text-sm font-medium bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
         >
           {findingNext ? (
             <RefreshCw className="h-4 w-4 animate-spin" />
           ) : (
             <Search className="h-4 w-4" />
           )}
-          <span className="ml-2">Find next available</span>
+          <span>Find next available</span>
         </button>
       </div>
       </div>
@@ -259,8 +261,11 @@ const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
     if (slots.length <= 1) return true;
     const sorted = slots.sort();
     for (let i = 0; i < sorted.length - 1; i++) {
-      const current = parseInt(sorted[i].split(':')[0]);
-      const next = parseInt(sorted[i + 1].split(':')[0]);
+      const currentParts = sorted[i]?.split(':');
+      const nextParts = sorted[i + 1]?.split(':');
+      if (!currentParts || !nextParts) return false;
+      const current = parseInt(currentParts[0] || '0');
+      const next = parseInt(nextParts[0] || '0');
       if (next - current !== 1) return false;
     }
     return true;
@@ -311,7 +316,7 @@ const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
         const adminEvents = data.events || [];
         
         // Generate time slots and check availability
-        const slots = generateTimeSlotsWithAvailability(dateStr, adminEvents, calendarSettings);
+        const slots = generateTimeSlotsWithAvailability(dateStr || '', adminEvents, calendarSettings);
         setTimeSlots(slots);
       } catch (error) {
         console.error('Error fetching available slots:', error);
@@ -326,10 +331,12 @@ const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
   }, [selectedDate, calendarSettings]);
 
   // Generate time slots with real availability checking
-  const generateTimeSlotsWithAvailability = (date: string, adminEvents: any[], settings?: any) => {
+  const generateTimeSlotsWithAvailability = (date: string, adminEvents: Array<{start: string; end: string; title?: string}>, settings?: {workingHours?: {start?: string; end?: string}; lessonDurationMinutes?: number; bufferTimeMinutes?: number}) => {
     const slots = [];
-    const [startHour, startMinute] = settings?.workingHours?.start?.split(':').map(Number) || [9, 0];
-    const [endHour, endMinute] = settings?.workingHours?.end?.split(':').map(Number) || [17, 0];
+    const workingHoursStart = settings?.workingHours?.start || '09:00';
+    const workingHoursEnd = settings?.workingHours?.end || '17:00';
+    const [startHour = 9, startMinute = 0] = workingHoursStart.split(':').map(Number);
+    const [endHour = 17, endMinute = 0] = workingHoursEnd.split(':').map(Number);
     const lessonDuration = settings?.lessonDurationMinutes || 60;
     const bufferTime = settings?.bufferTimeMinutes || 30;
 
@@ -444,12 +451,23 @@ export default function QuotaManagementTab({
 }: QuotaManagementTabProps) {
   const queryClient = useQueryClient();
 
+  // Profile completion hook
+  const { 
+    profileData, 
+    canBook, 
+    missingFields, 
+    refreshProfile,
+    loading: profileLoading
+  } = useProfileCompletion();
+
   // State variables
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [booking, setBooking] = useState(false);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileCheckPending, setProfileCheckPending] = useState(false);
 
   // Fetch user quota from API
   const { data: quotaResponse } = useQuery({
@@ -509,7 +527,7 @@ export default function QuotaManagementTab({
           .eq("status", "confirmed");
 
         if (data) {
-          const events = data.map((booking: any) => ({
+          const events = data.map((booking: unknown) => ({
             id: `${booking.date}-${booking.time}`,
             date: booking.date,
             time: booking.time,
@@ -538,6 +556,16 @@ export default function QuotaManagementTab({
   const handleBooking = async () => {
     if (selectedTimeSlots.length === 0 || !selectedDate) {
       setError('Please select a date and time slots first');
+      return;
+    }
+
+    // Check if profile is complete using the hook
+    if (!canBook) {
+      console.warn('⚠️ Profile incomplete - showing completion modal');
+      console.log('Missing critical fields:', missingFields.critical);
+      console.log('Missing important fields:', missingFields.important);
+      setShowProfileModal(true);
+      setProfileCheckPending(true);
       return;
     }
 
@@ -591,8 +619,35 @@ export default function QuotaManagementTab({
     }
   };
 
+  // Handle profile completion
+  const handleProfileComplete = async () => {
+    await refreshProfile();
+    setShowProfileModal(false);
+    
+    // If there was a pending booking, proceed with it
+    if (profileCheckPending) {
+      setProfileCheckPending(false);
+      // Retry booking after profile completion
+      setTimeout(() => {
+        handleBooking();
+      }, 500);
+    }
+  };
+
   return (
-    <ErrorBoundary
+    <>
+      {/* Only render modal when profile data is loaded */}
+      {!profileLoading && (
+        <ProfileCompletionModal
+          open={showProfileModal}
+          onOpenChange={setShowProfileModal}
+          missingFields={missingFields}
+          onComplete={handleProfileComplete}
+          initialData={profileData}
+        />
+      )}
+      
+      <ErrorBoundary
       fallback={
         <div className="p-4 border border-red-300 bg-red-50 rounded-md">
           Something went wrong. Please try refreshing the page.
@@ -604,32 +659,34 @@ export default function QuotaManagementTab({
         <SuccessAlert message={success} />
 
         {/* Compact Stats */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-emerald-500 text-white p-2 rounded text-center">
-            <div className="text-lg font-bold">{remainingHours}</div>
-            <div className="text-xs">Available</div>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white p-4 rounded-xl shadow-md text-center">
+            <div className="text-2xl font-bold">{remainingHours}</div>
+            <div className="text-xs font-medium opacity-90">Available</div>
           </div>
-          <div className="bg-teal-500 text-white p-2 rounded text-center">
-            <div className="text-lg font-bold">{totalHours}</div>
-            <div className="text-xs">Total</div>
+          <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-4 rounded-xl shadow-md text-center">
+            <div className="text-2xl font-bold">{totalHours}</div>
+            <div className="text-xs font-medium opacity-90">Total</div>
           </div>
-          <div className="bg-blue-500 text-white p-2 rounded text-center">
-            <div className="text-lg font-bold">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4 rounded-xl shadow-md text-center">
+            <div className="text-2xl font-bold">
               {Math.round(progressPercentage)}%
             </div>
-            <div className="text-xs">Progress</div>
+            <div className="text-xs font-medium opacity-90">Progress</div>
           </div>
         </div>
 
         {/* Enhanced Calendar Booking Interface */}
-        <Card className="border-emerald-200">
-          <CardHeader className="bg-emerald-50 pb-3">
-            <CardTitle className="flex items-center text-lg">
-              <Calendar className="h-5 w-5 mr-2 text-emerald-600" />
+        <Card className="border-emerald-200/60 shadow-lg rounded-xl">
+          <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 pb-4 rounded-t-xl">
+            <CardTitle className="flex items-center gap-3 text-xl font-bold text-emerald-700">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <Calendar className="h-5 w-5 text-emerald-600" />
+              </div>
               Schedule Lessons
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4">
+          <CardContent className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left Side - Calendar View */}
               <div className="space-y-4">
@@ -671,31 +728,36 @@ export default function QuotaManagementTab({
 
                 {/* Selected Booking Confirmation */}
                 {selectedTimeSlots.length > 0 && selectedDate && (
-                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
-                    <div className="flex items-center justify-between">
+                  <div className="p-5 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200/60 shadow-md">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex-1">
-                        <div className="text-lg font-bold text-emerald-800 mb-1">
+                        <div className="text-xl font-bold text-emerald-800 mb-2 flex items-center gap-2">
+                          <CheckCircle className="h-5 w-5" />
                           Confirm Booking
                         </div>
-                        <div className="text-sm text-emerald-700">
+                        <div className="text-sm font-medium text-emerald-700">
                           {selectedDate.toLocaleDateString()} at {selectedTimeSlots.sort()[0]} • {selectedTimeSlots.length} hour lesson
                         </div>
-                        <div className="text-xs text-emerald-600 mt-1">
+                        <div className="text-xs text-emerald-600 mt-1.5 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
                           Will consume {selectedTimeSlots.length} hour(s) from quota
                         </div>
                       </div>
                       <button
                         onClick={handleBooking}
                         disabled={booking}
-                        className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+                        className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl hover:scale-105 flex items-center justify-center gap-2"
                       >
                         {booking ? (
-                          <div className="flex items-center">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                             Booking...
-                          </div>
+                          </>
                         ) : (
-                          'Book Lesson'
+                          <>
+                            <Calendar className="h-5 w-5" />
+                            Book Lesson
+                          </>
                         )}
                       </button>
                     </div>
@@ -705,20 +767,36 @@ export default function QuotaManagementTab({
             </div>
 
             {/* Booking Policies */}
-            <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-xs font-medium text-blue-800 mb-2">
+            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200/60 shadow-sm">
+              <div className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
+                <div className="p-1 bg-blue-100 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                </div>
                 Booking Policies
               </div>
-              <div className="space-y-1 text-xs text-blue-700">
-                <div>• Each lesson consumes 1 hour from your quota</div>
-                <div>• {calendarSettings?.bufferTimeMinutes || 30}-minute buffer time between lessons</div>
-                <div>• Working hours: {calendarSettings?.workingHours?.start || '09:00'} - {calendarSettings?.workingHours?.end || '17:00'}</div>
-                <div>• Cancellations must be made 24 hours in advance</div>
+              <div className="space-y-2 text-sm text-blue-700">
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <span>Each lesson consumes 1 hour from your quota</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <span>{calendarSettings?.bufferTimeMinutes || 30}-minute buffer time between lessons</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <span>Working hours: {calendarSettings?.workingHours?.start || '09:00'} - {calendarSettings?.workingHours?.end || '17:00'}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <span>Cancellations must be made 24 hours in advance</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
     </ErrorBoundary>
+    </>
   );
 }

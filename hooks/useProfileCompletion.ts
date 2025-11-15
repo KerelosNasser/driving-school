@@ -1,86 +1,141 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
-
-interface ProfileCompletionStatus {
-  completed: boolean;
-  authenticated: boolean;
-  needsProfileCompletion?: boolean;
-  userId?: string;
-  invitationCode?: string;
-  loading: boolean;
-  error?: string;
-}
+import { validateProfileForBooking, ProfileCompletionStatus, UserProfileData } from '@/lib/utils/profile-validation';
 
 export function useProfileCompletion() {
-  const { user, isLoaded } = useUser();
-  const router = useRouter();
-  const [status, setStatus] = useState<ProfileCompletionStatus>({
-    completed: false,
-    authenticated: false,
-    loading: true
-  });
+  const { user: clerkUser, isLoaded } = useUser();
+  const [profileData, setProfileData] = useState<UserProfileData | null>(null);
+  const [validationStatus, setValidationStatus] = useState<ProfileCompletionStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkProfileCompletion = async () => {
-      if (!isLoaded) return;
-      
-      if (!user) {
-        setStatus({
-          completed: false,
-          authenticated: false,
-          loading: false
-        });
-        return;
-      }
-
-      // First check client-side metadata for immediate response
-      const profileCompletedInClerk = user.publicMetadata?.profileCompleted === true;
-      
-      if (profileCompletedInClerk) {
-        setStatus({
-          completed: true,
-          authenticated: true,
-          loading: false
-        });
+    const fetchProfileData = async () => {
+      if (!isLoaded || !clerkUser) {
+        setLoading(false);
         return;
       }
 
       try {
-        // If not completed in client metadata, verify with server
-        const response = await fetch('/api/check-profile-completion');
+        const response = await fetch('/api/user/profile');
+        if (!response.ok) {
+          throw new Error('Failed to fetch user profile');
+        }
+
         const data = await response.json();
         
-        setStatus({
-          ...data,
-          loading: false
-        });
+        // Extract profile data from API response with safe fallbacks
+        const profile: UserProfileData = {
+          fullName: data.fullName || '',
+          phone: data.phone || '',
+          address: data.address || '',
+          dateOfBirth: data.dateOfBirth || '',
+          suburb: data.suburb || '',
+          experienceLevel: data.experienceLevel || '',
+          emergencyContact: data.emergencyContact || undefined,
+        };
+
+        setProfileData(profile);
         
-        // Redirect to complete profile if needed
-        if (data.authenticated && data.needsProfileCompletion) {
-          const currentPath = window.location.pathname;
-          if (currentPath !== '/complete-profile') {
-            router.push('/complete-profile');
-          }
+        // Validate the profile
+        const status = validateProfileForBooking(profile);
+        setValidationStatus(status);
+
+        // Log to console if profile is incomplete
+        if (!status.canBook) {
+          console.warn('⚠️ Profile incomplete - missing critical fields:', status.missingFields.critical);
+          console.log('📋 Current profile data:', profile);
         }
+      } catch (err) {
+        console.error('Error fetching profile data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load profile');
         
-      } catch (error) {
-        console.error('Error checking profile completion:', error);
-        setStatus({
-          completed: false,
-          authenticated: true,
-          loading: false,
-          error: 'Failed to check profile status'
+        // Set empty profile data on error to prevent null issues
+        setProfileData({
+          fullName: '',
+          phone: '',
+          address: '',
+          dateOfBirth: '',
+          suburb: '',
+          experienceLevel: '',
+          emergencyContact: undefined,
         });
+        
+        // Set validation status to indicate profile is incomplete
+        setValidationStatus({
+          isComplete: false,
+          completionPercentage: 0,
+          missingFields: {
+            critical: ['phone', 'address'],
+            important: ['fullName', 'emergencyContact'],
+            optional: ['dateOfBirth', 'suburb', 'experienceLevel'],
+          },
+          canBook: false,
+        });
+      } finally {
+        setLoading(false);
       }
     };
 
-    checkProfileCompletion();
-  }, [isLoaded, user, router]);
+    fetchProfileData();
+  }, [clerkUser, isLoaded]);
 
-  return status;
+  const refreshProfile = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/user/profile');
+      if (!response.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+
+      const data = await response.json();
+      
+      const profile: UserProfileData = {
+        fullName: data.fullName || '',
+        phone: data.phone || '',
+        address: data.address || '',
+        dateOfBirth: data.dateOfBirth || '',
+        suburb: data.suburb || '',
+        experienceLevel: data.experienceLevel || '',
+        emergencyContact: data.emergencyContact || undefined,
+      };
+
+      setProfileData(profile);
+      const status = validateProfileForBooking(profile);
+      setValidationStatus(status);
+      
+      console.log('✅ Profile refreshed successfully');
+    } catch (err) {
+      console.error('Error refreshing profile:', err);
+      setError(err instanceof Error ? err.message : 'Failed to refresh profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    profileData: profileData || {
+      fullName: '',
+      phone: '',
+      address: '',
+      dateOfBirth: '',
+      suburb: '',
+      experienceLevel: '',
+      emergencyContact: undefined,
+    },
+    validationStatus,
+    loading,
+    error,
+    refreshProfile,
+    canBook: validationStatus?.canBook ?? false,
+    isComplete: validationStatus?.isComplete ?? false,
+    completionPercentage: validationStatus?.completionPercentage ?? 0,
+    missingFields: validationStatus?.missingFields ?? { 
+      critical: ['phone', 'address'], 
+      important: ['fullName', 'emergencyContact'], 
+      optional: ['dateOfBirth', 'suburb', 'experienceLevel'] 
+    },
+  };
 }
-
-export default useProfileCompletion;
