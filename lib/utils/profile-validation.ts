@@ -80,7 +80,7 @@ export function validateProfileForBooking(profile: UserProfileData): ProfileComp
       important,
       optional,
     },
-    canBook,
+    canBook, 
   };
 }
 

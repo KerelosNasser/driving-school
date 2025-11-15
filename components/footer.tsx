@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, Car, Shield, Star, Award } from 'lucide-react';
 import { useGlobalContent } from '@/contexts/globalContentContext';

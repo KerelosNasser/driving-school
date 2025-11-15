@@ -7,8 +7,6 @@ import { Check, ArrowRight, Star, Calendar, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import type { Package } from '@/lib/types';
-import { EditableWrapper } from '@/components/drag-drop/EditableWrapper';
-import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
 import { EditableText } from '@/components/ui/editable-text';
 
 // Fallback package data in case the Supabase fetch fails
@@ -98,7 +96,6 @@ export function PackagesPreview() {
   }, []);
 
   return (
-    <EditableWrapper componentId="packages-section" componentType="packages">
       <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-5">
@@ -297,8 +294,5 @@ export function PackagesPreview() {
         </motion.div>
       </div>
       </section>
-      
-      <DropZoneArea id="after-packages" className="my-4" placeholder="Add components after packages" />
-    </EditableWrapper>
   );
 }

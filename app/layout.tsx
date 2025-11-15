@@ -3,14 +3,12 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
 import "./globals.css";
-import { WebVitals } from "@/components/seo/WebVitals";
-import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
 import PostSignupWrapper from "@/components/PostSignupWrapper";
+import { ConditionalLayout } from "@/components/ConditionalLayout";
 import { Suspense } from "react";
 import { EditModeProvider } from "@/contexts/editModeContext";
 import { GlobalContentProvider } from "@/contexts/globalContentContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { AndroidStyleEditor } from "@/components/drag-drop/AndroidStyleEditor";
 import { ReactQueryProvider } from "@/components/providers";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 
@@ -160,20 +158,15 @@ export default function RootLayout({
                 <EditModeProvider>
                   <GlobalContentProvider>
                     <PostSignupWrapper>
-                      <LayoutWrapper>
-                        <AndroidStyleEditor>{children}</AndroidStyleEditor>
-                      </LayoutWrapper>
+                      <ConditionalLayout>
+                        {children}
+                      </ConditionalLayout>
                     </PostSignupWrapper>
                   </GlobalContentProvider>
                 </EditModeProvider>
               </Suspense>
             </ThemeProvider>
           </ReactQueryProvider>
-
-          {/* Performance monitoring */}
-          <Suspense fallback={null}>
-            <WebVitals />
-          </Suspense>
 
           <Toaster richColors position="top-right" />
 

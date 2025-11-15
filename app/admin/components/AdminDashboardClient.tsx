@@ -14,27 +14,19 @@ import {
   Package as PackageIcon,
   MessageSquare,
   CalendarDays,
-  FileText,
-  Palette,
-  Map,
   Mail,
-  Search,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  CreditCard
 } from 'lucide-react';
 import { OverviewTab } from './OverviewTab';
+import { PaymentsTab } from './PaymentsTab';
 import { BookingsTab } from './BookingsTab';
 import { UsersTab } from './UsersTab';
 import { ReviewsTab } from './ReviewsTab';
-import { CalendarTab } from './CalendarTab';
 import { CalendarSettingsTab } from './CalendarSettingsTab';
 import { PackagesTab } from './PackagesTab';
-import { SEOTab } from './SEOTab';
-import { DirectPagesTab } from './DirectPagesTab';
-import { MapTab } from './MapsTab';
-import { FormsTab } from './FormsTab';
-import { ThemeTab } from './ThemeTab';
 import { ReferralRewardsTab } from './ReferralRewardsTab';
 import { AnnouncementTab } from './AnnouncementTab';
 import { MergedUser } from '../page';
@@ -49,18 +41,11 @@ const navigationItems = [
     category: 'main'
   },
   {
-    id: 'pages',
-    label: 'Pages',
-    icon: FileText,
-    description: 'WordPress-like File Editor',
-    category: 'content'
-  },
-  {
-    id: 'theme',
-    label: 'Theme',
-    icon: Palette,
-    description: 'Design Customization',
-    category: 'content'
+    id: 'payments',
+    label: 'Payments',
+    icon: CreditCard,
+    description: 'Payment Analytics',
+    category: 'main'
   },
   {
     id: 'bookings',
@@ -105,39 +90,11 @@ const navigationItems = [
     category: 'business'
   },
   {
-    id: 'calendar',
-    label: 'Calendar',
-    icon: CalendarDays,
-    description: 'Schedule View',
-    category: 'business'
-  },
-  {
     id: 'calendar-settings',
     label: 'Calendar Settings',
     icon: CalendarDays,
     description: 'Buffer Time, Hours & Vacation Days',
-    category: 'business'
-  },
-  {
-    id: 'maps',
-    label: 'Maps',
-    icon: Map,
-    description: 'Location Management',
-    category: 'tools'
-  },
-  {
-    id: 'forms',
-    label: 'Forms',
-    icon: Mail,
-    description: 'Form Management',
-    category: 'tools'
-  },
-  {
-    id: 'seo',
-    label: 'SEO',
-    icon: Search,
-    description: 'SEO Optimization',
-    category: 'tools'
+    category: 'settings'
   }
 ];
 
@@ -203,6 +160,8 @@ export function AdminDashboardClient({
     switch (activeTab) {
       case 'overview':
         return <OverviewTab bookings={bookings} users={initialUsers} reviews={reviews} loading={loading} />;
+      case 'payments':
+        return <PaymentsTab />;
       case 'bookings':
         return <BookingsTab bookings={bookings} loading={loading} onBookingUpdate={handleBookingUpdate} />;
       case 'users':
@@ -211,44 +170,12 @@ export function AdminDashboardClient({
         return <PackagesTab initialPackages={initialPackages} />;
       case 'reviews':
         return <ReviewsTab reviews={reviews} loading={loading} handleReviewApproval={handleReviewApproval} />;
-      case 'calendar':
-        return (
-          <CalendarTab 
-            bookings={bookings.map(booking => ({
-              ...booking,
-              package_id: booking.package_id || 'unknown',
-              google_calendar_event_id: booking.id, // Fallback to booking ID
-              package: booking.packages || { id: '', name: 'Unknown Package', hours: 1 },
-              user: booking.users || { id: '', email: '', full_name: 'Unknown User' }
-            }))} 
-          />
-        );
       case 'calendar-settings':
         return <CalendarSettingsTab />;
-      case 'pages':
-        return <DirectPagesTab />;
-      case 'forms':
-        return <FormsTab />;
-      case 'maps':
-        return (
-          <MapTab 
-            bookings={bookings.map(booking => ({
-              id: booking.id,
-              user: booking.users ? {
-                latitude: (booking.users as any).latitude || null,
-                longitude: (booking.users as any).longitude || null
-              } : null
-            }))} 
-          />
-        );
-      case 'theme':
-        return <ThemeTab />;
       case 'referral-rewards':
         return <ReferralRewardsTab />;
       case 'announcements':
         return <AnnouncementTab />;
-      case 'seo':
-        return <SEOTab />;
       default:
         return <OverviewTab bookings={bookings} users={initialUsers} reviews={reviews} loading={loading} />;
     }
@@ -257,9 +184,8 @@ export function AdminDashboardClient({
   const getCategoryLabel = (category: string) => {
     switch (category) {
       case 'main': return 'Dashboard';
-      case 'content': return 'Content & Design';
       case 'business': return 'Business Operations';
-      case 'tools': return 'Tools & Settings';
+      case 'settings': return 'Settings';
       default: return '';
     }
   };
@@ -426,23 +352,7 @@ export function AdminDashboardClient({
         <div className="bg-white/90 backdrop-blur-sm border-b border-emerald-200/50 px-6 py-4 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className={cn(
-                "p-3 rounded-2xl shadow-2xl transition-all duration-300",
-                activeItem?.id === 'overview' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'bookings' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'users' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'packages' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'reviews' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'calendar' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'calendar-settings' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'pages' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'forms' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'maps' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'theme' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'referral-rewards' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                activeItem?.id === 'seo' && "bg-gradient-to-r from-emerald-500 to-teal-600",
-                !activeItem && "bg-gradient-to-r from-emerald-500 to-teal-600"
-              )}>
+              <div className="p-3 rounded-2xl shadow-2xl transition-all duration-300 bg-gradient-to-r from-emerald-500 to-teal-600">
                 {activeItem && <activeItem.icon className="h-6 w-6 text-white" />}
               </div>
               <div>
@@ -452,36 +362,14 @@ export function AdminDashboardClient({
                 <p className="text-gray-600 mt-1 font-medium">{activeItem?.description}</p>
               </div>
             </div>
-            
-            {activeTab === 'pages' && (
-              <div className="flex items-center space-x-3">
-                <Badge className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 shadow-lg rounded-full px-4 py-2">
-                  <FileText className="h-3 w-3 mr-1" />
-                  Direct File Editor
-                </Badge>
-                <Badge className="bg-white/80 backdrop-blur-sm text-emerald-700 border border-emerald-200 shadow-lg rounded-full px-4 py-2">
-                  Live Preview
-                </Badge>
-              </div>
-            )}
           </div>
         </div>
 
         {/* Content Area */}
-        <div className={cn(
-          "flex-1 overflow-auto bg-gradient-to-br from-gray-50/50 to-emerald-50/30",
-          activeTab === 'pages' || activeTab === 'theme' || activeTab === 'maps' 
-            ? "p-0" // Full screen for page builder, theme, and maps
-            : "p-6"
-        )}>
-          <div className={cn(
-            "transition-all duration-500",
-            activeTab !== 'pages' && activeTab !== 'theme' && activeTab !== 'maps' && "animate-in fade-in-50 duration-500"
-          )}>
+        <div className="flex-1 overflow-auto bg-gradient-to-br from-gray-50/50 to-emerald-50/30 p-6">
+          <div className="transition-all duration-500 animate-in fade-in-50 duration-500">
             {/* Content wrapper with consistent styling */}
-            <div className={cn(
-              activeTab !== 'pages' && activeTab !== 'theme' && activeTab !== 'maps' && "bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-emerald-100 p-8"
-            )}>
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-emerald-100 p-8">
               {renderTabContent()}
             </div>
           </div>

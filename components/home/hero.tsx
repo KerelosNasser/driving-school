@@ -18,8 +18,6 @@ import {
     Package,
     HelpCircle,
 } from "lucide-react";
-import { EditableWrapper } from '../drag-drop/EditableWrapper';
-import { DropZoneArea } from '../drag-drop/DropZoneArea';
 import { PageContent, getContentValue } from '@/lib/content';
 import { EditableText } from "../ui/editable-text";
 import { OnboardingDialog } from "../ui/onboarding-dialog";
@@ -33,7 +31,7 @@ const featureIcons = [Award, Car, Calendar, Clock];
 
 export function Hero({ content }: HeroProps) {
     const [showFeatures, setShowFeatures] = useState(false);
-    const [testPackage, setTestPackage] = useState<any>(null);
+    const [testPackage, setTestPackage] = useState<unknown>(null);
     const [loading, setLoading] = useState(true);
     const [purchasing, setPurchasing] = useState(false);
     const { user, isSignedIn } = useUser();
@@ -62,7 +60,7 @@ export function Hero({ content }: HeroProps) {
                 const response = await fetch("/api/packages");
                 if (response.ok) {
                     const data = await response.json();
-                    const testPkg = data.packages?.find((pkg: any) => pkg.popular) || data.packages?.[0];
+                    const testPkg = data.packages?.find((pkg: unknown) => pkg.popular) || data.packages?.[0];
                     if (testPkg) {
                         setTestPackage({
                             ...testPkg,
@@ -138,7 +136,7 @@ export function Hero({ content }: HeroProps) {
     };
 
     return (
-        <EditableWrapper componentId="hero-section" componentType="hero">
+        <>
             <section className="relative min-h-screen theme-gradient-hero text-white overflow-hidden">
                 {/* ================= Background Layers ================= */}
                 <div className="absolute inset-0">
@@ -477,14 +475,6 @@ export function Hero({ content }: HeroProps) {
                     </div>
                 </div>
             </section>
-
-            {/* Drop zone for adding components after hero */}
-            <DropZoneArea
-                id="after-hero"
-                className="my-4"
-                placeholder="Drop components after hero section"
-            />
-
             {/* Floating Navigation Buttons */}
             <div className="fixed bottom-6 right-6 z-40 flex flex-col space-y-3">
                 {/* AI Chatbot Button */}
@@ -591,6 +581,6 @@ export function Hero({ content }: HeroProps) {
                 isOpen={showOnboarding}
                 onClose={() => setShowOnboarding(false)}
             />
-        </EditableWrapper>
+        </>
     );
 }

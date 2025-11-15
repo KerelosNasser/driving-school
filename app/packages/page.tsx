@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EditableTermsConditions } from '@/components/ui/editable-terms-conditions';
 import { useUser } from '@clerk/nextjs';
+import ProfileCompletionModal from '@/components/ProfileCompletionModal';
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import type { Package } from '@/lib/supabase';
 import GoogleCalendarIntegration from '@/app/service-center/components/GoogleCalendarIntegration';
 import { QuotaIndicator } from '@/components/QuotaIndicator';
@@ -28,10 +30,19 @@ export default function PackagesPage() {
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
   const [_paymentError, setPaymentError] = useState<string | null>(null);
   const { user: _user, isSignedIn } = useUser();
+  const { canBook, profileData, missingFields, refreshProfile } = useProfileCompletion();
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [pendingPurchase, setPendingPurchase] = useState<{ packageId: string; paymentMethod: string } | null>(null);
 
   const handlePurchaseQuota = async (packageId: string, paymentMethod: string = 'payid') => {
     if (!isSignedIn) {
       window.location.href = '/sign-in';
+      return;
+    }
+
+    if (!canBook) {
+      setPendingPurchase({ packageId, paymentMethod });
+      setShowProfileModal(true);
       return;
     }
 
@@ -61,13 +72,13 @@ export default function PackagesPage() {
         }
 
         // Redirect to manual payment page
-        if (data.url) {
-          window.location.href = data.url;
-        } else {
-          throw new Error('No payment URL received');
-        }
-        return;
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No payment URL received');
       }
+      return;
+    }
 
       // For standard payment gateway
       const response = await fetch('/api/create-quota-checkout-enhanced', {
@@ -228,6 +239,21 @@ export default function PackagesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <ProfileCompletionModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+        missingFields={missingFields}
+        onComplete={async () => {
+          await refreshProfile();
+          setShowProfileModal(false);
+          const next = pendingPurchase;
+          setPendingPurchase(null);
+          if (next) {
+            await handlePurchaseQuota(next.packageId, next.paymentMethod);
+          }
+        }}
+        initialData={profileData}
+      />
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>

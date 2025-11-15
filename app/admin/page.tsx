@@ -56,16 +56,49 @@ interface ServerBooking {
 // Server-side function to fetch and merge users
 async function getMergedUsers(): Promise<MergedUser[]> {
   try {
+    // Check if Clerk secret key is configured
+    if (!process.env.CLERK_SECRET_KEY) {
+      console.warn("CLERK_SECRET_KEY not configured, skipping Clerk user fetch");
+      // Fetch only from Supabase
+      const { data: supabaseUsers, error: supabaseError } = await supabaseAdmin
+        .from('users')
+        .select('*');
+
+      if (supabaseError) {
+        console.error("Supabase error:", supabaseError);
+        return [];
+      }
+
+      // Return only Supabase users
+      return (supabaseUsers || []).map(user => ({
+        clerkId: '',
+        email: user.email || '',
+        supabaseUserId: user.id,
+        fullName: user.full_name || 'No Name',
+        phone: user.phone || '',
+        supabaseCreatedAt: user.created_at,
+        clerkCreatedAt: user.created_at,
+        lastSignInAt: null,
+        isSynced: false,
+      }));
+    }
+
     const clerkClient = createClerkClient({
-      secretKey: process.env.CLERK_SECRET_KEY ?? '',
+      secretKey: process.env.CLERK_SECRET_KEY,
     });
 
     console.log("Fetching users from Clerk and Supabase...");
 
-    // Fetch users from Clerk
-    const clerkUsersResponse = await clerkClient.users.getUserList({ limit: 200 });
-    const clerkUsers = clerkUsersResponse.data || [];
-    console.log(`Found ${clerkUsers.length} Clerk users`);
+    // Fetch users from Clerk with error handling
+    let clerkUsers: any[] = [];
+    try {
+      const clerkUsersResponse = await clerkClient.users.getUserList({ limit: 200 });
+      clerkUsers = clerkUsersResponse.data || [];
+      console.log(`Found ${clerkUsers.length} Clerk users`);
+    } catch (clerkError) {
+      console.error("Clerk API error:", clerkError);
+      console.warn("Continuing with Supabase users only");
+    }
 
     // Fetch users from Supabase
     const { data: supabaseUsers, error: supabaseError } = await supabaseAdmin

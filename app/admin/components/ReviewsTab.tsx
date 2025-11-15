@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ThumbsUp, ThumbsDown, Globe, MessageSquare, ExternalLink } from 'lucide-react';
-import { ExternalReviewsSync } from '@/components/admin/ExternalReviewsSync';
 
 interface Review {
   id: string;
@@ -193,7 +192,19 @@ export const ReviewsTab = ({ reviews, loading, handleReviewApproval }: ReviewsTa
         </TabsContent>
         
         <TabsContent value="sync">
-          <ExternalReviewsSync onReviewImported={handleExternalReviewImported} />
+          <Card>
+            <CardHeader>
+              <CardTitle>External Review Sync</CardTitle>
+              <CardDescription>
+                External review sync feature has been removed. Reviews can only be managed through code.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                To sync external reviews, please use the API endpoints directly or contact the development team.
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

@@ -75,14 +75,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User email not found' }, { status: 400 });
     }
 
-    // Generate payment ID using the service
     const paymentIdService = new PaymentIdService();
     const paymentId = paymentIdService.generatePaymentId(packageId, clerkUserId);
     
     // Create payment session with payment ID
     const sessionId = `payment_${paymentGateway}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Use the atomic function to create both user and payment session
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('id, address, latitude, longitude')
+      .eq('clerk_id', clerkUserId)
+      .maybeSingle();
+
+    const city = (userProfile?.address || '').includes('Brisbane') ? 'Brisbane' : '';
+    const country = 'AU';
+
     const { data, error: functionError } = await supabase.rpc('create_manual_payment_session', {
       p_clerk_id: clerkUserId,
       p_email: email,
@@ -99,6 +106,11 @@ export async function POST(request: NextRequest) {
         user_email: email,
         user_name: fullName,
         payment_id: paymentId,
+        user_address: userProfile?.address || '',
+        latitude: userProfile?.latitude ?? null,
+        longitude: userProfile?.longitude ?? null,
+        city,
+        country,
         ...metadata
       }
     });

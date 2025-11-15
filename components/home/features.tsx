@@ -17,8 +17,6 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { Button } from '../ui/button';
-import { EditableWrapper } from '../drag-drop/EditableWrapper';
-import { DropZoneArea } from '../drag-drop/DropZoneArea';
 import { EditableText } from '../ui/editable-text';
 // Using built-in button and card components
 
@@ -143,7 +141,6 @@ export function Features({
   }, []);
 
   return (
-    <EditableWrapper componentId="features-section" componentType="features">
       <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-5">
@@ -280,8 +277,5 @@ export function Features({
         </motion.div>
       </div>
       </section>
-      
-      <DropZoneArea id="after-features" className="my-4" placeholder="Add components after features" />
-    </EditableWrapper>
   );
 }

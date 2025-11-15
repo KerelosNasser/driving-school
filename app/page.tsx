@@ -7,8 +7,7 @@ import { Hero } from "@/components/home/hero";
 import { Gallery } from "@/components/home/gallery";
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import type { Metadata } from 'next'
-import { OrganizationSchema, LocalBusinessSchema } from '@/components/seo/StructuredData'
-import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
+
 import {
     getPageContent,
     getContentValue,
@@ -92,8 +91,6 @@ export default async function Home() {
 
     return (
         <>
-            <OrganizationSchema />
-            <LocalBusinessSchema />
 
             <div className="min-h-screen">
                 <main>
@@ -132,8 +129,6 @@ export default async function Home() {
                     <ServiceAreaMap />
 
                     <ReviewsPreview />
-
-                    <DropZoneArea id="page-bottom" className="my-8" placeholder="Add components at bottom of page" />
 
                 </main>
 

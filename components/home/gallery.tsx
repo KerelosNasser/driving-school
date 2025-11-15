@@ -26,8 +26,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { EditableWrapper } from '@/components/drag-drop/EditableWrapper';
-import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
 
 interface StudentImage {
   id: number;
@@ -583,7 +581,6 @@ export function Gallery({
   }
 
   return (
-    <EditableWrapper componentId="gallery-section" componentType="gallery">
       <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-emerald-50/30 relative overflow-hidden">
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-20 left-10 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
@@ -959,8 +956,5 @@ export function Gallery({
         />
       </div>
       </section>
-      
-      <DropZoneArea id="after-gallery" className="my-4" placeholder="Add components after gallery" />
-    </EditableWrapper>
   );
 }
