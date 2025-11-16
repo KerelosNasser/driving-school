@@ -54,25 +54,58 @@ export async function POST(request: NextRequest) {
   
   try {
     // Check authentication
-    const { userId } = auth();
+    const authResult = await auth();
+    const userId = authResult?.userId;
+    
+    console.log('[Google Reviews Sync] Auth check:', { 
+      hasUserId: !!userId,
+      userId: userId ? userId.substring(0, 8) + '...' : 'none'
+    });
+    
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('[Google Reviews Sync] Authentication failed - no userId');
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: 'You must be logged in to sync reviews. Please sign in and try again.'
+      }, { status: 401 });
     }
 
     // TODO: Add admin role check
-    // Verify user is admin before allowing sync
+    // For now, allow any authenticated user
+    console.log('[Google Reviews Sync] User authenticated, proceeding with sync...');
 
     // Check environment variables
     const GOOGLE_LOCATION_ID = process.env.GOOGLE_LOCATION_ID;
+    const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
+    const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY;
+    
+    console.log('[Google Reviews Sync] Environment check:', {
+      hasLocationId: !!GOOGLE_LOCATION_ID,
+      hasClientEmail: !!GOOGLE_CLIENT_EMAIL,
+      hasPrivateKey: !!GOOGLE_PRIVATE_KEY,
+      locationId: GOOGLE_LOCATION_ID ? GOOGLE_LOCATION_ID.substring(0, 30) + '...' : 'missing'
+    });
     
     if (!GOOGLE_LOCATION_ID) {
+      console.error('[Google Reviews Sync] GOOGLE_LOCATION_ID not configured');
       return NextResponse.json({ 
         error: 'Configuration missing',
-        details: 'GOOGLE_LOCATION_ID is not configured. Please set up your Google Business location ID.'
+        details: 'GOOGLE_LOCATION_ID is not configured. Please add it to your environment variables.',
+        hint: 'Format: accounts/YOUR_ACCOUNT_ID/locations/YOUR_LOCATION_ID'
+      }, { status: 500 });
+    }
+
+    if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
+      console.error('[Google Reviews Sync] Service account credentials missing');
+      return NextResponse.json({ 
+        error: 'Service account not configured',
+        details: 'GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY is missing.',
+        hint: 'These should already be configured for your Calendar integration.'
       }, { status: 500 });
     }
 
     // Get service account access token using existing TokenManager
+    console.log('[Google Reviews Sync] Requesting service account token...');
     const jwtConfig = TokenManager.getJWTConfigForUseCase('custom', [
       'https://www.googleapis.com/auth/business.manage'
     ]);
@@ -80,25 +113,37 @@ export async function POST(request: NextRequest) {
     const accessToken = await TokenManager.getServiceAccountToken(jwtConfig);
     
     if (!accessToken) {
+      console.error('[Google Reviews Sync] Failed to obtain access token');
       return NextResponse.json({ 
         error: 'Authentication failed',
-        details: 'Failed to obtain access token from service account. Check your GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY.'
+        details: 'Failed to obtain access token from service account.',
+        hint: 'Check that GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY are correctly configured.',
+        troubleshooting: 'Run: node test-google-business-reviews.js to diagnose the issue'
       }, { status: 500 });
     }
+    
+    console.log('[Google Reviews Sync] Access token obtained successfully');
 
     // Create sync log entry
-    await supabaseAdmin.from('review_sync_log').insert({
+    console.log('[Google Reviews Sync] Creating sync log entry...');
+    const { error: logError } = await supabaseAdmin.from('review_sync_log').insert({
       id: syncLogId,
       source: 'google',
       status: 'in_progress',
       sync_started_at: new Date().toISOString()
     });
+    
+    if (logError) {
+      console.error('[Google Reviews Sync] Failed to create sync log:', logError);
+      // Continue anyway - logging failure shouldn't stop the sync
+    }
 
     let allReviews: GoogleReview[] = [];
     let nextPageToken: string | undefined;
     let totalFetched = 0;
 
     // Fetch all pages of reviews
+    console.log('[Google Reviews Sync] Starting to fetch reviews...');
     do {
       // Construct API URL using Google Business Profile API (newer version)
       const baseUrl = `https://mybusinessbusinessinformation.googleapis.com/v1/${GOOGLE_LOCATION_ID}/reviews`;
@@ -108,6 +153,7 @@ export async function POST(request: NextRequest) {
       });
 
       const apiUrl = `${baseUrl}?${params.toString()}`;
+      console.log(`[Google Reviews Sync] Fetching from: ${apiUrl.substring(0, 100)}...`);
 
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -119,7 +165,11 @@ export async function POST(request: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Google API Error:', response.status, errorText);
+        console.error('[Google Reviews Sync] Google API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
         
         // Update sync log with error
         await supabaseAdmin.from('review_sync_log').update({
@@ -129,14 +179,27 @@ export async function POST(request: NextRequest) {
           reviews_fetched: totalFetched
         }).eq('id', syncLogId);
 
+        const errorMessages: Record<number, string> = {
+          401: 'Authentication failed. Service account token may be invalid.',
+          403: 'Access denied. Service account needs Manager access to your Google Business Profile.',
+          404: 'Location not found. Check your GOOGLE_LOCATION_ID format.',
+          429: 'Rate limit exceeded. Please try again later.'
+        };
+
         return NextResponse.json({ 
           error: 'Failed to fetch Google reviews',
-          details: errorText,
-          status: response.status
+          details: errorMessages[response.status] || errorText,
+          status: response.status,
+          troubleshooting: response.status === 403 
+            ? 'Add your service account as Manager in Google Business Profile'
+            : response.status === 404
+            ? 'Verify GOOGLE_LOCATION_ID format: accounts/{account}/locations/{location}'
+            : 'Run: node test-google-business-reviews.js to diagnose'
         }, { status: response.status });
       }
 
       const data: GoogleBusinessProfileResponse = await response.json();
+      console.log(`[Google Reviews Sync] Fetched ${data.reviews?.length || 0} reviews from this page`);
       
       if (data.reviews && data.reviews.length > 0) {
         allReviews = allReviews.concat(data.reviews);
@@ -145,8 +208,11 @@ export async function POST(request: NextRequest) {
 
       nextPageToken = data.nextPageToken;
     } while (nextPageToken);
+    
+    console.log(`[Google Reviews Sync] Total reviews fetched: ${totalFetched}`);
 
     // Process and import reviews
+    console.log('[Google Reviews Sync] Processing and importing reviews...');
     let imported = 0;
     let updated = 0;
     let skipped = 0;
@@ -225,6 +291,13 @@ export async function POST(request: NextRequest) {
       }
     }).eq('id', syncLogId);
 
+    console.log('[Google Reviews Sync] Sync completed successfully:', {
+      fetched: totalFetched,
+      imported,
+      updated,
+      skipped
+    });
+
     return NextResponse.json({
       success: true,
       message: 'Google reviews synced successfully',
@@ -239,7 +312,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error syncing Google reviews:', error);
+    console.error('[Google Reviews Sync] Fatal error:', error);
     
     // Update sync log with error
     await supabaseAdmin.from('review_sync_log').update({
@@ -250,7 +323,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     }, { status: 500 });
   }
 }
@@ -258,9 +332,17 @@ export async function POST(request: NextRequest) {
 // GET - Get sync status and history
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = auth();
+    const authResult = await auth();
+    const userId = authResult?.userId;
+    
+    console.log('[Google Reviews Sync] GET request - Auth check:', { hasUserId: !!userId });
+    
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('[Google Reviews Sync] GET - Authentication failed');
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: 'You must be logged in to view sync status.'
+      }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
