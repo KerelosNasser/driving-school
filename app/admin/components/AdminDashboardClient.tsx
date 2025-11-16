@@ -18,7 +18,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  CreditCard
+  CreditCard,
+  CheckSquare
 } from 'lucide-react';
 import { OverviewTab } from './OverviewTab';
 import { PaymentsTab } from './PaymentsTab';
@@ -29,6 +30,7 @@ import { CalendarSettingsTab } from './CalendarSettingsTab';
 import { PackagesTab } from './PackagesTab';
 import { ReferralRewardsTab } from './ReferralRewardsTab';
 import { AnnouncementTab } from './AnnouncementTab';
+import { PaymentVerificationTab } from './PaymentVerificationTab';
 import { MergedUser } from '../page';
 import { Booking, Review, Package } from '@/lib/types';
 
@@ -45,6 +47,13 @@ const navigationItems = [
     label: 'Payments',
     icon: CreditCard,
     description: 'Payment Analytics',
+    category: 'main'
+  },
+  {
+    id: 'payment-verification',
+    label: 'Payment Verification',
+    icon: CheckSquare,
+    description: 'Verify Manual Payments',
     category: 'main'
   },
   {
@@ -162,6 +171,8 @@ export function AdminDashboardClient({
         return <OverviewTab bookings={bookings} users={initialUsers} reviews={reviews} loading={loading} />;
       case 'payments':
         return <PaymentsTab />;
+      case 'payment-verification':
+        return <PaymentVerificationTab />;
       case 'bookings':
         return <BookingsTab bookings={bookings} loading={loading} onBookingUpdate={handleBookingUpdate} />;
       case 'users':

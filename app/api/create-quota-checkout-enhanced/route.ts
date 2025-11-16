@@ -75,8 +75,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User email not found' }, { status: 400 });
     }
 
-    const paymentIdService = new PaymentIdService();
-    const paymentId = paymentIdService.generatePaymentId(packageId, clerkUserId);
+    const paymentId = PaymentIdService.generatePaymentId(clerkUserId, packageId, packageData.price, paymentGateway);
     
     // Create payment session with payment ID
     const sessionId = `payment_${paymentGateway}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

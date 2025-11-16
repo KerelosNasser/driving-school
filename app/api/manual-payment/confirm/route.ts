@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendWhatsAppNotification, formatPaymentNotification } from '@/lib/whatsapp';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,13 +42,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session expired' }, { status: 400 });
     }
 
-    // Update session with payment reference and mark as completed
+    // Update session with payment reference and mark as PENDING_VERIFICATION
+    // Admin must verify the payment before hours are granted
     const { data, error } = await supabase
       .from('manual_payment_sessions')
       .update({
         payment_reference: paymentReference.trim(),
-        status: 'completed',
-        completed_at: new Date().toISOString(),
+        status: 'pending_verification',
+        submitted_at: new Date().toISOString(),
         gateway: gateway || session.gateway
       })
       .eq('session_id', sessionId)
@@ -59,75 +61,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to confirm payment' }, { status: 500 });
     }
 
-    // Update user quota with purchased hours
-    try {
-      const hoursToAdd = parseFloat(data.metadata?.hours || '0');
-      
-      // First, ensure user has a quota record
-      const { data: existingQuota } = await supabase
-        .from('user_quotas')
-        .select('*')
-        .eq('user_id', data.user_id)
-        .single();
+    // DO NOT grant hours yet - admin must verify first
+    // Hours will be granted when admin approves the payment
 
-      if (!existingQuota) {
-        // Create new quota record
-        const { error: createError } = await supabase
-          .from('user_quotas')
-          .insert({
-            user_id: data.user_id,
-            total_hours: hoursToAdd,
-            used_hours: 0
-          });
-        
-        if (createError) {
-          console.error('Error creating user quota:', createError);
-        }
-      } else {
-        // Update existing quota by adding hours to total_hours
-        const { error: updateError } = await supabase
-          .from('user_quotas')
-          .update({
-            total_hours: parseFloat(existingQuota.total_hours) + hoursToAdd,
-            updated_at: new Date().toISOString()
+    // Send WhatsApp notification to admin
+    try {
+      const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER;
+      if (adminPhone) {
+        await sendWhatsAppNotification({
+          to: adminPhone,
+          message: formatPaymentNotification({
+            userName: data.metadata?.user_name || data.full_name || 'Unknown User',
+            amount: data.amount,
+            packageName: data.metadata?.package_name || 'Unknown Package',
+            paymentReference: paymentReference.trim(),
+            hours: parseFloat(data.metadata?.hours || '0')
           })
-          .eq('user_id', data.user_id);
-        
-        if (updateError) {
-          console.error('Error updating user quota:', updateError);
-        }
-      }
-      
-      // Log the transaction in quota_transactions
-      const { error: transactionError } = await supabase
-        .from('quota_transactions')
-        .insert({
-          user_id: data.user_id,
-          transaction_type: 'purchase',
-          hours_change: hoursToAdd,
-          amount_paid: data.amount,
-          description: `Purchased ${data.metadata?.package_name || 'Package'} - ${hoursToAdd} hours via ${gateway?.toUpperCase() || 'Manual Payment'}`,
-          package_id: data.package_id,
-          payment_id: sessionId,
-          metadata: {
-            gateway: gateway || session.gateway,
-            payment_reference: paymentReference.trim(),
-            session_id: sessionId
-          }
         });
-      
-      if (transactionError) {
-        console.error('Error logging transaction:', transactionError);
       }
-      
-    } catch (quotaUpdateError) {
-      console.error('Error updating user quota:', quotaUpdateError);
+    } catch (notificationError) {
+      // Don't fail the request if notification fails
+      console.error('Failed to send WhatsApp notification:', notificationError);
     }
 
     return NextResponse.json({ 
-      message: 'Payment confirmed successfully',
+      message: 'Payment reference submitted successfully. Your payment is pending admin verification.',
       session: data,
-      hoursAdded: data.metadata?.hours || 0
+      status: 'pending_verification',
+      note: 'Your hours will be added to your account once the payment is verified by our team (usually within 24 hours).'
     });
 
   } catch (error) {

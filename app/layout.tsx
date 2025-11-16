@@ -8,7 +8,6 @@ import { ConditionalLayout } from "@/components/ConditionalLayout";
 import { Suspense } from "react";
 import { EditModeProvider } from "@/contexts/editModeContext";
 import { GlobalContentProvider } from "@/contexts/globalContentContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ReactQueryProvider } from "@/components/providers";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 
@@ -153,7 +152,6 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
           <ReactQueryProvider>
-            <ThemeProvider>
               <Suspense fallback={<LoadingIndicator size="large" text="Loading application..." className="items-center text-center" />}>
                 <EditModeProvider>
                   <GlobalContentProvider>
@@ -165,7 +163,6 @@ export default function RootLayout({
                   </GlobalContentProvider>
                 </EditModeProvider>
               </Suspense>
-            </ThemeProvider>
           </ReactQueryProvider>
 
           <Toaster richColors position="top-right" />

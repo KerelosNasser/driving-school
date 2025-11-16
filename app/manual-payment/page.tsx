@@ -2,118 +2,69 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { CheckCircle, AlertCircle, Loader2, CreditCard, QrCode, Banknote, Copy, Check, Shield, Clock, Car, Zap, ArrowLeft, ExternalLink } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, QrCode, Copy, Check, Clock, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-
-interface PaymentError {
-  message: string;
-  type?: string;
-}
-
-// Helper function to safely extract error message
-const getErrorMessage = (error: PaymentError | null): string => {
-  if (!error) return '';
-  return error.message || 'An error occurred';
-};
 
 export default function ManualPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<PaymentError | null>(null);
-  const [paymentData, setPaymentData] = useState<any>(null);
+  const [error, setError] = useState<string>('');
+  const [paymentData, setPaymentData] = useState<{
+    amount: number;
+    packageName: string;
+    hours: number;
+  } | null>(null);
   const [paymentReference, setPaymentReference] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [selectedGateway, setSelectedGateway] = useState<string>('');
-  const [validationError, setValidationError] = useState<string>('');
 
   const sessionId = searchParams.get('session_id');
-  const gateway = searchParams.get('gateway');
+  const payidNumber = process.env.NEXT_PUBLIC_PAYID_IDENTIFIER || '0431512095';
 
   useEffect(() => {
     if (!sessionId) {
-      setError({message: 'Invalid payment session', type: 'validation'});
+      setError('Invalid payment session');
       setLoading(false);
       return;
     }
 
-    const fetchPaymentSession = async () => {
-      try {
-        const response = await fetch(`/api/manual-payment?session_id=${sessionId}`);
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch payment session');
-        }
-        
+    fetch(`/api/manual-payment?session_id=${sessionId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) throw new Error(data.error);
         setPaymentData(data);
-        setSelectedGateway(gateway || data.gateway || 'payid');
-      } catch (err: any) {
-        setError({
-          message: err.message || 'Failed to fetch payment session',
-          type: 'network'
-        });
-      } finally {
         setLoading(false);
-      }
-    };
-
-    fetchPaymentSession();
-  }, [sessionId, gateway]);
-
-  const validatePaymentReference = (ref: string, gateway: string): string => {
-    if (!ref.trim()) return 'Payment reference is required';
-    
-    const cleanRef = ref.trim();
-    
-    switch (gateway) {
-      case 'payid':
-        if (cleanRef.length < 6) return 'PayID reference must be at least 6 characters';
-        if (!/^[A-Za-z0-9]+$/.test(cleanRef)) return 'PayID reference should contain only letters and numbers';
-        break;
-      case 'bpay':
-        if (cleanRef.length < 8) return 'BPAY reference must be at least 8 characters';
-        if (!/^[0-9]+$/.test(cleanRef)) return 'BPAY reference should contain only numbers';
-        break;
-      case 'tyro':
-        if (cleanRef.length < 10) return 'Tyro receipt number must be at least 10 characters';
-        if (!/^[A-Za-z0-9-]+$/.test(cleanRef)) return 'Tyro reference should contain letters, numbers, and hyphens only';
-        break;
-    }
-    
-    return '';
-  };
+      })
+      .catch(err => {
+        setError(err.message || 'Failed to load payment session');
+        setLoading(false);
+      });
+  }, [sessionId]);
 
   const handleConfirmPayment = async () => {
-    const validation = validatePaymentReference(paymentReference, selectedGateway);
-    if (validation) {
-      setValidationError(validation);
+    if (!paymentReference.trim() || paymentReference.length < 6) {
+      setError('Please enter a valid payment reference (at least 6 characters)');
       return;
     }
 
     setConfirming(true);
-    setError(null);
-    setValidationError('');
+    setError('');
     
     try {
       const response = await fetch('/api/manual-payment/confirm', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
           paymentReference: paymentReference.trim(),
-          gateway: selectedGateway,
+          gateway: 'payid'
         }),
       });
       
@@ -124,11 +75,8 @@ export default function ManualPaymentPage() {
       }
       
       setConfirmed(true);
-    } catch (err: any) {
-      setError({
-        message: err.message || 'Failed to confirm payment',
-        type: err.type || 'payment'
-      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to confirm payment');
     } finally {
       setConfirming(false);
     }
@@ -140,571 +88,281 @@ export default function ManualPaymentPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getGatewayOptions = () => [
-    {
-      id: 'payid',
-      title: 'PayID',
-      icon: <QrCode className="h-5 w-5" />,
-      description: 'Instant bank transfer',
-      fee: '0.5% + 10¢',
-      color: 'from-emerald-500 to-teal-600',
-      popular: true
-    },
-    {
-      id: 'bpay',
-      title: 'BPAY',
-      icon: <Banknote className="h-5 w-5" />,
-      description: 'Bank transfer via BPAY',
-      fee: '0.6% + 25¢',
-      color: 'from-purple-500 to-violet-600',
-      popular: false
-    },
-    {
-      id: 'tyro',
-      title: 'Tyro EFTPOS',
-      icon: <CreditCard className="h-5 w-5" />,
-      description: 'In-person EFTPOS payment',
-      fee: '1.8% + 30¢',
-      color: 'from-blue-500 to-indigo-600',
-      popular: false
-    }
+  const bankApps = [
+    { name: 'CommBank', icon: '🏦', link: 'commbank://' },
+    { name: 'NAB', icon: '🏦', link: 'nab://' },
+    { name: 'Westpac', icon: '🏦', link: 'westpac://' },
+    { name: 'ANZ', icon: '🏦', link: 'anz://' },
   ];
 
-  const getGatewayDetails = (gatewayType: string) => {
-    const generateReferenceNumber = () => {
-      const timestamp = Date.now().toString();
-      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-      return `${gatewayType.toUpperCase()}${timestamp.slice(-6)}${random}`;
-    };
-    
-    const referenceNumber = generateReferenceNumber();
-    
-    switch (gatewayType) {
-      case 'payid':
-        return {
-          title: 'PayID Payment',
-          icon: <QrCode className="h-6 w-6" />,
-          description: 'Transfer funds using your bank\'s PayID service',
-          instructions: [
-            'Open your banking app or internet banking',
-            'Select "Pay Someone" or "PayID Transfer"',
-            `Enter PayID: ${process.env.NEXT_PUBLIC_PAYID_IDENTIFIER || '0431512095'}`,
-            `Amount: $${paymentData?.amount} AUD`,
-            `Reference: ${referenceNumber}`,
-            'Complete the transfer and save the receipt'
-          ],
-          color: 'from-emerald-500 to-teal-600',
-          referenceLabel: 'Transaction ID from your bank receipt'
-        };
-      case 'bpay':
-        return {
-          title: 'BPAY Payment',
-          icon: <Banknote className="h-6 w-6" />,
-          description: 'Pay using BPAY through your bank',
-          instructions: [
-            'Log in to your internet banking or mobile app',
-            'Navigate to "BPAY" or "Pay Bills"',
-            `Biller Code: ${process.env.NEXT_PUBLIC_BPAY_BILLER_CODE || '123456'}`,
-            `Reference: ${referenceNumber}`,
-            `Amount: $${paymentData?.amount} AUD`,
-            'Complete payment and save the receipt number'
-          ],
-          color: 'from-purple-500 to-violet-600',
-          referenceLabel: 'BPAY receipt number (8+ digits)'
-        };
-      case 'tyro':
-        return {
-          title: 'Tyro EFTPOS Payment',
-          icon: <CreditCard className="h-6 w-6" />,
-          description: 'Pay using Tyro EFTPOS terminal',
-          instructions: [
-            'Visit our office or authorized payment location',
-            `Tell them you need to pay $${paymentData?.amount} for driving lessons`,
-            `Provide reference: ${referenceNumber}`,
-            'Complete the EFTPOS transaction',
-            'Keep the printed receipt',
-            'Enter the receipt number below'
-          ],
-          color: 'from-blue-500 to-indigo-600',
-          referenceLabel: 'Receipt number from Tyro terminal'
-        };
-      default:
-        return {
-          title: 'Manual Payment',
-          icon: <CreditCard className="h-6 w-6" />,
-          description: 'Complete your payment manually',
-          instructions: ['Follow the provided instructions'],
-          color: 'from-gray-500 to-gray-700',
-          referenceLabel: 'Payment reference'
-        };
-    }
+  const openBankApp = (link: string) => {
+    window.location.href = link;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center px-4">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-emerald-600" />
-          <h2 className="text-xl font-semibold text-gray-800">Loading Payment Details</h2>
-          <p className="text-gray-600">Please wait while we prepare your payment information...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
       </div>
     );
   }
 
-  if (error) {
+  if (error && !paymentData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6">
-        <div className="max-w-md mx-auto">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-red-600">
-                <AlertCircle className="h-6 w-6" />
-                <span>Payment Error</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700">{error.message}</p>
-              {error.type === 'network' && (
-                <p className="text-sm text-gray-500 mt-2">Please check your internet connection and try again.</p>
-              )}
-            </CardContent>
-            <CardFooter className="flex flex-col gap-2">
-              <Button 
-                onClick={() => router.push('/packages')} 
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800"
-              >
-                Return to Packages
-              </Button>
-              <Button 
-                onClick={() => window.location.reload()} 
-                variant="outline"
-                className="w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-              >
-                Try Again
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+      <div className="min-h-screen p-4">
+        <Card className="max-w-md mx-auto mt-8">
+          <CardContent className="p-6">
+            <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
+            <p className="text-center text-gray-700 mb-4">{error}</p>
+            <Button onClick={() => router.push('/packages')} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600">
+              Return to Packages
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (confirmed) {
-    const generateReferenceNumber = () => {
-      const timestamp = Date.now().toString();
-      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-      return `${selectedGateway.toUpperCase()}${timestamp.slice(-6)}${random}`;
-    };
-    const referenceNumber = generateReferenceNumber();
-    
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6">
-        <div className="max-w-2xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-8"
-          >
-            <div className="mx-auto bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full w-20 h-20 flex items-center justify-center mb-6">
-              <CheckCircle className="h-12 w-12 text-emerald-600" />
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 p-4">
+        <Card className="max-w-md mx-auto mt-8 border-0 shadow-xl">
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 text-center rounded-t-xl">
+            <div className="mx-auto bg-white rounded-full w-16 h-16 flex items-center justify-center mb-3">
+              <Clock className="h-8 w-8 text-yellow-600" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-3">Payment Confirmed!</h1>
-            <p className="text-gray-600 mb-8 text-lg">
-              Thank you for your payment. Your driving lesson hours will be added to your account shortly.
-            </p>
-            
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg mb-8">
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="text-left">
-                    <p className="text-sm text-gray-500 mb-1">Payment Reference</p>
-                    <p className="font-mono text-lg font-semibold text-gray-900">{paymentReference}</p>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm text-gray-500 mb-1">Our Reference</p>
-                    <p className="font-mono text-lg font-semibold text-gray-900">{referenceNumber}</p>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm text-gray-500 mb-1">Amount Paid</p>
-                    <p className="text-2xl font-bold text-emerald-600">${paymentData?.amount} AUD</p>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm text-gray-500 mb-1">Package</p>
-                    <p className="font-semibold text-gray-900">{paymentData?.packageName}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <h2 className="text-2xl font-bold text-white">Payment Submitted!</h2>
+          </div>
+          
+          <CardContent className="p-6 space-y-4">
+            <Alert className="bg-yellow-50 border-yellow-300">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-900 text-sm">
+                Your hours will be added within 24 hours once verified.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-3">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500">Reference</p>
+                <p className="font-mono font-bold">{paymentReference}</p>
+              </div>
+              <div className="bg-emerald-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500">Amount</p>
+                <p className="text-2xl font-bold text-emerald-600">${paymentData?.amount}</p>
+              </div>
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500">Package</p>
+                <p className="font-semibold">{paymentData?.packageName}</p>
+                <p className="text-sm text-gray-600">{paymentData?.hours} hours</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
               <Button 
-                onClick={() => router.push('/service-center')}
-                className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800"
+                onClick={() => router.push('/service-center')} 
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-600"
               >
-                Continue to Dashboard
+                Go to Dashboard
               </Button>
               <Button 
-                onClick={() => router.push('/packages')}
-                variant="outline"
-                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                onClick={() => router.push('/packages')} 
+                variant="outline" 
+                className="w-full"
               >
                 View More Packages
               </Button>
             </div>
-          </motion.div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const gatewayOptions = getGatewayOptions();
-  const gatewayDetails = getGatewayDetails(selectedGateway);
-  const generateReferenceNumber = () => {
-    const timestamp = Date.now().toString();
-    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-    return `${selectedGateway.toUpperCase()}${timestamp.slice(-6)}${random}`;
-  };
-  const referenceNumber = generateReferenceNumber();
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4 sm:px-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="relative mb-12">
-          <Button
-            onClick={() => router.push('/packages')}
-            variant="ghost"
-            className="absolute left-0 top-0 text-gray-600 hover:text-gray-900 hover:bg-white/50 backdrop-blur-sm"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Packages
-          </Button>
-          
-          <div className="text-center">
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full blur-lg opacity-30 animate-pulse"></div>
-                <div className="relative p-4 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full shadow-xl">
-                  <Car className="h-10 w-10 text-white" />
+    <div className="min-h-screen bg-gray-50">
+      {/* Desktop: Split layout | Mobile: Single column */}
+      <div className="lg:flex lg:h-screen">
+        
+        {/* LEFT SIDE - Desktop Only: Instructions & Info */}
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-12 items-center justify-center">
+          <div className="max-w-md">
+            <QrCode className="h-16 w-16 mb-6 opacity-90" />
+            <h1 className="text-4xl font-bold mb-3">PayID Payment</h1>
+            <p className="text-emerald-100 text-lg mb-8">Complete your payment in a few simple steps</p>
+            
+            <div className="space-y-4">
+              {[
+                { step: 'Open your banking app', icon: '📱' },
+                { step: 'Select PayID payment', icon: '💳' },
+                { step: `Transfer to: ${payidNumber}`, icon: '🔢' },
+                { step: `Amount: $${paymentData?.amount}`, icon: '💰' },
+                { step: 'Complete the transfer', icon: '✅' },
+                { step: 'Enter transaction ID', icon: '📋' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-start bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+                  <span className="flex-shrink-0 w-8 h-8 bg-white text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold mr-4">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <span className="text-2xl mr-3">{item.icon}</span>
+                    <span className="text-white font-medium">{item.step}</span>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent mb-3">
-              Complete Your Payment
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Secure and fast payment processing for your driving lessons
-            </p>
+
+            <div className="mt-8 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+              <p className="text-emerald-100 text-sm mb-2">Package Details</p>
+              <p className="text-2xl font-bold">{paymentData?.packageName}</p>
+              <p className="text-emerald-100">{paymentData?.hours} driving hours</p>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
-          {/* Payment Gateway Selection */}
-          <div className="xl:col-span-2">
-            <Card className="border-0 shadow-2xl bg-white/90 backdrop-blur-md">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-bold text-gray-900">Payment Methods</CardTitle>
-                <CardDescription className="text-gray-600">Choose your preferred payment option</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {gatewayOptions.map((option) => (
-                  <motion.div
-                    key={option.id}
-                    whileHover={{ scale: 1.02, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        {/* RIGHT SIDE - Mobile: Full width | Desktop: Half width */}
+        <div className="lg:w-1/2 lg:overflow-y-auto">
+          <div className="max-w-lg mx-auto lg:my-12">
+            
+            {/* Header */}
+            <div className="bg-white p-3 border-b sticky top-0 z-10 lg:hidden">
+              <Button onClick={() => router.push('/packages')} variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back
+              </Button>
+            </div>
+
+            {/* Desktop Header */}
+            <div className="hidden lg:block mb-6 px-4">
+              <Button onClick={() => router.push('/packages')} variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to Packages
+              </Button>
+            </div>
+
+            {/* Hero - Mobile Only */}
+            <div className="lg:hidden bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white text-center">
+              <QrCode className="h-10 w-10 mx-auto mb-2 opacity-80" />
+              <h1 className="text-2xl font-bold mb-1">PayID Payment</h1>
+              <div className="text-4xl font-bold my-3">${paymentData?.amount}</div>
+              <p className="text-emerald-100 text-sm">{paymentData?.packageName} • {paymentData?.hours} hours</p>
+            </div>
+
+            {/* Desktop Amount Card */}
+            <div className="hidden lg:block px-4 mb-6">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+                <CardContent className="p-6 text-center">
+                  <p className="text-emerald-100 text-sm mb-2">Amount to Pay</p>
+                  <div className="text-5xl font-bold my-2">${paymentData?.amount}</div>
+                  <p className="text-emerald-100">AUD</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 space-y-3">
+          
+          {/* PayID */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <p className="text-xs text-gray-500 mb-2">Transfer to PayID</p>
+              <div className="flex items-center justify-between gap-2 bg-blue-50 p-3 rounded-lg">
+                <p className="font-mono font-bold text-blue-900 text-sm">{payidNumber}</p>
+                <Button
+                  onClick={() => copyToClipboard(payidNumber)}
+                  size="sm"
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 flex-shrink-0"
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Bank Apps */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <p className="text-xs text-gray-500 mb-2">Quick access</p>
+              <div className="grid grid-cols-4 gap-2">
+                {bankApps.map((bank) => (
+                  <button
+                    key={bank.name}
+                    onClick={() => openBankApp(bank.link)}
+                    className="flex flex-col items-center p-2 bg-gray-50 rounded-lg hover:bg-emerald-50 border hover:border-emerald-500 transition-all active:scale-95"
                   >
-                    <Card 
-                      className={`cursor-pointer transition-all duration-300 relative overflow-hidden ${
-                        selectedGateway === option.id 
-                          ? `border-2 bg-gradient-to-br ${option.color} text-white shadow-2xl ring-4 ring-white/20` 
-                          : 'border border-gray-200 hover:border-gray-300 hover:shadow-xl bg-white/80 backdrop-blur-sm'
-                      }`}
-                      onClick={() => setSelectedGateway(option.id)}
-                    >
-                      {selectedGateway === option.id && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent pointer-events-none" />
-                      )}
-                      <CardContent className="p-5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className={`p-3 rounded-xl transition-all duration-300 ${
-                              selectedGateway === option.id 
-                                ? 'bg-white/20 shadow-lg' 
-                                : `bg-gradient-to-br ${option.color} shadow-md`
-                            }`}>
-                              <div className="text-white">
-                                {option.icon}
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <h3 className={`font-bold text-lg ${
-                                  selectedGateway === option.id ? 'text-white' : 'text-gray-900'
-                                }`}>{option.title}</h3>
-                                {option.popular && (
-                                  <Badge className="bg-yellow-400 text-yellow-900 text-xs font-semibold px-2 py-1">
-                                    ⭐ Popular
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className={`text-sm mb-2 ${
-                                selectedGateway === option.id ? 'text-white/90' : 'text-gray-600'
-                              }`}>
-                                {option.description}
-                              </p>
-                              <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                                selectedGateway === option.id 
-                                  ? 'bg-white/20 text-white' 
-                                  : 'bg-gray-100 text-gray-700'
-                              }`}>
-                                💰 Fee: {option.fee}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            {selectedGateway === option.id ? (
-                              <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                              >
-                                <CheckCircle className="h-6 w-6 text-white" />
-                              </motion.div>
-                            ) : (
-                              <div className="w-6 h-6 border-2 border-gray-300 rounded-full" />
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                    <span className="text-2xl">{bank.icon}</span>
+                    <span className="text-xs font-medium text-gray-700 mt-1">{bank.name}</span>
+                  </button>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Package Summary */}
-            <Card className="border-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-indigo-50 backdrop-blur-md mt-6">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-bold text-gray-900 flex items-center">
-                  <Zap className="h-5 w-5 mr-2 text-emerald-500" />
-                  Order Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-gray-600 font-medium">Package</span>
-                    <span className="font-bold text-gray-900">{paymentData?.packageName}</span>
+          {/* Instructions */}
+          <Card className="border-0 shadow-sm bg-emerald-50">
+            <CardContent className="p-4">
+              <p className="text-xs font-semibold text-emerald-900 mb-2">Steps:</p>
+              <div className="space-y-1.5">
+                {[
+                  'Open your bank app',
+                  'Select PayID payment',
+                  'Enter PayID above',
+                  'Complete transfer',
+                  'Enter transaction ID below',
+                ].map((step, i) => (
+                  <div key={i} className="flex items-center text-sm">
+                    <span className="flex-shrink-0 w-5 h-5 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">
+                      {i + 1}
+                    </span>
+                    <span className="text-emerald-900">{step}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-gray-600 font-medium">Lesson Hours</span>
-                    <span className="font-bold text-gray-900">{paymentData?.hours} hours</span>
-                  </div>
-                  <div className="border-t-2 border-gray-200 pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xl font-bold text-gray-900">Total Amount</span>
-                      <div className="text-right">
-                        <span className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                          ${paymentData?.amount}
-                        </span>
-                        <p className="text-sm text-gray-500 font-medium">AUD</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Payment Instructions */}
-          <div className="xl:col-span-3">
-            <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur-md">
-              <CardHeader className="pb-6">
-                <div className="flex items-center space-x-4">
-                  <div className={`p-3 bg-gradient-to-br ${gatewayDetails.color} rounded-xl shadow-lg`}>
-                    <div className="text-white">
-                      {gatewayDetails.icon}
-                    </div>
-                  </div>
-                  <div>
-                    <CardTitle className="text-2xl font-bold text-gray-900">{gatewayDetails.title}</CardTitle>
-                    <CardDescription className="text-gray-600 text-base">{gatewayDetails.description}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Reference Number */}
-                <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-200 rounded-xl p-6 shadow-lg">
-                  <h4 className="font-bold text-blue-800 mb-4 flex items-center text-lg">
-                    <div className="p-2 bg-blue-200 rounded-lg mr-3">
-                      <AlertCircle className="h-5 w-5 text-blue-700" />
-                    </div>
-                    Payment Reference Number
-                  </h4>
-                  <div className="bg-white rounded-lg p-4 border-2 border-blue-300 shadow-inner">
-                    <div className="flex items-center space-x-3">
-                      <Input
-                        value={referenceNumber}
-                        readOnly
-                        className="font-mono text-xl font-bold bg-gradient-to-r from-gray-50 to-gray-100 border-2 border-gray-300 text-center tracking-wider"
-                      />
-                      <Button
-                        onClick={() => copyToClipboard(referenceNumber)}
-                        variant="outline"
-                        size="lg"
-                        className="border-2 border-blue-300 hover:bg-blue-100 transition-all duration-200"
-                      >
-                        {copied ? (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="flex items-center"
-                          >
-                            <Check className="h-5 w-5 text-green-600 mr-1" />
-                            <span className="text-green-600 font-semibold">Copied!</span>
-                          </motion.div>
-                        ) : (
-                          <>
-                            <Copy className="h-5 w-5 text-blue-700 mr-1" />
-                            <span className="text-blue-700 font-semibold">Copy</span>
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-blue-700 mt-3 font-medium text-center">
-                    💳 Use this exact reference number when making your payment
-                  </p>
-                </div>
+          {/* Submit Form */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4 space-y-3">
+              <div>
+                <Label htmlFor="reference" className="text-sm font-medium">
+                  Transaction ID
+                </Label>
+                <Input
+                  id="reference"
+                  placeholder="Enter ID from your receipt"
+                  value={paymentReference}
+                  onChange={(e) => {
+                    setPaymentReference(e.target.value);
+                    setError('');
+                  }}
+                  className="mt-1.5 h-11 text-base border-2 focus:border-emerald-500"
+                />
+              </div>
 
-                {/* Instructions */}
-                <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
-                  <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
-                    <div className={`p-2 bg-gradient-to-r ${gatewayDetails.color} rounded-lg mr-3`}>
-                      <div className="text-white">
-                        <CheckCircle className="h-5 w-5" />
-                      </div>
-                    </div>
-                    Step-by-Step Instructions
-                  </h3>
-                  <ol className="space-y-5">
-                    {gatewayDetails.instructions.map((instruction, index) => (
-                      <motion.li 
-                        key={index} 
-                        className="flex items-start"
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                      >
-                        <span className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br ${gatewayDetails.color} text-white rounded-full flex items-center justify-center text-sm font-bold mr-4 mt-1 shadow-lg`}>
-                          {index + 1}
-                        </span>
-                        <span className="text-gray-800 leading-relaxed font-medium text-base bg-white/60 backdrop-blur-sm rounded-lg p-3 flex-1 shadow-sm">
-                          {instruction}
-                        </span>
-                      </motion.li>
-                    ))}
-                  </ol>
-                </div>
+              {error && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">{error}</AlertDescription>
+                </Alert>
+              )}
 
-                {/* Payment Confirmation */}
-                <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl p-6 border-2 border-emerald-200">
-                  <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
-                    <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg mr-3">
-                      <Shield className="h-5 w-5 text-white" />
-                    </div>
-                    Confirm Your Payment
-                  </h3>
-                  <div className="space-y-6">
-                    <div>
-                      <Label htmlFor="paymentRef" className="text-lg font-bold text-gray-900 mb-2 block">
-                        {gatewayDetails.referenceLabel}
-                      </Label>
-                      <Input
-                        id="paymentRef"
-                        placeholder={`Enter your ${selectedGateway.toUpperCase()} reference number`}
-                        value={paymentReference}
-                        onChange={(e) => {
-                          setPaymentReference(e.target.value);
-                          setValidationError('');
-                        }}
-                        className="text-xl font-mono border-2 border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 bg-white shadow-inner py-4"
-                      />
-                      <p className="text-emerald-700 mt-3 font-medium flex items-center">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        This confirms that you have completed the payment successfully
-                      </p>
-                    </div>
-
-                    {(error || validationError) && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                      >
-                        <Alert variant="destructive" className="border-2 border-red-300 bg-red-50 shadow-lg">
-                          <AlertCircle className="h-5 w-5" />
-                          <AlertDescription className="text-red-800 font-medium text-base">
-                            {validationError || getErrorMessage(error)}
-                          </AlertDescription>
-                        </Alert>
-                      </motion.div>
-                    )}
-
-                    <div className="pt-4">
-                      <Button
-                        onClick={handleConfirmPayment}
-                        disabled={confirming || !paymentReference.trim()}
-                        className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-700 text-xl font-bold py-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-                      >
-                        {confirming ? (
-                          <>
-                            <Loader2 className="mr-3 h-6 w-6 animate-spin" />
-                            Confirming Payment...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="mr-3 h-6 w-6" />
-                            Confirm Payment
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Security Notice */}
-            <Card className="border-0 shadow-2xl bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white mt-8">
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                  <div className="flex flex-col items-center space-y-2">
-                    <div className="p-3 bg-emerald-500/20 rounded-full">
-                      <Shield className="h-6 w-6 text-emerald-400" />
-                    </div>
-                    <span className="font-semibold">Secure Processing</span>
-                    <span className="text-sm text-gray-300">Bank-level security</span>
-                  </div>
-                  <div className="flex flex-col items-center space-y-2">
-                    <div className="p-3 bg-blue-500/20 rounded-full">
-                      <Clock className="h-6 w-6 text-blue-400" />
-                    </div>
-                    <span className="font-semibold">24/7 Support</span>
-                    <span className="text-sm text-gray-300">Always here to help</span>
-                  </div>
-                  <div className="flex flex-col items-center space-y-2">
-                    <div className="p-3 bg-purple-500/20 rounded-full">
-                      <ExternalLink className="h-6 w-6 text-purple-400" />
-                    </div>
-                    <span className="font-semibold">Need Help?</span>
-                    <span className="text-sm text-gray-300">Contact our team</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <Button
+                onClick={handleConfirmPayment}
+                disabled={confirming || !paymentReference.trim()}
+                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 transition-transform"
+              >
+                {confirming ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Payment'
+                )}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
