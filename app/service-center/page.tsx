@@ -240,12 +240,6 @@ export default function ServiceCenterPage() {
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white via-emerald-100 to-teal-200 bg-clip-text text-transparent mb-2">
                   Service Center
                 </h1>
-                <div className="h-1 w-20 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full mx-auto mb-3"></div>
-                <ProfileCompletionBadge 
-                  completionPercentage={completionPercentage} 
-                  canBook={canBook}
-                  className="mt-2"
-                />
               </div>
             </div>
             <p className="text-base sm:text-lg text-blue-100 max-w-2xl mx-auto leading-relaxed px-4">

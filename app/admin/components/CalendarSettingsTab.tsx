@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
 import { 
   Clock, 
   Calendar as CalendarIcon, 
@@ -32,7 +31,7 @@ import { format, addDays, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface CalendarSettings {
-  id?: string;
+  id?: number;
   buffer_time_minutes: number;
   monday_start: string;
   monday_end: string;
@@ -58,7 +57,7 @@ interface CalendarSettings {
 }
 
 interface VacationDay {
-  id?: string;
+  id?: number;
   date: string;
   reason: string;
   created_at?: string;
@@ -116,21 +115,19 @@ export function CalendarSettingsTab() {
 
   const loadSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('calendar_settings')
-        .select('*')
-        .single();
+      const response = await fetch('/api/calendar-settings');
+      const result = await response.json();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        throw error;
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to load calendar settings');
       }
 
-      if (data) {
-        setSettings(data);
+      if (result.data) {
+        setSettings(result.data);
       }
-    } catch (error) {
-      console.error('Error loading calendar settings:', error);
-      toast.error('Failed to load calendar settings');
+    } catch (error: any) {
+      console.error('Error loading calendar settings:', error?.message || error);
+      toast.error(error?.message || 'Failed to load calendar settings');
     } finally {
       setLoading(false);
     }
@@ -138,33 +135,44 @@ export function CalendarSettingsTab() {
 
   const loadVacationDays = async () => {
     try {
-      const { data, error } = await supabase
-        .from('vacation_days')
-        .select('*')
-        .order('date', { ascending: true });
+      const response = await fetch('/api/vacation-days');
+      const result = await response.json();
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to load vacation days');
+      }
 
-      setVacationDays(data || []);
-    } catch (error) {
-      console.error('Error loading vacation days:', error);
-      toast.error('Failed to load vacation days');
+      setVacationDays(result.data || []);
+    } catch (error: any) {
+      console.error('Error loading vacation days:', error?.message || error);
+      toast.error(error?.message || 'Failed to load vacation days');
     }
   };
 
   const saveSettings = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('calendar_settings')
-        .upsert(settings, { onConflict: 'id' });
+      const response = await fetch('/api/calendar-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
 
-      toast.success('Calendar settings saved successfully!');
-    } catch (error) {
-      console.error('Error saving calendar settings:', error);
-      toast.error('Failed to save calendar settings');
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to save calendar settings');
+      }
+
+      toast.success(result.message || 'Calendar settings saved successfully!');
+    } catch (error: any) {
+      console.error('Error saving calendar settings:', {
+        message: error?.message,
+        error: error
+      });
+      toast.error(error?.message || 'Failed to save calendar settings');
     } finally {
       setSaving(false);
     }
@@ -190,39 +198,48 @@ export function CalendarSettingsTab() {
         reason: newVacationReason.trim(),
       };
 
-      const { data, error } = await supabase
-        .from('vacation_days')
-        .insert([newVacationDay])
-        .select()
-        .single();
+      const response = await fetch('/api/vacation-days', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newVacationDay),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
 
-      setVacationDays([...vacationDays, data]);
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to add vacation day');
+      }
+
+      setVacationDays([...vacationDays, result.data]);
       setSelectedDate(undefined);
       setNewVacationReason('');
       setShowCalendar(false);
-      toast.success('Vacation day added successfully!');
-    } catch (error) {
-      console.error('Error adding vacation day:', error);
-      toast.error('Failed to add vacation day');
+      toast.success(result.message || 'Vacation day added successfully!');
+    } catch (error: any) {
+      console.error('Error adding vacation day:', error?.message || error);
+      toast.error(error?.message || 'Failed to add vacation day');
     }
   };
 
-  const removeVacationDay = async (id: string) => {
+  const removeVacationDay = async (id: number) => {
     try {
-      const { error } = await supabase
-        .from('vacation_days')
-        .delete()
-        .eq('id', id);
+      const response = await fetch(`/api/vacation-days?id=${id}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to remove vacation day');
+      }
 
       setVacationDays(vacationDays.filter(day => day.id !== id));
-      toast.success('Vacation day removed successfully!');
-    } catch (error) {
-      console.error('Error removing vacation day:', error);
-      toast.error('Failed to remove vacation day');
+      toast.success(result.message || 'Vacation day removed successfully!');
+    } catch (error: any) {
+      console.error('Error removing vacation day:', error?.message || error);
+      toast.error(error?.message || 'Failed to remove vacation day');
     }
   };
 
