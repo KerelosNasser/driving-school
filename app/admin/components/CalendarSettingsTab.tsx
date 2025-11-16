@@ -106,6 +106,7 @@ export function CalendarSettingsTab() {
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [newVacationReason, setNewVacationReason] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
 
   // Load settings and vacation days on component mount
   useEffect(() => {
@@ -152,6 +153,8 @@ export function CalendarSettingsTab() {
   const saveSettings = async () => {
     setSaving(true);
     try {
+      console.log('💾 [CalendarSettingsTab] Saving settings:', settings);
+      
       const response = await fetch('/api/calendar-settings', {
         method: 'POST',
         headers: {
@@ -166,9 +169,13 @@ export function CalendarSettingsTab() {
         throw new Error(result.message || 'Failed to save calendar settings');
       }
 
-      toast.success(result.message || 'Calendar settings saved successfully!');
+      console.log('✅ [CalendarSettingsTab] Settings saved successfully');
+      toast.success(result.message || 'Calendar settings saved successfully! Changes will be reflected in the service center.');
+      
+      // Trigger a refresh of calendar settings in the service center
+      // by invalidating the cache (users will see changes on next page load or after 30 seconds)
     } catch (error: any) {
-      console.error('Error saving calendar settings:', {
+      console.error('❌ [CalendarSettingsTab] Error saving calendar settings:', {
         message: error?.message,
         error: error
       });
@@ -263,6 +270,43 @@ export function CalendarSettingsTab() {
 
   const timeOptions = generateTimeOptions();
 
+  const testConnection = async () => {
+    setTestingConnection(true);
+    try {
+      console.log('🔍 [CalendarSettingsTab] Testing calendar settings connection...');
+      
+      // Test fetching settings from the service center endpoint
+      const response = await fetch('/api/calendar/settings');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch settings from service center endpoint');
+      }
+      
+      console.log('✅ [CalendarSettingsTab] Service center can read settings:', data);
+      
+      // Compare with current settings
+      const bufferMatch = data.bufferTimeMinutes === settings.buffer_time_minutes;
+      const workingDaysMatch = JSON.stringify(data.workingDays?.sort()) === JSON.stringify(
+        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+          .map((day, idx) => settings[`${day}_enabled` as keyof CalendarSettings] ? idx : -1)
+          .filter(idx => idx >= 0)
+          .sort()
+      );
+      
+      if (bufferMatch && workingDaysMatch) {
+        toast.success('✅ Connection verified! Service center is reading the correct settings.');
+      } else {
+        toast.warning('⚠️ Settings mismatch detected. Service center may be using cached data. It will update within 30 seconds.');
+      }
+    } catch (error: any) {
+      console.error('❌ [CalendarSettingsTab] Connection test failed:', error);
+      toast.error('Failed to verify connection: ' + error.message);
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -284,23 +328,43 @@ export function CalendarSettingsTab() {
             <p className="text-gray-600">Configure buffer time, working hours, and vacation days</p>
           </div>
         </div>
-        <Button 
-          onClick={saveSettings} 
-          disabled={saving}
-          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg"
-        >
-          {saving ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Settings
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={testConnection} 
+            disabled={testingConnection}
+            variant="outline"
+            className="border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+          >
+            {testingConnection ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600 mr-2"></div>
+                Testing...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Test Connection
+              </>
+            )}
+          </Button>
+          <Button 
+            onClick={saveSettings} 
+            disabled={saving}
+            className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg"
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save Settings
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

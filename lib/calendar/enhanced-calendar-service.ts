@@ -143,9 +143,13 @@ export class EnhancedCalendarService {
 
   /**
    * Load calendar settings and vacation days from Supabase (if available)
+   * @param forceReload - Force reload settings even if already loaded
    */
-  private async ensureSettingsLoaded(): Promise<void> {
-    if (this.settingsLoaded) return;
+  private async ensureSettingsLoaded(forceReload: boolean = false): Promise<void> {
+    if (this.settingsLoaded && !forceReload) return;
+    
+    console.log('🔄 [EnhancedCalendarService] Loading calendar settings from database...');
+    
     try {
       // Load calendar settings row (single)
       const { data: settingsRow, error: settingsError } = await this.supabase
@@ -154,6 +158,8 @@ export class EnhancedCalendarService {
         .single();
 
       if (!settingsError && settingsRow) {
+        console.log('✅ [EnhancedCalendarService] Calendar settings loaded:', settingsRow);
+        
         // Map enabled working days
         const enabledDays: number[] = [];
         const dayKeys = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
@@ -165,6 +171,9 @@ export class EnhancedCalendarService {
           if (enabled) enabledDays.push(idx);
         });
 
+        console.log('📅 [EnhancedCalendarService] Working hours by day:', this.workingHoursByDay);
+        console.log('📅 [EnhancedCalendarService] Enabled days:', enabledDays);
+
         // Update core settings
         const monday = this.workingHoursByDay[1];
         this.settings = {
@@ -173,6 +182,10 @@ export class EnhancedCalendarService {
           workingHours: { start: monday.start, end: monday.end },
           workingDays: enabledDays,
         };
+        
+        console.log('⚙️ [EnhancedCalendarService] Updated settings:', this.settings);
+      } else {
+        console.warn('⚠️ [EnhancedCalendarService] No calendar settings found in database, using defaults');
       }
 
       // Load vacation days
@@ -191,10 +204,12 @@ export class EnhancedCalendarService {
             return d;
           }
         });
+        console.log('🏖️ [EnhancedCalendarService] Vacation days loaded:', this.settings.vacationDays);
       }
 
       this.settingsLoaded = true;
     } catch (err) {
+      console.error('❌ [EnhancedCalendarService] Error loading settings:', err);
       // If Supabase is not configured or query fails, fall back to defaults silently
       this.settingsLoaded = true; // Avoid retry loops; can be refreshed on demand
     }
@@ -238,10 +253,19 @@ export class EnhancedCalendarService {
 
   /**
    * Get current booking settings
+   * @param forceReload - Force reload settings from database
    */
-  async getSettings(): Promise<BookingSettings> {
-    await this.ensureSettingsLoaded();
+  async getSettings(forceReload: boolean = false): Promise<BookingSettings> {
+    await this.ensureSettingsLoaded(forceReload);
     return { ...this.settings };
+  }
+  
+  /**
+   * Refresh settings from database (clears cache and reloads)
+   */
+  async refreshSettings(): Promise<BookingSettings> {
+    this.settingsLoaded = false;
+    return this.getSettings(true);
   }
 
   /**

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle, AlertCircle, Loader2, QrCode, Copy, Check, Clock, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Loader2, QrCode, Copy, Check, Clock, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -181,188 +181,139 @@ export default function ManualPaymentPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Desktop: Split layout | Mobile: Single column */}
-      <div className="lg:flex lg:h-screen">
+      <div className="max-w-7xl mx-auto">
         
-        {/* LEFT SIDE - Desktop Only: Instructions & Info */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-12 items-center justify-center">
-          <div className="max-w-md">
-            <QrCode className="h-16 w-16 mb-6 opacity-90" />
-            <h1 className="text-4xl font-bold mb-3">PayID Payment</h1>
-            <p className="text-emerald-100 text-lg mb-8">Complete your payment in a few simple steps</p>
-            
-            <div className="space-y-4">
-              {[
-                { step: 'Open your banking app', icon: '📱' },
-                { step: 'Select PayID payment', icon: '💳' },
-                { step: `Transfer to: ${payidNumber}`, icon: '🔢' },
-                { step: `Amount: $${paymentData?.amount}`, icon: '💰' },
-                { step: 'Complete the transfer', icon: '✅' },
-                { step: 'Enter transaction ID', icon: '📋' },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start bg-white/10 backdrop-blur-sm p-4 rounded-xl">
-                  <span className="flex-shrink-0 w-8 h-8 bg-white text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold mr-4">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <span className="text-2xl mr-3">{item.icon}</span>
-                    <span className="text-white font-medium">{item.step}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
-              <p className="text-emerald-100 text-sm mb-2">Package Details</p>
-              <p className="text-2xl font-bold">{paymentData?.packageName}</p>
-              <p className="text-emerald-100">{paymentData?.hours} driving hours</p>
-            </div>
-          </div>
+        {/* Header */}
+        <div className="bg-white p-3 border-b sticky top-0 z-10">
+          <Button onClick={() => router.push('/packages')} variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
         </div>
 
-        {/* RIGHT SIDE - Mobile: Full width | Desktop: Half width */}
-        <div className="lg:w-1/2 lg:overflow-y-auto">
-          <div className="max-w-lg mx-auto lg:my-12">
-            
-            {/* Header */}
-            <div className="bg-white p-3 border-b sticky top-0 z-10 lg:hidden">
-              <Button onClick={() => router.push('/packages')} variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back
-              </Button>
-            </div>
+        {/* Hero - Mobile Only */}
+        <div className="lg:hidden bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white text-center">
+          <QrCode className="h-10 w-10 mx-auto mb-2 opacity-80" />
+          <h1 className="text-2xl font-bold mb-1">PayID Payment</h1>
+          <div className="text-4xl font-bold my-3">${paymentData?.amount}</div>
+          <p className="text-emerald-100 text-sm">{paymentData?.packageName} • {paymentData?.hours} hours</p>
+        </div>
 
-            {/* Desktop Header */}
-            <div className="hidden lg:block mb-6 px-4">
-              <Button onClick={() => router.push('/packages')} variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Packages
-              </Button>
-            </div>
+        {/* Content - Mobile: Stack | Desktop: Grid */}
+        <div className="p-4 lg:p-8">
+          {/* Desktop: 2 column grid | Mobile: Single column */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 max-w-lg lg:max-w-none mx-auto">
+            {/* Amount - Desktop shows here */}
+            <Card className="border-0 shadow-sm lg:shadow-lg hidden lg:block">
+              <CardContent className="p-6 text-center bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg">
+                <p className="text-emerald-100 text-sm mb-2">Amount to Pay</p>
+                <div className="text-5xl font-bold my-2">${paymentData?.amount}</div>
+                <p className="text-emerald-100 text-sm">{paymentData?.packageName} • {paymentData?.hours}h</p>
+              </CardContent>
+            </Card>
 
-            {/* Hero - Mobile Only */}
-            <div className="lg:hidden bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white text-center">
-              <QrCode className="h-10 w-10 mx-auto mb-2 opacity-80" />
-              <h1 className="text-2xl font-bold mb-1">PayID Payment</h1>
-              <div className="text-4xl font-bold my-3">${paymentData?.amount}</div>
-              <p className="text-emerald-100 text-sm">{paymentData?.packageName} • {paymentData?.hours} hours</p>
-            </div>
-
-            {/* Desktop Amount Card */}
-            <div className="hidden lg:block px-4 mb-6">
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
-                <CardContent className="p-6 text-center">
-                  <p className="text-emerald-100 text-sm mb-2">Amount to Pay</p>
-                  <div className="text-5xl font-bold my-2">${paymentData?.amount}</div>
-                  <p className="text-emerald-100">AUD</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Content */}
-            <div className="p-4 space-y-3">
-          
-          {/* PayID */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-gray-500 mb-2">Transfer to PayID</p>
-              <div className="flex items-center justify-between gap-2 bg-blue-50 p-3 rounded-lg">
-                <p className="font-mono font-bold text-blue-900 text-sm">{payidNumber}</p>
-                <Button
-                  onClick={() => copyToClipboard(payidNumber)}
-                  size="sm"
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 flex-shrink-0"
-                >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bank Apps */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-gray-500 mb-2">Quick access</p>
-              <div className="grid grid-cols-4 gap-2">
-                {bankApps.map((bank) => (
-                  <button
-                    key={bank.name}
-                    onClick={() => openBankApp(bank.link)}
-                    className="flex flex-col items-center p-2 bg-gray-50 rounded-lg hover:bg-emerald-50 border hover:border-emerald-500 transition-all active:scale-95"
+            {/* PayID */}
+            <Card className="border-0 shadow-sm lg:shadow-lg">
+              <CardContent className="p-4 lg:p-6">
+                <p className="text-xs text-gray-500 mb-2">Transfer to PayID</p>
+                <div className="flex items-center justify-between gap-2 bg-blue-50 p-3 rounded-lg">
+                  <p className="font-mono font-bold text-blue-900 text-sm">{payidNumber}</p>
+                  <Button
+                    onClick={() => copyToClipboard(payidNumber)}
+                    size="sm"
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 flex-shrink-0"
                   >
-                    <span className="text-2xl">{bank.icon}</span>
-                    <span className="text-xs font-medium text-gray-700 mt-1">{bank.name}</span>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Instructions */}
-          <Card className="border-0 shadow-sm bg-emerald-50">
-            <CardContent className="p-4">
-              <p className="text-xs font-semibold text-emerald-900 mb-2">Steps:</p>
-              <div className="space-y-1.5">
-                {[
-                  'Open your bank app',
-                  'Select PayID payment',
-                  'Enter PayID above',
-                  'Complete transfer',
-                  'Enter transaction ID below',
-                ].map((step, i) => (
-                  <div key={i} className="flex items-center text-sm">
-                    <span className="flex-shrink-0 w-5 h-5 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">
-                      {i + 1}
-                    </span>
-                    <span className="text-emerald-900">{step}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+            {/* Bank Apps */}
+            <Card className="border-0 shadow-sm lg:shadow-lg">
+              <CardContent className="p-4 lg:p-6">
+                <p className="text-xs text-gray-500 mb-2">Quick access</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {bankApps.map((bank) => (
+                    <button
+                      key={bank.name}
+                      onClick={() => openBankApp(bank.link)}
+                      className="flex flex-col items-center p-2 bg-gray-50 rounded-lg hover:bg-emerald-50 border hover:border-emerald-500 transition-all active:scale-95"
+                    >
+                      <span className="text-2xl">{bank.icon}</span>
+                      <span className="text-xs font-medium text-gray-700 mt-1">{bank.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Submit Form */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4 space-y-3">
-              <div>
-                <Label htmlFor="reference" className="text-sm font-medium">
-                  Transaction ID
-                </Label>
-                <Input
-                  id="reference"
-                  placeholder="Enter ID from your receipt"
-                  value={paymentReference}
-                  onChange={(e) => {
-                    setPaymentReference(e.target.value);
-                    setError('');
-                  }}
-                  className="mt-1.5 h-11 text-base border-2 focus:border-emerald-500"
-                />
-              </div>
+            {/* Instructions */}
+            <Card className="border-0 shadow-sm lg:shadow-lg bg-emerald-50">
+              <CardContent className="p-4 lg:p-6">
+                <p className="text-xs font-semibold text-emerald-900 mb-2">Steps:</p>
+                <div className="space-y-1.5">
+                  {[
+                    'Open your bank app',
+                    'Select PayID payment',
+                    'Enter PayID above',
+                    'Complete transfer',
+                    'Enter transaction ID below',
+                  ].map((step, i) => (
+                    <div key={i} className="flex items-center text-sm">
+                      <span className="flex-shrink-0 w-5 h-5 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">
+                        {i + 1}
+                      </span>
+                      <span className="text-emerald-900">{step}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-              {error && (
-                <Alert variant="destructive" className="py-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-sm">{error}</AlertDescription>
-                </Alert>
-              )}
+            {/* Submit Form - Spans 2 columns on desktop */}
+            <Card className="border-0 shadow-sm lg:shadow-lg lg:col-span-2">
+              <CardContent className="p-4 lg:p-6 space-y-3">
+                <div>
+                  <Label htmlFor="reference" className="text-sm font-medium">
+                    Transaction ID
+                  </Label>
+                  <Input
+                    id="reference"
+                    placeholder="Enter ID from your receipt"
+                    value={paymentReference}
+                    onChange={(e) => {
+                      setPaymentReference(e.target.value);
+                      setError('');
+                    }}
+                    className="mt-1.5 h-11 text-base border-2 focus:border-emerald-500"
+                  />
+                </div>
 
-              <Button
-                onClick={handleConfirmPayment}
-                disabled={confirming || !paymentReference.trim()}
-                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 transition-transform"
-              >
-                {confirming ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Payment'
+                {error && (
+                  <Alert variant="destructive" className="py-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">{error}</AlertDescription>
+                  </Alert>
                 )}
-              </Button>
-            </CardContent>
-          </Card>
+
+                <Button
+                  onClick={handleConfirmPayment}
+                  disabled={confirming || !paymentReference.trim()}
+                  className="w-full h-11 text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 transition-transform"
+                >
+                  {confirming ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Payment'
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

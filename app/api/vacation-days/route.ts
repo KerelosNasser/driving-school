@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
+import { isAdmin } from '@/lib/auth-helpers';
 
 // Create admin Supabase client
 function getSupabaseAdmin() {
@@ -8,20 +9,6 @@ function getSupabaseAdmin() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-}
-
-// Check if user is admin
-async function isAdmin() {
-  const { userId, sessionClaims } = await auth();
-  
-  if (!userId) {
-    return false;
-  }
-
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-  const userEmail = sessionClaims?.email as string | undefined;
-
-  return userEmail === adminEmail;
 }
 
 // GET - Load vacation days

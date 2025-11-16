@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 export default async function AdminLayout({
@@ -17,10 +17,11 @@ export default async function AdminLayout({
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
   
   // Get user's email from Clerk
-  const { sessionClaims } = await auth();
-  const userEmail = sessionClaims?.email as string | undefined;
+  const user = await currentUser();
+  const userEmail = user?.emailAddresses?.[0]?.emailAddress;
 
   if (!userEmail || userEmail !== adminEmail) {
+    console.log('Admin access denied:', { userEmail, adminEmail, match: userEmail === adminEmail });
     redirect('/');
   }
 

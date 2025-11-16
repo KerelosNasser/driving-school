@@ -9,6 +9,7 @@ import { Calendar, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Search, 
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, isBefore, startOfDay } from "date-fns";
 import { useProfileCompletion } from "@/hooks/useProfileCompletion";
 import ProfileCompletionModal from "@/components/ProfileCompletionModal";
+import { useCalendarSettings } from "@/hooks/useCalendarSettings";
 
 // Compact Error Alert Component
 const ErrorAlert = ({ message }: { message: string | null }) => {
@@ -75,10 +76,41 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [findingNext, setFindingNext] = useState(false);
 
-  // Generate calendar days
+  // Generate calendar days with proper alignment
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-  const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  
+  // Get the first day of the week for the month (0 = Sunday, 6 = Saturday)
+  const startDayOfWeek = monthStart.getDay();
+  
+  // Calculate how many days from previous month to show
+  const daysFromPrevMonth = startDayOfWeek;
+  
+  // Calculate how many days from next month to show (to fill the grid)
+  const totalDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd }).length;
+  const totalCells = Math.ceil((daysFromPrevMonth + totalDaysInMonth) / 7) * 7;
+  const daysFromNextMonth = totalCells - daysFromPrevMonth - totalDaysInMonth;
+  
+  // Generate all calendar days including prev/next month
+  const calendarDays: Date[] = [];
+  
+  // Add days from previous month
+  for (let i = daysFromPrevMonth - 1; i >= 0; i--) {
+    const day = new Date(monthStart);
+    day.setDate(day.getDate() - (i + 1));
+    calendarDays.push(day);
+  }
+  
+  // Add days from current month
+  const currentMonthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  calendarDays.push(...currentMonthDays);
+  
+  // Add days from next month
+  for (let i = 0; i < daysFromNextMonth; i++) {
+    const day = new Date(monthEnd);
+    day.setDate(day.getDate() + (i + 1));
+    calendarDays.push(day);
+  }
 
   // Navigation functions
   const goToPreviousMonth = () => {
@@ -132,15 +164,47 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       return true;
     }
 
-    // Check if it's a working day
-    if (calendarSettings?.workingDays && !calendarSettings.workingDays.includes(date.getDay())) {
-      return true;
+    if (!calendarSettings) {
+      console.log('⚠️ No calendar settings loaded yet');
+      return false;
     }
 
-    // Check vacation days (would need to fetch from vacation_days table)
-    // For now, just check if it's a weekend
-    if (date.getDay() === 0 || date.getDay() === 6) {
+    // Check if it's a working day using day-specific enabled flags
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayOfWeek = date.getDay();
+    const dayName = dayNames[dayOfWeek];
+    const dayEnabledKey = `${dayName}Enabled`;
+    
+    const isDayEnabled = calendarSettings[dayEnabledKey];
+    
+    console.log(`🔍 Checking ${date.toDateString()} (${dayName}, day ${dayOfWeek}):`, {
+      dayEnabledKey,
+      isDayEnabled,
+      settingsKeys: Object.keys(calendarSettings).filter(k => k.includes('Enabled'))
+    });
+    
+    // If explicitly false, disable the day
+    if (isDayEnabled === false) {
+      console.log(`❌ ${dayName} is disabled`);
       return true;
+    }
+    
+    // If undefined or true, it's enabled
+    if (isDayEnabled === true || isDayEnabled === undefined) {
+      console.log(`✅ ${dayName} is enabled`);
+    }
+
+    // Check vacation days
+    if (calendarSettings.vacationDays && Array.isArray(calendarSettings.vacationDays)) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
+      if (calendarSettings.vacationDays.includes(dateStr)) {
+        console.log(`🏖️ ${dateStr} is a vacation day`);
+        return true;
+      }
     }
 
     return false;
@@ -148,25 +212,30 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   // Get CSS classes for calendar day
   const getDayClasses = (date: Date) => {
-    const baseClasses = "h-10 w-10 rounded-lg flex items-center justify-center text-sm font-medium transition-colors cursor-pointer";
-
+    const baseClasses = "h-10 w-10 rounded-lg flex items-center justify-center text-sm font-medium transition-colors";
+    
+    // Days from other months - lighter and not clickable
     if (!isSameMonth(date, currentMonth)) {
-      return `${baseClasses} text-gray-400 hover:text-gray-600`;
+      return `${baseClasses} text-gray-300 cursor-default opacity-40`;
     }
 
+    // Disabled days (past, non-working, vacation)
     if (isDateDisabled(date)) {
-      return `${baseClasses} text-gray-300 cursor-not-allowed bg-gray-50`;
+      return `${baseClasses} text-gray-400 cursor-not-allowed bg-gray-100 line-through`;
     }
 
+    // Today
     if (isToday(date)) {
-      return `${baseClasses} bg-blue-500 text-white hover:bg-blue-600`;
+      return `${baseClasses} bg-blue-500 text-white hover:bg-blue-600 cursor-pointer font-bold ring-2 ring-blue-300`;
     }
 
+    // Selected date
     if (selectedDate && isSameDay(date, selectedDate)) {
-      return `${baseClasses} bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-2 border-emerald-300`;
+      return `${baseClasses} bg-emerald-500 text-white hover:bg-emerald-600 cursor-pointer font-bold ring-2 ring-emerald-300`;
     }
 
-    return `${baseClasses} text-gray-700 hover:bg-gray-100`;
+    // Available dates
+    return `${baseClasses} text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer hover:ring-1 hover:ring-emerald-200`;
   };
 
   return (
@@ -221,17 +290,46 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
       {/* Calendar Days */}
       <div className="grid grid-cols-7 gap-1">
-        {calendarDays.map(date => (
-          <div key={date.toISOString()} className="relative">
-            <button
-              className={getDayClasses(date)}
-              onClick={() => !isDateDisabled(date) && onDateSelect(date)}
-              disabled={isDateDisabled(date)}
-            >
-              {format(date, 'd')}
-            </button>
+        {calendarDays.map((date, index) => {
+          const isCurrentMonth = isSameMonth(date, currentMonth);
+          const isDisabled = isDateDisabled(date);
+          const canClick = isCurrentMonth && !isDisabled;
+          
+          return (
+            <div key={`${date.toISOString()}-${index}`} className="relative">
+              <button
+                className={getDayClasses(date)}
+                onClick={() => canClick && onDateSelect(date)}
+                disabled={!canClick}
+                type="button"
+              >
+                {format(date, 'd')}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* Calendar Legend */}
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="flex flex-wrap gap-4 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-blue-500 ring-2 ring-blue-300"></div>
+            <span className="text-gray-600">Today</span>
           </div>
-        ))}
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-emerald-500 ring-2 ring-emerald-300"></div>
+            <span className="text-gray-600">Selected</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-gray-100 text-gray-400 flex items-center justify-center line-through">X</div>
+            <span className="text-gray-600">Unavailable</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded border border-emerald-200 hover:bg-emerald-50"></div>
+            <span className="text-gray-600">Available</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -297,74 +395,98 @@ const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
     }
   };
 
-  // Fetch available time slots from admin calendar
-  useEffect(() => {
-    const fetchAvailableSlots = async () => {
-      if (!selectedDate) return;
+  // Fetch available time slots with caching
+  const { data: slotsData, isLoading: slotsLoading } = useQuery({
+    queryKey: ['time-slots', selectedDate?.toISOString().split('T')[0], calendarSettings?.bufferTimeMinutes],
+    queryFn: async () => {
+      if (!selectedDate) return [];
       
-      setLoading(true);
-      try {
-        const dateStr = selectedDate.toISOString().split('T')[0];
-        
-        // Fetch admin events for the selected date
-        const response = await fetch(`/api/calendar/events?date=${dateStr}&admin=true`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch calendar events');
-        }
-        
-        const data = await response.json();
-        const adminEvents = data.events || [];
-        
-        // Generate time slots and check availability
-        const slots = generateTimeSlotsWithAvailability(dateStr || '', adminEvents, calendarSettings);
-        setTimeSlots(slots);
-      } catch (error) {
-        console.error('Error fetching available slots:', error);
-        // Fallback to mock data if API fails
-        setTimeSlots(generateMockTimeSlots());
-      } finally {
-        setLoading(false);
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      console.log(`🔄 Fetching slots for ${dateStr}`);
+      
+      // Fetch admin events for the selected date
+      const response = await fetch(`/api/calendar/events?date=${dateStr}&admin=true`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch calendar events');
       }
-    };
+      
+      const data = await response.json();
+      const adminEvents = data.events || [];
+      
+      console.log(`📅 Found ${adminEvents.length} admin events for ${dateStr}`);
+      
+      // Generate time slots and check availability
+      const slots = generateTimeSlotsWithAvailability(dateStr, adminEvents, calendarSettings);
+      return slots;
+    },
+    enabled: !!selectedDate && !!calendarSettings,
+    staleTime: 60000, // Cache for 1 minute
+    gcTime: 300000, // Keep in cache for 5 minutes
+  });
 
-    fetchAvailableSlots();
-  }, [selectedDate, calendarSettings]);
+  // Update local state when query data changes
+  useEffect(() => {
+    if (slotsData) {
+      setTimeSlots(slotsData);
+      setLoading(false);
+    } else if (slotsLoading) {
+      setLoading(true);
+    }
+  }, [slotsData, slotsLoading]);
 
   // Generate time slots with real availability checking
-  const generateTimeSlotsWithAvailability = (date: string, adminEvents: Array<{start: string; end: string; title?: string}>, settings?: {workingHours?: {start?: string; end?: string}; lessonDurationMinutes?: number; bufferTimeMinutes?: number}) => {
+  const generateTimeSlotsWithAvailability = (date: string, adminEvents: Array<{start: string; end: string; title?: string}>, settings?: any) => {
     const slots = [];
-    const workingHoursStart = settings?.workingHours?.start || '09:00';
-    const workingHoursEnd = settings?.workingHours?.end || '17:00';
-    const [startHour = 9, startMinute = 0] = workingHoursStart.split(':').map(Number);
-    const [endHour = 17, endMinute = 0] = workingHoursEnd.split(':').map(Number);
-    const lessonDuration = settings?.lessonDurationMinutes || 60;
-    const bufferTime = settings?.bufferTimeMinutes || 30;
+    
+    if (!settings) {
+      return [];
+    }
+    
+    // Get day of week
+    const dateObj = new Date(date + 'T00:00:00');
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[dateObj.getDay()];
+    
+    // Check if day is enabled
+    const dayEnabledKey = `${dayName}Enabled`;
+    const dayStartKey = `${dayName}Start`;
+    const dayEndKey = `${dayName}End`;
+    
+    if (settings[dayEnabledKey] === false) {
+      return [];
+    }
+    
+    // Get working hours
+    const workingHoursStart = settings[dayStartKey] || '09:00';
+    const workingHoursEnd = settings[dayEndKey] || '17:00';
+    const lessonDuration = settings.lessonDurationMinutes || 60;
+    const bufferTime = settings.bufferTimeMinutes || 30;
 
+    // Parse times
+    const [startHour, startMinute] = workingHoursStart.split(':').map(Number);
+    const [endHour, endMinute] = workingHoursEnd.split(':').map(Number);
     const startTime = startHour * 60 + startMinute;
     const endTime = endHour * 60 + endMinute;
 
+    // Generate slots
     for (let time = startTime; time < endTime; time += lessonDuration) {
       const hour = Math.floor(time / 60);
       const minute = time % 60;
       const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
       
-      // Check if this time slot conflicts with admin events
       const slotStart = new Date(`${date}T${timeString}:00`);
       const slotEnd = new Date(slotStart.getTime() + lessonDuration * 60000);
       
       let available = true;
       let reason = '';
       
-      // Check for conflicts with admin events
+      // Check conflicts
       for (const event of adminEvents) {
         const eventStart = new Date(event.start);
         const eventEnd = new Date(event.end);
-        
-        // Add buffer time to event boundaries
         const eventStartWithBuffer = new Date(eventStart.getTime() - bufferTime * 60000);
         const eventEndWithBuffer = new Date(eventEnd.getTime() + bufferTime * 60000);
         
-        // Check for overlap
         if (
           (slotStart >= eventStartWithBuffer && slotStart < eventEndWithBuffer) ||
           (slotEnd > eventStartWithBuffer && slotEnd <= eventEndWithBuffer) ||
@@ -482,30 +604,41 @@ export default function QuotaManagementTab({
     enabled: !!userId,
   });
 
-  // Fetch calendar settings from admin dashboard
-  const { data: calendarSettingsResponse } = useQuery({
-    queryKey: ["calendar-settings"],
-    queryFn: async () => {
-      const response = await fetch("/api/calendar/settings");
-      if (!response.ok) {
-        throw new Error("Failed to fetch calendar settings");
-      }
-      return response.json();
-    },
-  });
+  // Fetch calendar settings
+  const { settings: calendarSettings, refetch: refetchCalendarSettings } = useCalendarSettings();
+
+  // Debug: Log settings when they change
+  useEffect(() => {
+    if (calendarSettings) {
+      console.log('📊 Calendar settings loaded:', {
+        sundayEnabled: calendarSettings.sundayEnabled,
+        mondayEnabled: calendarSettings.mondayEnabled,
+        tuesdayEnabled: calendarSettings.tuesdayEnabled,
+        wednesdayEnabled: calendarSettings.wednesdayEnabled,
+        thursdayEnabled: calendarSettings.thursdayEnabled,
+        fridayEnabled: calendarSettings.fridayEnabled,
+        saturdayEnabled: calendarSettings.saturdayEnabled,
+        vacationDays: calendarSettings.vacationDays?.length || 0
+      });
+    }
+  }, [calendarSettings]);
 
   const quota = quotaResponse?.quota;
-  const calendarSettings = calendarSettingsResponse;
 
   // Local function to refresh quota data
   const _refreshQuotaData = () => {
     queryClient.invalidateQueries({ queryKey: ["user-quota", userId] });
   };
 
-  // Auto-sync calendar on mount
+  // Auto-sync calendar on mount and refresh calendar settings
   useEffect(() => {
     const syncCalendar = async () => {
       try {
+        console.log('🔄 [QuotaManagementTab] Syncing calendar...');
+        
+        // Refresh calendar settings first
+        await refetchCalendarSettings();
+        
         const now = new Date();
         const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const endDate = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString();
@@ -527,7 +660,7 @@ export default function QuotaManagementTab({
           .eq("status", "confirmed");
 
         if (data) {
-          const events = data.map((booking: unknown) => ({
+          const events = data.map((booking: any) => ({
             id: `${booking.date}-${booking.time}`,
             date: booking.date,
             time: booking.time,
@@ -535,15 +668,15 @@ export default function QuotaManagementTab({
             type: "lesson",
           }));
           // Events data available for future use
-          console.log('Calendar events loaded:', events);
+          console.log('✅ [QuotaManagementTab] Calendar events loaded:', events);
         }
       } catch (err) {
-        console.error("Calendar sync failed:", err);
+        console.error("❌ [QuotaManagementTab] Calendar sync failed:", err);
       }
     };
 
     if (userId) syncCalendar();
-  }, [userId]);
+  }, [userId, refetchCalendarSettings]);
 
   // Calculate progress for visual elements
   const totalHours = quota?.total_hours || 0;
@@ -785,7 +918,7 @@ export default function QuotaManagementTab({
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
-                  <span>Working hours: {calendarSettings?.workingHours?.start || '09:00'} - {calendarSettings?.workingHours?.end || '17:00'}</span>
+                  <span>Working hours vary by day (check calendar for details)</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>

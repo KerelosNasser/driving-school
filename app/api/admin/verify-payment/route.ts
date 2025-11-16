@@ -1,70 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Create admin Supabase client
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
-
-// Check if user is admin
-async function isAdmin() {
-  const { userId, sessionClaims } = await auth();
-  
-  if (!userId) {
-    return false;
-  }
-
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-  const userEmail = sessionClaims?.email as string | undefined;
-
-  return userEmail === adminEmail;
-}
+import { isAdmin } from '@/lib/auth-helpers';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 // GET - Get all pending payment verifications
 export async function GET() {
   try {
-    if (!await isAdmin()) {
+    // Check admin access
+    const adminCheck = await isAdmin();
+    if (!adminCheck) {
+      console.log('Admin access denied in verify-payment route');
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Admin access required' },
         { status: 403 }
       );
     }
 
-    const supabase = getSupabaseAdmin();
-    
-    const { data, error } = await supabase
-      .from('manual_payment_sessions')
-      .select(`
-        *,
-        users:user_id (
-          id,
-          email,
-          full_name,
-          phone
-        )
-      `)
-      .eq('status', 'pending_verification')
-      .order('submitted_at', { ascending: false });
-
-    if (error) {
-      console.error('Error loading pending payments:', error);
+    // Validate environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Missing Supabase configuration');
       return NextResponse.json(
-        { error: 'Database error', message: error.message },
+        { error: 'Configuration error', message: 'Database configuration is missing' },
         { status: 500 }
       );
     }
 
+    const supabase = getSupabaseAdmin();
+    
+    // Add timeout and better error handling
+    const { data, error } = await Promise.race([
+      supabase
+        .from('manual_payment_sessions')
+        .select(`
+          *,
+          users:user_id (
+            id,
+            email,
+            full_name,
+            phone
+          )
+        `)
+        .eq('status', 'pending_verification')
+        .order('submitted_at', { ascending: false }),
+      new Promise<{ data: null; error: { message: string } }>((_, reject) =>
+        setTimeout(() => reject({ data: null, error: { message: 'Database request timeout' } }), 10000)
+      )
+    ]);
+
+    if (error) {
+      console.error('Error loading pending payments:', {
+        message: error.message,
+        details: (error as any).details || 'No additional details',
+        hint: (error as any).hint || 'No hint available',
+        code: (error as any).code || 'No error code'
+      });
+      
+      // Return empty array instead of error for better UX
+      return NextResponse.json({ 
+        data: [], 
+        warning: 'Could not load pending payments. Please check your database connection.' 
+      });
+    }
+
     return NextResponse.json({ data: data || [] });
   } catch (error: any) {
-    console.error('Error in GET /api/admin/verify-payment:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', message: error?.message || 'Unknown error' },
-      { status: 500 }
-    );
+    console.error('Error in GET /api/admin/verify-payment:', {
+      message: error?.message || 'Unknown error',
+      stack: error?.stack,
+      name: error?.name,
+      cause: error?.cause
+    });
+    
+    // Return empty array with warning instead of 500 error
+    return NextResponse.json({ 
+      data: [], 
+      warning: 'Database connection failed. Please check your network connection and try again.' 
+    });
   }
 }
 
@@ -230,11 +241,18 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error('Error in POST /api/admin/verify-payment:', error);
+    console.error('Error in POST /api/admin/verify-payment:', {
+      message: error?.message || 'Unknown error',
+      stack: error?.stack,
+      name: error?.name,
+      cause: error?.cause?.message
+    });
+    
     return NextResponse.json(
       { 
         error: 'Internal server error', 
-        message: error?.message || 'Unknown error'
+        message: error?.message || 'An unexpected error occurred. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
       },
       { status: 500 }
     );

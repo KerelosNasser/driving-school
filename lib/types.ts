@@ -19,6 +19,15 @@ export interface Review {
   approved: boolean;
   user_name: string;
   user_image?: string;
+  source?: 'website' | 'google' | 'facebook';
+  external_id?: string;
+  profile_photo_url?: string;
+  reply?: {
+    comment: string;
+    updated_at: string;
+  };
+  synced_at?: string;
+  updated_at?: string;
 }
 
 export interface User {

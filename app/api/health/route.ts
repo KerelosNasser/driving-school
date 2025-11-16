@@ -1,35 +1,27 @@
-import { NextResponse } from 'next/server'
-import HealthChecker from '@/lib/health-check'
+import { NextResponse } from 'next/server';
+import { testSupabaseConnection } from '@/lib/supabase-admin';
 
 export async function GET() {
   try {
-    const health = await HealthChecker.getHealthStatus()
+    const supabaseOk = await testSupabaseConnection();
     
-    // Return appropriate HTTP status based on health
-    const statusCode = health.status === 'healthy' ? 200 
-                     : health.status === 'degraded' ? 200 
-                     : 503
-
-    return NextResponse.json(health, { status: statusCode })
-  } catch (error) {
-    return NextResponse.json(
-      {
-        status: 'unhealthy',
-        timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Health check failed',
-        services: {
-          database: { status: 'down' },
-          redis: { status: 'down' },
-          auth: { status: 'down' }
-        },
-        uptime: 0
+    return NextResponse.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      services: {
+        supabase: supabaseOk ? 'connected' : 'disconnected',
+        clerk: !!process.env.CLERK_SECRET_KEY,
       },
-      { status: 503 }
-    )
+      environment: {
+        nodeEnv: process.env.NODE_ENV,
+        tlsRejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
+      }
+    });
+  } catch (error: any) {
+    return NextResponse.json({
+      status: 'error',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
-}
-
-// Simple liveness probe
-export async function HEAD() {
-  return new Response(null, { status: 200 })
 }

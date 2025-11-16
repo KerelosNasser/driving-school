@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-
-async function isUserAdmin(userId: string): Promise<boolean> {
-  try {
-    const client = await clerkClient()
-    const user = await client.users.getUser(userId);
-    return user.publicMetadata?.role === 'admin' || process.env.NODE_ENV === 'development';
-  } catch (error) {
-    console.error('Error checking admin status:', error);
-    return false;
-  }
-}
+import { isUserAdmin } from '@/lib/auth-helpers';
 
 // GET - Fetch referral rewards overview and statistics
 export async function GET(request: NextRequest) {

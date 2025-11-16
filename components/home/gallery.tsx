@@ -686,7 +686,7 @@ export function Gallery({
                 onTouchEnd={onTouchEnd}
               >
                 <div className="flex items-center justify-center min-h-[380px] sm:min-h-[440px] md:min-h-[500px] lg:min-h-[600px] relative px-4">
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence initial={false}>
                     {studentImages.map((student, index) => {
                       const isActive = index === currentIndex;
                       const isPrev = index === (currentIndex === 0 ? studentImages.length - 1 : currentIndex - 1);

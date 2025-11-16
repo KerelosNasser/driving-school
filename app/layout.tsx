@@ -4,12 +4,13 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
 import "./globals.css";
 import PostSignupWrapper from "@/components/PostSignupWrapper";
-import { ConditionalLayout } from "@/components/ConditionalLayout";
 import { Suspense } from "react";
 import { EditModeProvider } from "@/contexts/editModeContext";
 import { GlobalContentProvider } from "@/contexts/globalContentContext";
 import { ReactQueryProvider } from "@/components/providers";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
+import { Navigation } from "@/components/navigation";
+import { Footer } from "@/components/footer";
 
 // Optimized font loading
 const geistSans = Geist({
@@ -156,9 +157,9 @@ export default function RootLayout({
                 <EditModeProvider>
                   <GlobalContentProvider>
                     <PostSignupWrapper>
-                      <ConditionalLayout>
+                      <Navigation/>
                         {children}
-                      </ConditionalLayout>
+                        <Footer/>
                     </PostSignupWrapper>
                   </GlobalContentProvider>
                 </EditModeProvider>
