@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Copy, Check, MapPin, User, Phone, Gift } from 'lucide-react';
+import { Copy, Check, MapPin, User, Phone, Gift, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LoadingIndicator } from '@/components/ui/loading-indicator';
 
@@ -169,10 +170,10 @@ export default function CompleteProfilePage() {
         setShowSuggestions(true);
       }
     } catch (error) {
-      console.error('Location search error:', error);
-    } finally {
-      setIsLoadingLocation(false);
-    }
+      logger.error('Location search error:', error);
+      } finally {
+        setIsLoadingLocation(false);
+      }
   };
 
   // Handle location selection
@@ -250,7 +251,7 @@ export default function CompleteProfilePage() {
       }, 2000);
       
     } catch (error) {
-      console.error('Profile completion error:', error);
+      logger.error('Profile completion error:', error);
       setErrors({ general: 'Network error. Please try again.' });
       toast.error('Network error. Please try again.');
     } finally {

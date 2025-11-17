@@ -120,6 +120,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  productionBrowserSourceMaps: false,
 };
 
 export default withSentryConfig(nextConfig, {

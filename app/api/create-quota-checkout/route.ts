@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { supabase } from '@/lib/supabase';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 import { PaymentIdService } from '@/lib/payment-id-service';
 
 // Server admin client (use only on server & keep env secret)
@@ -22,15 +23,15 @@ const checkoutSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  console.log('🚀 Checkout API called');
+  logger.info('Checkout API called');
 
   try {
     // Authentication check (Clerk)
     const { userId: clerkUserId } = await auth();
-    console.log('👤 Clerk User ID:', clerkUserId);
+    logger.debug('Clerk User ID:', clerkUserId);
 
     if (!clerkUserId) {
-      console.log('❌ No Clerk user ID found');
+      logger.warn('No Clerk user ID found');
       return NextResponse.json(
         {
           error: 'Please sign in to continue',
@@ -42,28 +43,28 @@ export async function POST(request: NextRequest) {
 
     // Input validation
     const body = await request.json();
-    console.log('📦 Request body:', body);
+    logger.debug('Request body:', body);
 
     const validatedInput = checkoutSchema.parse(body);
     const { packageId, paymentGateway, acceptedTerms } = validatedInput;
-    console.log('✅ Package ID validated:', packageId);
+    logger.debug('Package ID validated:', packageId);
 
     // Get package details (packages table is public-selectable)
-    console.log('🔍 Looking up package in database...');
+    logger.info('Looking up package in database...');
     const { data: packageData, error: packageError } = await supabase
       .from('packages')
       .select('*')
       .eq('id', packageId)
       .single();
 
-    console.log('📊 Package query result:', {
+    logger.debug('Package query result:', {
       found: !!packageData,
       error: packageError?.message,
       code: packageError?.code,
     });
 
     if (packageError || !packageData) {
-      console.log('❌ Package lookup failed');
+      logger.warn('Package lookup failed');
       return NextResponse.json(
         {
           error: 'Package not found',
@@ -76,14 +77,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Map Clerk user ID to Supabase UUID and fetch user details using admin client
-    console.log('🔍 Looking up user in database (admin client)...');
+    logger.info('Looking up user in database (admin client)...');
     let { data: userRow, error: userLookupError } = await supabaseAdmin
       .from('users')
       .select('id, email, full_name')
       .eq('clerk_id', clerkUserId)
       .maybeSingle();
 
-    console.log('👥 User query result (admin):', {
+    logger.debug('User query result (admin):', {
       found: !!userRow,
       error: userLookupError?.message,
       code: userLookupError?.code,
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // If user doesn't exist, create one automatically (use admin client to bypass RLS)
     if (!userRow && !userLookupError) {
-      console.log('🔧 User not found, creating user record (admin)...');
+      logger.info('User not found, creating user record (admin)...');
 
       try {
         const { currentUser } = await import('@clerk/nextjs/server');
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
             'User';
           const phone = clerkUser.phoneNumbers[0]?.phoneNumber || null;
 
-          console.log('📝 Creating user with:', { email, fullName, clerkUserId });
+          logger.info('Creating user with:', { email, fullName, clerkUserId });
 
           if (email) {
             // Try upsert-like behavior to avoid race / unique constraint failures
@@ -123,12 +124,12 @@ export async function POST(request: NextRequest) {
               .maybeSingle();
 
             if (!createError && newUser) {
-              console.log('✅ User created/returned successfully (admin):', newUser.id);
+              logger.info('User created/returned successfully (admin):', newUser.id);
               userRow = newUser;
               userLookupError = null;
             } else {
               // Log detailed DB error for debugging
-              console.log('❌ Failed to create/upsert user:', createError?.message, createError?.code);
+              logger.warn('Failed to create/upsert user:', createError?.message, createError?.code);
 
               // If unique constraint conflict happened, fetch existing user
               if (createError && createError.code === '23505') {
@@ -143,18 +144,18 @@ export async function POST(request: NextRequest) {
               }
             }
           } else {
-            console.log('❌ Clerk user has no email; cannot create user record');
+            logger.warn('Clerk user has no email; cannot create user record');
           }
         } else {
-          console.log('❌ Could not fetch clerk currentUser()');
+          logger.warn('Could not fetch clerk currentUser()');
         }
       } catch (createUserError) {
-        console.log('❌ Error creating user (admin):', createUserError);
+        logger.error('Error creating user (admin):', createUserError);
       }
     }
 
     if (!userRow) {
-      console.log('❌ User lookup/creation failed');
+      logger.warn('User lookup/creation failed');
       return NextResponse.json(
         {
           error: 'User profile setup required',
@@ -168,7 +169,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create payment ID for the transaction
-    console.log('💳 Creating payment ID...');
+    logger.info('Creating payment ID...');
     const paymentId = PaymentIdService.generatePaymentId();
     
     // Store payment record in database
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (paymentError) {
-      console.log('❌ Error creating payment record:', paymentError);
+      logger.error('Error creating payment record:', paymentError);
       return NextResponse.json(
         {
           error: 'Payment initialization failed',
@@ -203,7 +204,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('✅ Payment ID created successfully:', paymentId);
+    logger.info('Payment ID created successfully:', paymentId);
 
     return NextResponse.json({
       paymentId: paymentId,
@@ -214,11 +215,11 @@ export async function POST(request: NextRequest) {
       redirectUrl: `/service-center?payment_id=${paymentId}&status=pending`,
     });
   } catch (error) {
-    console.error('💥 Checkout API Error:', error);
+    logger.error('Checkout API Error:', error);
 
     // Handle validation errors
     if (error instanceof z.ZodError) {
-      console.log('❌ Validation error:', error.issues);
+      logger.warn('Validation error:', error.issues);
       return NextResponse.json(
         {
           error: 'Invalid request data',
@@ -232,7 +233,7 @@ export async function POST(request: NextRequest) {
     // Handle payment ID errors
     if (error instanceof Error) {
       if (error.message.includes('payment_id') || error.message.includes('PaymentId')) {
-        console.log('❌ Payment ID error:', error.message);
+        logger.warn('Payment ID error:', error.message);
         return NextResponse.json(
           {
             error: 'Payment ID generation failed',
@@ -243,7 +244,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.log('❌ General error:', error.message);
+      logger.warn('General error:', error.message);
       return NextResponse.json(
         {
           error: 'Checkout failed',

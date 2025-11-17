@@ -1,4 +1,5 @@
 import { GaxiosError } from 'gaxios';
+import { logger } from '@/lib/logger';
 
 /**
  * Comprehensive error handling for Google API interactions
@@ -257,7 +258,7 @@ export async function withRetry<T>(
       if (options?.onRetry) {
         options.onRetry(attempt + 1, lastError, delay);
       } else {
-        console.warn(`Google API operation failed (attempt ${attempt + 1}/${config.maxRetries + 1}):`, {
+        logger.warn(`Google API operation failed (attempt ${attempt + 1}/${config.maxRetries + 1}):`, {
           error: lastError.message,
           type: lastError.type,
           statusCode: lastError.statusCode,
@@ -300,7 +301,7 @@ export class GoogleAPIRateLimiter {
       const oldestRequest = Math.min(...validRequests);
       const waitTime = this.windowMs - (now - oldestRequest);
       
-      console.warn(`Rate limit exceeded for key: ${key}. Waiting ${waitTime}ms`);
+      logger.warn(`Rate limit exceeded for key: ${key}. Waiting ${waitTime}ms`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       return this.checkRateLimit(key); // Recursive call after waiting
     }
@@ -392,7 +393,7 @@ export class GoogleAPICircuitBreaker {
     
     if (this.failures >= this.failureThreshold) {
       this.state = 'OPEN';
-      console.error(`Circuit breaker opened after ${this.failures} failures`);
+      logger.error(`Circuit breaker opened after ${this.failures} failures`);
     }
   }
 
@@ -400,9 +401,9 @@ export class GoogleAPICircuitBreaker {
     this.failures = 0;
     this.successCount = 0;
     this.state = 'CLOSED';
-    console.info('Circuit breaker reset to CLOSED state');
+    logger.info('Circuit breaker reset to CLOSED state');
   }
-
+}
 
 /**
  * Utility function to handle common Google API error scenarios

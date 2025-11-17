@@ -6,6 +6,15 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  {
+    ignores: [
+      '**/__tests__/**',
+      'scripts/**',
+      'lib/theme/**',
+      'public/**',
+      'node/**'
+    ],
+  },
   ...compat.config({
     extends: ['next/core-web-vitals', 'next/typescript'],
     rules: {
@@ -38,6 +47,13 @@ const eslintConfig = [
       'react-hooks/exhaustive-deps': 'warn',
     },
   }),
+  {
+    files: ['**/*.{ts,tsx}'],
+    ignores: ['lib/logger.ts'],
+    rules: {
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+    },
+  },
 ];
 
 export default eslintConfig;

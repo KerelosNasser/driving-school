@@ -1,0 +1,26 @@
+# Production Cleanup Summary
+
+- Centralized logging via `lib/logger.ts` with environment gating.
+- Enforced `no-console` (allow `warn`, `error`) with ESLint; excluded tests/scripts/theme demos.
+- Replaced console usage in:
+  - `contexts/editModeContext.tsx`
+  - `lib/realtime/RealtimeClient.ts`
+  - `lib/google-api/logger.ts`
+  - `app/api/create-quota-checkout/route.ts`
+  - `app/admin/components/CalendarSettingsTab.tsx`
+- Removed development endpoints/pages:
+  - `app/api/debug-checkout/route.ts`
+  - `app/api/debug-packages/route.ts`
+  - `app/api/sentry-example-api/route.ts`
+  - `app/test-calendar-settings/page.tsx`
+- Hardened build config:
+  - `next.config.ts`: `productionBrowserSourceMaps: false`
+  - Sentry sampling reduced in production (`sentry.*.config.ts`).
+- Environment hygiene:
+  - Deleted `.env.sentry-build-plugin`
+  - Removed TLS bypass; set placeholders for `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_SECRET` in `.env.local`.
+- Verification:
+  - Ran type-check (identified legacy TS issues outside scope), lint, and initiated build.
+- Follow-ups:
+  - Rotate exposed secrets; move all production secrets to deployment env.
+  - Gradually fix existing TypeScript errors; re-enable strict build checks.

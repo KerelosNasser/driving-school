@@ -1,5 +1,6 @@
 import { RealtimeChannel, RealtimeClient as SupabaseRealtimeClient } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
+import { logger } from '@/lib/logger';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -72,7 +73,7 @@ export class RealtimeClient {
   }
 
   private handleConnectionOpen(): void {
-    console.log('Realtime connection opened');
+    logger.info('Realtime connection opened');
     this.status = 'connected';
     this.retryCount = 0;
     this.isReconnecting = false;
@@ -90,7 +91,7 @@ export class RealtimeClient {
   }
 
   private handleConnectionClose(): void {
-    console.log('Realtime connection closed');
+    logger.warn('Realtime connection closed');
     this.status = 'disconnected';
     this.emit('statusChange', this.status);
 
@@ -101,7 +102,7 @@ export class RealtimeClient {
   }
 
   private handleConnectionError(error: any): void {
-    console.error('Realtime connection error:', error);
+    logger.error('Realtime connection error:', error);
     this.status = 'error';
     this.emit('statusChange', this.status);
     this.emit('error', new Error(error.message || 'Connection error'));
@@ -112,7 +113,7 @@ export class RealtimeClient {
 
   private attemptReconnect(): void {
     if (this.retryCount >= this.config.maxRetries) {
-      console.error('Max reconnection attempts reached');
+      logger.error('Max reconnection attempts reached');
       this.status = 'error';
       this.emit('statusChange', this.status);
       return;
@@ -130,7 +131,7 @@ export class RealtimeClient {
       this.config.maxDelay
     );
 
-    console.log(`Attempting to reconnect (${this.retryCount}/${this.config.maxRetries}) in ${delay}ms`);
+    logger.info(`Attempting to reconnect (${this.retryCount}/${this.config.maxRetries}) in ${delay}ms`);
     this.emit('reconnecting', this.retryCount);
 
     this.retryTimeout = setTimeout(() => {
@@ -199,7 +200,7 @@ export class RealtimeClient {
 
     // Subscribe to the channel with proper error handling
     channel.subscribe((status) => {
-      console.log(`Channel ${channelName} subscription status:`, status);
+      logger.debug(`Channel ${channelName} subscription status:`, status);
 
       if (status === 'SUBSCRIBED') {
         // Channel successfully subscribed
@@ -264,7 +265,7 @@ export class RealtimeClient {
         try {
           (listener as any)(...args);
         } catch (error) {
-          console.error(`Error in event listener for ${event}:`, error);
+          logger.error(`Error in event listener for ${event}:`, error);
         }
       });
     }

@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
+//
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { 
@@ -24,11 +24,11 @@ import {
   Moon,
   Coffee,
   Sunset,
-  AlertCircle,
   CheckCircle2
 } from 'lucide-react';
-import { format, addDays, isSameDay } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface CalendarSettings {
   id?: number;
@@ -127,7 +127,7 @@ export function CalendarSettingsTab() {
         setSettings(result.data);
       }
     } catch (error: any) {
-      console.error('Error loading calendar settings:', error?.message || error);
+      logger.error('Error loading calendar settings:', error?.message || error);
       toast.error(error?.message || 'Failed to load calendar settings');
     } finally {
       setLoading(false);
@@ -145,7 +145,7 @@ export function CalendarSettingsTab() {
 
       setVacationDays(result.data || []);
     } catch (error: any) {
-      console.error('Error loading vacation days:', error?.message || error);
+      logger.error('Error loading vacation days:', error?.message || error);
       toast.error(error?.message || 'Failed to load vacation days');
     }
   };
@@ -153,7 +153,7 @@ export function CalendarSettingsTab() {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      console.log('💾 [CalendarSettingsTab] Saving settings:', settings);
+      logger.info('[CalendarSettingsTab] Saving settings:', settings);
       
       const response = await fetch('/api/calendar-settings', {
         method: 'POST',
@@ -169,13 +169,13 @@ export function CalendarSettingsTab() {
         throw new Error(result.message || 'Failed to save calendar settings');
       }
 
-      console.log('✅ [CalendarSettingsTab] Settings saved successfully');
+      logger.info('[CalendarSettingsTab] Settings saved successfully');
       toast.success(result.message || 'Calendar settings saved successfully! Changes will be reflected in the service center.');
       
       // Trigger a refresh of calendar settings in the service center
       // by invalidating the cache (users will see changes on next page load or after 30 seconds)
     } catch (error: any) {
-      console.error('❌ [CalendarSettingsTab] Error saving calendar settings:', {
+      logger.error('[CalendarSettingsTab] Error saving calendar settings:', {
         message: error?.message,
         error: error
       });
@@ -273,7 +273,7 @@ export function CalendarSettingsTab() {
   const testConnection = async () => {
     setTestingConnection(true);
     try {
-      console.log('🔍 [CalendarSettingsTab] Testing calendar settings connection...');
+      logger.info('[CalendarSettingsTab] Testing calendar settings connection...');
       
       // Test fetching settings from the service center endpoint
       const response = await fetch('/api/calendar/settings');
@@ -283,7 +283,7 @@ export function CalendarSettingsTab() {
         throw new Error('Failed to fetch settings from service center endpoint');
       }
       
-      console.log('✅ [CalendarSettingsTab] Service center can read settings:', data);
+      logger.info('[CalendarSettingsTab] Service center can read settings:', data);
       
       // Compare with current settings
       const bufferMatch = data.bufferTimeMinutes === settings.buffer_time_minutes;
@@ -300,7 +300,7 @@ export function CalendarSettingsTab() {
         toast.warning('⚠️ Settings mismatch detected. Service center may be using cached data. It will update within 30 seconds.');
       }
     } catch (error: any) {
-      console.error('❌ [CalendarSettingsTab] Connection test failed:', error);
+      logger.error('[CalendarSettingsTab] Connection test failed:', error);
       toast.error('Failed to verify connection: ' + error.message);
     } finally {
       setTestingConnection(false);

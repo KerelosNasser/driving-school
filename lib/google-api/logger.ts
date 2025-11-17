@@ -37,6 +37,8 @@ export interface APIMetrics {
 /**
  * Google API Logger with structured logging and metrics collection
  */
+import { logger } from '@/lib/logger';
+
 export class GoogleAPILogger {
   private metrics: APIMetrics = {
     totalRequests: 0,
@@ -262,16 +264,16 @@ export class GoogleAPILogger {
 
     switch (entry.level) {
       case LogLevel.DEBUG:
-        console.debug(JSON.stringify(logMessage));
+        logger.debug(JSON.stringify(logMessage));
         break;
       case LogLevel.INFO:
-        console.info(JSON.stringify(logMessage));
+        logger.info(JSON.stringify(logMessage));
         break;
       case LogLevel.WARN:
-        console.warn(JSON.stringify(logMessage));
+        logger.warn(JSON.stringify(logMessage));
         break;
       case LogLevel.ERROR:
-        console.error(JSON.stringify(logMessage));
+        logger.error(JSON.stringify(logMessage));
         break;
     }
   }

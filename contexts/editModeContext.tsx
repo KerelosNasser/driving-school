@@ -19,6 +19,7 @@ import {
   RealtimeEvent,
   ContentChangeEventData
 } from '../lib/realtime';
+import { logger } from '@/lib/logger';
 import { permissionManager } from '../lib/permissions/PermissionManager';
 import { UserRole, Resource, Operation } from '../lib/permissions/types';
 
@@ -250,12 +251,12 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
                 realtimeClientRef.current.on('statusChange', (status) => {
                     setIsConnected(status === 'connected');
                     if (status === 'connected') {
-                        console.log('Real-time connection established');
+                        logger.info('Real-time connection established');
                     } else if (status === 'disconnected') {
-                        console.log('Real-time connection lost');
+                        logger.warn('Real-time connection lost');
                         toast.warning('Connection lost. Attempting to reconnect...');
                     } else if (status === 'error') {
-                        console.error('Real-time connection error');
+                        logger.error('Real-time connection error');
                         toast.error('Connection error. Please refresh the page.');
                     }
                 });
@@ -284,7 +285,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
                 await realtimeClientRef.current.connect();
                 
             } catch (error) {
-                console.error('Failed to initialize real-time infrastructure:', error);
+                logger.error('Failed to initialize real-time infrastructure:', error);
                 toast.error('Failed to initialize collaborative editing');
             }
         };
@@ -324,7 +325,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        console.log('isEditMode changed:', isEditMode);
+        logger.debug('isEditMode changed:', isEditMode);
     }, [isEditMode]);
 
     // Page subscription methods
@@ -343,9 +344,9 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
             });
 
             currentPageRef.current = pageName;
-            console.log(`Subscribed to page: ${pageName}`);
+            logger.info(`Subscribed to page: ${pageName}`);
         } catch (error) {
-            console.error('Failed to subscribe to page:', error);
+            logger.error('Failed to subscribe to page:', error);
             throw error;
         }
     }, [isAdmin, user]);
@@ -360,9 +361,9 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
             if (currentPageRef.current === pageName) {
                 currentPageRef.current = null;
             }
-            console.log(`Unsubscribed from page: ${pageName}`);
+            logger.info(`Unsubscribed from page: ${pageName}`);
         } catch (error) {
-            console.error('Failed to unsubscribe from page:', error);
+            logger.error('Failed to unsubscribe from page:', error);
             throw error;
         }
     }, []);
@@ -378,7 +379,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
                 action
             });
         } catch (error) {
-            console.error('Failed to broadcast presence:', error);
+            logger.error('Failed to broadcast presence:', error);
         }
     }, []);
 
@@ -407,7 +408,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
             setConflictedItems(prev => prev.filter(item => item.id !== conflictId));
             toast.success('Conflict resolved successfully');
         } catch (error) {
-            console.error('Failed to resolve conflict:', error);
+            logger.error('Failed to resolve conflict:', error);
             toast.error('Failed to resolve conflict');
             throw error;
         }
@@ -446,7 +447,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
     const rollbackOptimisticUpdate = async (contentKey: string): Promise<void> => {
         const optimisticUpdate = optimisticUpdatesRef.current.get(contentKey);
         if (optimisticUpdate) {
-            console.log('Rolling back optimistic update for:', contentKey);
+            logger.debug('Rolling back optimistic update for:', contentKey);
             
             // Here you would typically update the UI to show the original value
             // This would require a callback or event system to notify components
@@ -489,7 +490,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
 
         // Simplified validation - only skip truly empty text
         if (type === 'text' && !value) {
-            console.log('Skipping save for empty value:', key);
+            logger.debug('Skipping save for empty value:', key);
             return true;
         }
 
@@ -511,7 +512,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
         setSaveState('saving');
 
         try {
-            console.log('Saving content:', { key, value, type, page });
+            logger.info('Saving content:', { key, value, type, page });
 
             // Broadcast content change event for real-time sync
             if (eventRouterRef.current && currentPageRef.current && user) {
@@ -574,7 +575,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
             return true;
 
         } catch (error) {
-            console.error('Error saving content:', error);
+            logger.error('Error saving content:', error);
             
             // Rollback optimistic update
             await rollbackOptimisticUpdate(contentKey);
@@ -655,7 +656,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
             toast.success(`Component added: ${componentType}`);
             return result.componentId || componentId;
         } catch (error) {
-            console.error('Failed to add component:', error);
+            logger.error('Failed to add component:', error);
             toast.error('Failed to add component');
             throw error;
         }
@@ -711,7 +712,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
 
             toast.success('Component moved successfully');
         } catch (error) {
-            console.error('Failed to move component:', error);
+            logger.error('Failed to move component:', error);
             toast.error('Failed to move component');
             throw error;
         }
@@ -766,7 +767,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
 
             toast.success('Component deleted successfully');
         } catch (error) {
-            console.error('Failed to delete component:', error);
+            logger.error('Failed to delete component:', error);
             toast.error('Failed to delete component');
             throw error;
         }
@@ -894,7 +895,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
 
             toast.success('Navigation updated successfully');
         } catch (error) {
-            console.error('Failed to update navigation:', error);
+            logger.error('Failed to update navigation:', error);
             toast.error('Failed to update navigation');
             throw error;
         }
@@ -951,7 +952,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
             toast.success('Navigation item created successfully');
             return result.item?.id || itemId;
         } catch (error) {
-            console.error('Failed to create navigation item:', error);
+            logger.error('Failed to create navigation item:', error);
             toast.error('Failed to create navigation item');
             throw error;
         }
@@ -1003,7 +1004,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
 
             toast.success('Navigation item updated successfully');
         } catch (error) {
-            console.error('Failed to update navigation item:', error);
+            logger.error('Failed to update navigation item:', error);
             toast.error('Failed to update navigation item');
             throw error;
         }
@@ -1054,7 +1055,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
 
             toast.success('Navigation item deleted successfully');
         } catch (error) {
-            console.error('Failed to delete navigation item:', error);
+            logger.error('Failed to delete navigation item:', error);
             toast.error('Failed to delete navigation item');
             throw error;
         }
@@ -1106,7 +1107,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
 
             toast.success('Navigation items reordered successfully');
         } catch (error) {
-            console.error('Failed to reorder navigation items:', error);
+            logger.error('Failed to reorder navigation items:', error);
             toast.error('Failed to reorder navigation items');
             throw error;
         }
@@ -1158,7 +1159,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
 
             toast.success(`Navigation item ${isVisible ? 'shown' : 'hidden'} successfully`);
         } catch (error) {
-            console.error('Failed to toggle navigation visibility:', error);
+            logger.error('Failed to toggle navigation visibility:', error);
             toast.error('Failed to toggle navigation visibility');
             throw error;
         }
