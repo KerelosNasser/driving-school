@@ -13,7 +13,7 @@ interface AnnouncementRequest {
   scheduledFor?: string;
 }
 
-function getAnnouncementEmailHtml(subject: string, content: string, userName: string = 'Valued Customer') {
+function getAnnouncementEmailHtml(subject: string, content: string, _userName: string = 'Valued Customer') {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 20px; text-align: center;">
@@ -27,8 +27,8 @@ function getAnnouncementEmailHtml(subject: string, content: string, userName: st
         <div style="margin-top: 30px; padding: 20px; background-color: white; border-radius: 8px; border-left: 4px solid #10b981; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <p style="margin: 0; font-size: 14px; color: #6b7280;">
             If you have any questions about this announcement, please don't hesitate to contact us:<br><br>
-            📞 <strong>Phone:</strong> 0400 000 000<br>
-            📧 <strong>Email:</strong> info@egdrivingschool.com<br>
+            📞 <strong>Phone:</strong> 04 315 120 95 <br>
+            📧 <strong>Email:</strong> emealghobrial@gmail.com <br>
             🌐 <strong>Website:</strong> www.egdrivingschool.com
           </p>
         </div>
@@ -100,12 +100,12 @@ export async function POST(request: NextRequest) {
     }
 
     let announcementId: string;
-    let status: 'sent' | 'scheduled' = 'sent';
+    const _status: 'sent' | 'scheduled' = 'sent';
     let sentCount = 0;
 
     if (scheduled) {
       // Store scheduled announcement
-      status = 'scheduled';
+      const _status = 'scheduled';
       const { data: announcementData, error: insertError } = await supabase
         .from('announcements')
         .insert({
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
         recipientCount: sentCount,
         totalUsers: users.length,
         failedCount: failedEmails.length,
-        announcementId
+        announcementId: announcementId!
       });
     }
 
