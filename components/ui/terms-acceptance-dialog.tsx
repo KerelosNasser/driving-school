@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Shield, FileText, AlertCircle, ChevronDown, ChevronUp, CheckCircle2, X, Eye } from 'lucide-react';
+import { Shield ,ChevronDown, ChevronUp, CheckCircle2, X, Eye } from 'lucide-react';
 
 interface Term {
   id: string;
@@ -35,16 +35,17 @@ export function TermsAcceptanceDialog({
   useEffect(() => {
     const loadTerms = async () => {
       try {
-        const response = await fetch('/api/admin/content?page=packages&key=packages_terms_conditions');
+        const response = await fetch('/api/content/persistent?page=packages&key=packages_terms_conditions');
         
         if (response.ok) {
           const data = await response.json();
-          const termsData = data.data.find((item: any) => item.content_key === 'packages_terms_conditions');
-          
-          if (termsData && termsData.content_json && Array.isArray(termsData.content_json)) {
-            setTerms(termsData.content_json);
+          const item = Array.isArray(data.data)
+            ? data.data.find((x: any) => x.content_key === 'packages_terms_conditions')
+            : data.data;
+
+          if (item && item.content_json && Array.isArray(item.content_json)) {
+            setTerms(item.content_json);
           } else {
-            // Fallback to default terms if none found
             setTerms(defaultTerms);
           }
         } else {

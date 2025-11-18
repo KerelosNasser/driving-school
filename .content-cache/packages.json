@@ -1,0 +1,35 @@
+{
+  "content": {
+    "packages_terms_conditions": {
+      "content_key": "packages_terms_conditions",
+      "content_value": null,
+      "content_json": [
+        {
+          "id": "1",
+          "title": "Booking and Payment",
+          "content": "All lessons must be booked in advance. Payment is required at the time of booking. We accept all major credit cards and digital payment methods."
+        },
+        {
+          "id": "2",
+          "title": "Cancellation Policy",
+          "content": "Lessons can be cancelled or rescheduled with at least 24 hours notice. Cancellations with less than 24 hours notice may incur a cancellation fee."
+        },
+        {
+          "id": "3",
+          "title": "Vehicle and Insurance",
+          "content": "All lessons are conducted in fully insured, dual-control vehicles. Students must hold a valid learner's permit or provisional license."
+        },
+        {
+          "id": "4",
+          "title": "Instructor Policies",
+          "content": "Our instructors are fully licensed and accredited. Lessons may be terminated early if the student is under the influence of alcohol or drugs, or exhibits unsafe behavior."
+        }
+      ],
+      "file_url": null,
+      "alt_text": null,
+      "content_type": "json"
+    }
+  },
+  "timestamp": 1763447326900,
+  "version": "v1763447326900-vjmapg5bh"
+}

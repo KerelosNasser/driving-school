@@ -40,14 +40,16 @@ export function EditableTermsConditions({
   useEffect(() => {
     const loadTerms = async () => {
       try {
-        const response = await fetch(`/api/admin/content?page=${page}&key=${contentKey}`);
+        const response = await fetch(`/api/content/persistent?page=${page}&key=${contentKey}`);
         
         if (response.ok) {
           const data = await response.json();
-          const termsData = data.data.find((item: any) => item.content_key === contentKey);
-          
-          if (termsData && termsData.content_json && Array.isArray(termsData.content_json)) {
-            setTerms(termsData.content_json);
+          const item = Array.isArray(data.data)
+            ? data.data.find((x: any) => x.content_key === contentKey)
+            : data.data;
+
+          if (item && item.content_json && Array.isArray(item.content_json)) {
+            setTerms(item.content_json);
           } else if (defaultTerms.length > 0) {
             setTerms(defaultTerms);
             await saveTerms(defaultTerms);
@@ -57,6 +59,7 @@ export function EditableTermsConditions({
           await saveTerms(defaultTerms);
         }
       } catch (error) {
+        console.error(error)
         if (defaultTerms.length > 0) {
           setTerms(defaultTerms);
         }
@@ -69,7 +72,7 @@ export function EditableTermsConditions({
   // Save terms to database
   const saveTerms = async (newTerms: Term[]) => {
     try {
-      const response = await fetch('/api/admin/content', {
+      const response = await fetch('/api/content/persistent', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +97,7 @@ export function EditableTermsConditions({
       toast.error('Failed to save terms');
       return false;
     } catch (error) {
-      toast.error('Failed to save terms');
+      toast.error('Failed to save terms'+ error);
       return false;
     }
   };
