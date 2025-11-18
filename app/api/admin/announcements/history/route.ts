@@ -1,38 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { auth } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication and admin role
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const admin = await isUserAdmin(userId);
+    if (!admin) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    // Verify admin role
-    const { data: userData, error: userError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .single();
-
-    if (userError || userData?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Insufficient permissions' },
-        { status: 403 }
-      );
-    }
-
-    // Fetch announcement history
     const { data: announcements, error: fetchError } = await supabase
       .from('announcements')
       .select('id, subject, content, recipient_count, status, sent_at, scheduled_for, created_at')
       .order('created_at', { ascending: false })
-      .limit(50); // Limit to last 50 announcements
+      .limit(50);
 
     if (fetchError) {
       console.error('Error fetching announcements:', fetchError);
@@ -42,7 +28,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Format the data for the frontend
     const formattedAnnouncements = (announcements || []).map(announcement => ({
       id: announcement.id,
       subject: announcement.subject,

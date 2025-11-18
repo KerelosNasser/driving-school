@@ -20,7 +20,6 @@ export class ComponentRenderer {
     component: React.ComponentType<any>
   ): void {
     this.componentMap.set(componentName, component);
-    console.log(`Registered React component: ${componentName}`);
   }
 
   /**
@@ -39,13 +38,13 @@ export class ComponentRenderer {
   ): React.ReactElement | null {
     const definition = componentRegistry.getDefinition(instance.type);
     if (!definition) {
-      console.error(`Component definition not found: ${instance.type}`);
+      
       return this.renderError(`Component type "${instance.type}" not found`);
     }
 
     const PreviewComponent = this.getReactComponent(definition.previewComponent);
     if (!PreviewComponent) {
-      console.error(`Preview component not found: ${definition.previewComponent}`);
+      
       return this.renderError(`Preview component "${definition.previewComponent}" not registered`);
     }
 
@@ -63,7 +62,6 @@ export class ComponentRenderer {
         key: instance.id
       });
     } catch (error) {
-      console.error(`Error rendering preview for ${instance.type}:`, error);
       return this.renderError(`Failed to render ${definition.name}`);
     }
   }
@@ -77,13 +75,13 @@ export class ComponentRenderer {
   ): React.ReactElement | null {
     const definition = componentRegistry.getDefinition(instance.type);
     if (!definition) {
-      console.error(`Component definition not found: ${instance.type}`);
+      
       return this.renderError(`Component type "${instance.type}" not found`);
     }
 
     const EditComponent = this.getReactComponent(definition.editComponent);
     if (!EditComponent) {
-      console.error(`Edit component not found: ${definition.editComponent}`);
+      
       return this.renderError(`Edit component "${definition.editComponent}" not registered`);
     }
 
@@ -101,7 +99,6 @@ export class ComponentRenderer {
         key: `edit-${instance.id}`
       });
     } catch (error) {
-      console.error(`Error rendering edit mode for ${instance.type}:`, error);
       return this.renderError(`Failed to render ${definition.name} editor`);
     }
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { supabase } from '@/lib/supabase';
 import { auth } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/lib/auth-helpers';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -50,27 +51,13 @@ function getAnnouncementEmailHtml(subject: string, content: string, userName: st
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication and admin role
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // Verify admin role
-    const { data: userData, error: userError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .single();
-
-    if (userError || userData?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Insufficient permissions' },
-        { status: 403 }
-      );
+    const admin = await isUserAdmin(userId);
+    if (!admin) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const body: AnnouncementRequest = await request.json();

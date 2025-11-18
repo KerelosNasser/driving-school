@@ -9,8 +9,7 @@ import { useEditMode } from '@/contexts/editModeContext';
 import { EditableText } from '@/components/ui/editable-text';
 import { EditableImage } from '@/components/ui/editable-image';
 import { motion } from 'framer-motion';
-import { EditableWrapper } from '@/components/drag-drop/EditableWrapper';
-import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
+ 
 
 // Dynamic map import
 
@@ -26,7 +25,6 @@ export default function AboutPage() {
       </div>
 
       {/* Hero Section */}
-      <EditableWrapper componentId="about-hero" componentType="hero">
         <section className="relative bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 text-white overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 via-teal-800/90 to-blue-900/95" />
@@ -86,13 +84,11 @@ export default function AboutPage() {
           </motion.div>
         </div>
         </section>
-      </EditableWrapper>
       
-      <DropZoneArea id="after-about-hero" className="my-6" placeholder="Add components after hero" />
+      
 
       <main className="max-w-7xl mx-auto py-16 sm:py-20 px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Instructor Bio Section */}
-        <EditableWrapper componentId="instructor-bio" componentType="instructor">
           <section className="mb-20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Instructor Image - Enhanced Design */}
@@ -311,12 +307,10 @@ Hi, my name is Emeal and I have been a driving instructor since 2017 and am qual
             </motion.div>
           </div>
           </section>
-        </EditableWrapper>
         
-        <DropZoneArea id="after-instructor-bio" className="my-8" placeholder="Add components after instructor bio" />
+        
 
         {/* Service Areas Section */}
-        <EditableWrapper componentId="service-areas" componentType="map">
           <div className="grid grid-cols-1 md:grid-cols-1 gap-16 items-start">
           <div className="space-y-8">
             <div>
@@ -343,9 +337,8 @@ Hi, my name is Emeal and I have been a driving instructor since 2017 and am qual
 
 
           </div>
-        </EditableWrapper>
         
-        <DropZoneArea id="about-page-bottom" className="my-8" placeholder="Add components at bottom of page" />
+        
       </main>
     </div>
   );

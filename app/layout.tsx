@@ -31,6 +31,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://your-domain.vercel.app"
   ),
+  alternates: {
+    canonical: process.env.NEXT_PUBLIC_SITE_URL || "https://your-domain.vercel.app",
+  },
   title: {
     default: "EG Driving School - Professional Driving Lessons & Training",
     template: "%s | EG Driving School",
@@ -68,7 +71,7 @@ export const metadata: Metadata = {
       "Learn to drive with EG Driving School - Australia's premier driving instruction service. Professional instructors, flexible scheduling, and comprehensive packages.",
     images: [
       {
-        url: "/og-image.jpg",
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://your-domain.vercel.app"}/og-image.jpg`,
         width: 1200,
         height: 630,
         alt: "EG Driving School - Professional Driving Lessons",
@@ -81,7 +84,7 @@ export const metadata: Metadata = {
     title: "EG Driving School - Professional Driving Lessons & Training",
     description:
       "Learn to drive with EG Driving School - Australia's premier driving instruction service.",
-    images: ["/twitter-image.jpg"],
+    images: [`${process.env.NEXT_PUBLIC_SITE_URL || "https://your-domain.vercel.app"}/twitter-image.jpg`],
     creator: "@egdrivingschool",
   },
   robots: {
@@ -152,6 +155,35 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
+          {/* JSON-LD: Organization/LocalBusiness */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "LocalBusiness",
+                name: "EG Driving School",
+                url: process.env.NEXT_PUBLIC_SITE_URL || "https://your-domain.vercel.app",
+                logo: `${process.env.NEXT_PUBLIC_SITE_URL || "https://your-domain.vercel.app"}/og-image.jpg`,
+                image: `${process.env.NEXT_PUBLIC_SITE_URL || "https://your-domain.vercel.app"}/twitter-image.jpg`,
+                description:
+                  "Professional driving instruction, flexible scheduling, comprehensive packages, and excellent pass rates.",
+                address: {
+                  "@type": "PostalAddress",
+                  addressLocality: "Brisbane",
+                  addressRegion: "QLD",
+                  addressCountry: "AU",
+                },
+                areaServed: {
+                  "@type": "AdministrativeArea",
+                  name: "Greater Brisbane",
+                },
+                priceRange: "$$",
+                openingHours: "Mo-Su 07:00-19:00",
+                telephone: "",
+              }),
+            }}
+          />
           <ReactQueryProvider>
               <Suspense fallback={<LoadingIndicator size="large" text="Loading application..." className="items-center text-center" />}>
                 <EditModeProvider>

@@ -10,8 +10,7 @@ import { Mail, Phone, MapPin, Clock, Send, MessageCircle, Shield } from "lucide-
 import { BusinessPhone, BusinessEmail, BusinessAddress } from "@/components/ui/global-editable-text";
 import { EditableText } from "@/components/ui/editable-text";
 import { useGlobalContent } from '@/contexts/globalContentContext';
-import { EditableWrapper } from '@/components/drag-drop/EditableWrapper';
-import { DropZoneArea } from '@/components/drag-drop/DropZoneArea';
+ 
 
 export default function ContactPage() {
   const { content } = useGlobalContent();
@@ -24,7 +23,6 @@ export default function ContactPage() {
       </div>
 
       {/* Hero Section */}
-      <EditableWrapper componentId="contact-hero" componentType="hero">
         <section className="relative bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 text-white overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 via-teal-800/90 to-blue-900/95" />
@@ -71,12 +69,10 @@ export default function ContactPage() {
           </motion.div>
         </div>
         </section>
-      </EditableWrapper>
       
-      <DropZoneArea id="after-contact-hero" className="my-6" placeholder="Add components after hero" />
+      
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 relative z-10">
-        <EditableWrapper componentId="contact-form-section" componentType="form">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Contact Information */}
             <motion.div
@@ -324,12 +320,10 @@ export default function ContactPage() {
             </Card>
           </motion.div>
           </div>
-        </EditableWrapper>
         
-        <DropZoneArea id="after-contact-form" className="my-8" placeholder="Add components after contact form" />
+        
 
         {/* CTA Section */}
-        <EditableWrapper componentId="contact-cta" componentType="cta">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -441,9 +435,8 @@ export default function ContactPage() {
             </div>
           </div>
           </motion.div>
-        </EditableWrapper>
         
-        <DropZoneArea id="contact-page-bottom" className="my-8" placeholder="Add components at bottom of page" />
+        
       </main>
     </div>
   );
