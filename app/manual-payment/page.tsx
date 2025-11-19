@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertCircle, Loader2, QrCode, Copy, Check, Clock, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Loader2, QrCode, Copy, Check, Clock, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 export default function ManualPaymentPage() {
   const router = useRouter();
@@ -24,6 +26,8 @@ export default function ManualPaymentPage() {
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [paymentApproved, setPaymentApproved] = useState(false);
 
   const sessionId = searchParams.get('session_id');
   const payidNumber = process.env.NEXT_PUBLIC_PAYID_IDENTIFIER || '0431512095';
@@ -47,6 +51,58 @@ export default function ManualPaymentPage() {
         setLoading(false);
       });
   }, [sessionId]);
+
+  // Real-time subscription for payment verification updates
+  useEffect(() => {
+    if (!sessionId || !confirmed) return; // Only listen after payment submission
+
+    console.log('🔌 Setting up real-time subscription for session:', sessionId);
+
+    const channel = supabase
+      .channel(`manual-payment-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'manual_payment_sessions',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload) => {
+          console.log('📡 Received real-time update:', payload);
+          const status = payload.new?.status;
+
+          if (status === 'completed') {
+            console.log('✅ Payment approved!');
+            setPaymentApproved(true);
+            toast.success('Payment verified! Hours have been added to your account.', {
+              duration: 5000,
+            });
+          } else if (status === 'rejected') {
+            console.log('❌ Payment rejected');
+            toast.error('Payment rejected. Please check your reference and contact support if needed.', {
+              duration: 5000,
+            });
+            setConfirmed(false); // Allow re-submission
+            setError('Payment was rejected by admin. Please verify your payment reference.');
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active');
+          setRealtimeStatus('connected');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error');
+          setRealtimeStatus('disconnected');
+        }
+      });
+
+    return () => {
+      console.log('🔌 Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId, confirmed]);
 
   const handleConfirmPayment = async () => {
     if (!paymentReference.trim() || paymentReference.length < 6) {
@@ -124,6 +180,64 @@ export default function ManualPaymentPage() {
   }
 
   if (confirmed) {
+    // If payment approved, show success screen
+    if (paymentApproved) {
+      return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 p-4">
+        <Card className="max-w-md mx-auto mt-8 border-0 shadow-xl">
+          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-center rounded-t-xl">
+            <div className="mx-auto bg-white rounded-full w-16 h-16 flex items-center justify-center mb-3">
+              <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Payment Approved!</h2>
+          </div>
+          
+          <CardContent className="p-6 space-y-4">
+            <Alert className="bg-emerald-50 border-emerald-300">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <AlertDescription className="text-emerald-900 text-sm font-medium">
+                Your hours have been added to your account. You can now book lessons!
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-3">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500">Reference</p>
+                <p className="font-mono font-bold">{paymentReference}</p>
+              </div>
+              <div className="bg-emerald-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500">Amount</p>
+                <p className="text-2xl font-bold text-emerald-600">${paymentData?.amount}</p>
+              </div>
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500">Package</p>
+                <p className="font-semibold">{paymentData?.packageName}</p>
+                <p className="text-sm text-gray-600">{paymentData?.hours} hours added</p>
+              </div>
+            </div>
+
+              <div className="space-y-2 pt-2">
+                <Button 
+                  onClick={() => router.push('/service-center')} 
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 h-11"
+                >
+                  Go to Dashboard & Book Lessons
+                </Button>
+                <Button 
+                  onClick={() => router.push('/packages')} 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  View More Packages
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    // Waiting for verification
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 p-4">
         <Card className="max-w-md mx-auto mt-8 border-0 shadow-xl">
@@ -135,6 +249,34 @@ export default function ManualPaymentPage() {
           </div>
           
           <CardContent className="p-6 space-y-4">
+            {/* Real-time connection status indicator */}
+            {realtimeStatus === 'connected' && (
+              <Alert className="bg-blue-50 border-blue-300">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                  <AlertDescription className="text-blue-900 text-sm font-medium">
+                    Waiting for admin verification... You'll be notified immediately.
+                  </AlertDescription>
+                </div>
+              </Alert>
+            )}
+            {realtimeStatus === 'disconnected' && (
+              <Alert className="bg-yellow-50 border-yellow-300">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-900 text-sm">
+                  Connection lost. Please refresh to check status.
+                </AlertDescription>
+              </Alert>
+            )}
+            {realtimeStatus === 'connecting' && (
+              <Alert className="bg-gray-50 border-gray-300">
+                <Loader2 className="h-4 w-4 text-gray-600 animate-spin" />
+                <AlertDescription className="text-gray-700 text-sm">
+                  Connecting to real-time updates...
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Alert className="bg-yellow-50 border-yellow-300">
               <AlertCircle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="text-yellow-900 text-sm">

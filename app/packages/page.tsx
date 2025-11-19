@@ -136,11 +136,6 @@ export default function PackagesPage() {
     }
   };
 
-  const handleBookingComplete = (booking: any) => {
-    setBookingSuccess(`Lesson booked successfully for ${booking.date}!`);
-    fetchQuota(); // Refresh quota after booking
-    setTimeout(() => setBookingSuccess(null), 5000);
-  };
 
   // Fetch packages and quota from API
   useEffect(() => {
@@ -385,7 +380,7 @@ export default function PackagesPage() {
                     initial="hidden"
                     animate="visible"
                   >
-                    {packages.map((pkg, index) => (
+                    {packages.map((pkg) => (
                       <motion.div
                         key={pkg.id}
                         variants={itemVariants}

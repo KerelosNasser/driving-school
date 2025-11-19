@@ -15,12 +15,14 @@ import QuotaManagementTab from './components/QuotaManagementTab';
 import NegotiationTab from './components/NegotiationTab';
 import TransactionHistoryTab from './components/TransactionHistoryTab';
 import InvitationDashboard from '@/components/InvitationDashboard';
+import { TermsAcceptanceDialog } from '@/components/ui/terms-acceptance-dialog';
+import { useRouter } from 'next/navigation';
 
 
 import UserDataReview from './components/UserDataReview';
 import { LoadingIndicator } from '@/components/ui/loading-indicator';
-import { useProfileCompletion } from '@/hooks/useProfileCompletion';
-import ProfileCompletionBadge from '@/components/ProfileCompletionBadge';
+ 
+ 
 
 interface UserQuota {
   user_id: string;
@@ -40,6 +42,7 @@ interface ErrorState {
 
 export default function ServiceCenterPage() {
   const { user, isLoaded: isUserLoaded } = useUser();
+  const router = useRouter();
   const [quota, setQuota] = useState<UserQuota | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ErrorState | null>(null);
@@ -47,9 +50,10 @@ export default function ServiceCenterPage() {
   const [lastRefreshAttempt, setLastRefreshAttempt] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const hasFetchedRef = useRef(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
   
   // Profile completion status
-  const { completionPercentage = 0, canBook = false } = useProfileCompletion();
+  
 
   // Smart error handling with suppression for internal server errors
   const handleError = useCallback((errorMessage: string, isRetry: boolean = false) => {
@@ -158,10 +162,24 @@ export default function ServiceCenterPage() {
         <div className="flex flex-col items-center space-y-4 p-6 bg-white/90 backdrop-blur-sm rounded-xl shadow-xl">
           <Car className="h-10 w-10 text-emerald-600" />
           <LoadingIndicator color="#059669" size="medium" text="Loading dashboard..." variant="bars" />
-        </div>
       </div>
-    );
-  }
+      <TermsAcceptanceDialog
+        open={showTermsDialog}
+        onAccept={() => {
+          if (typeof window !== 'undefined') window.localStorage.setItem('termsAccepted', 'true');
+          setShowTermsDialog(false);
+        }}
+        onDecline={() => {
+          if (typeof window !== 'undefined' && window.history.length > 1) {
+            router.back();
+          } else {
+            router.push('/');
+          }
+        }}
+      />
+    </div>
+  );
+}
 
   // Show sign-in prompt if user is not authenticated
   if (!user) {
@@ -463,9 +481,23 @@ export default function ServiceCenterPage() {
                   <InvitationDashboard />
                 </div>
               </TabsContent>
-            </Tabs>
-          </div>
+          </Tabs>
         </div>
+        <TermsAcceptanceDialog
+          open={showTermsDialog}
+          onAccept={() => {
+            if (typeof window !== 'undefined') window.localStorage.setItem('termsAccepted', 'true');
+            setShowTermsDialog(false);
+          }}
+          onDecline={() => {
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push('/');
+            }
+          }}
+        />
       </div>
+    </div>
   );
 }

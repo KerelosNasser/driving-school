@@ -86,13 +86,13 @@ export async function POST(request: NextRequest) {
   try {
     console.log('=== BOOKING API DEBUG ===');
     console.log('Request headers:', Object.fromEntries(request.headers.entries()));
-    
+
     const authResult = await auth();
     console.log('Auth result:', authResult);
-    
+
     const { userId } = authResult;
     console.log('Extracted userId:', userId);
-    
+
     if (!userId) {
       console.log('No userId found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -142,12 +142,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse the date and time
-    const bookingDate = new Date(date);
+    // Parse the date and time in LOCAL timezone to avoid UTC offset issues
+    // date format: "2025-11-20", time format: "10:00"
+    const [year, month, day] = date.split('-').map(Number);
     const [hours, minutes] = time.split(':').map(Number);
 
-    const startDateTime = new Date(bookingDate);
-    startDateTime.setHours(hours, minutes, 0, 0);
+    // Validate parsed values
+    if (!year || !month || !day || hours === undefined || minutes === undefined) {
+      return NextResponse.json(
+        { error: 'Invalid date or time format' },
+        { status: 400 }
+      );
+    }
+
+    // Create date in local timezone (not UTC) to match user's calendar
+    const startDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
     const endDateTime = new Date(startDateTime);
     endDateTime.setMinutes(endDateTime.getMinutes() + duration);
@@ -203,7 +212,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (!currentQuota || Number(currentQuota.available_hours) < hoursUsed) {
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'Insufficient quota balance',
           available_hours: currentQuota?.available_hours || 0,
           required_hours: hoursUsed
@@ -263,7 +272,7 @@ export async function POST(request: NextRequest) {
       } catch (cleanupError) {
         console.error('Failed to cleanup calendar events:', cleanupError);
       }
-      
+
       return NextResponse.json(
         { error: 'Failed to save booking to database' },
         { status: 500 }
@@ -300,14 +309,14 @@ export async function POST(request: NextRequest) {
 
         // If insufficient quota, report 400; otherwise 500
         if (quotaConsumeError.message?.includes('Insufficient quota hours')) {
-          return NextResponse.json({ 
+          return NextResponse.json({
             error: 'Insufficient quota balance',
-            details: quotaConsumeError.message 
+            details: quotaConsumeError.message
           }, { status: 400 });
         }
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'Failed to consume quota for booking',
-          details: quotaConsumeError.message 
+          details: quotaConsumeError.message
         }, { status: 500 });
       }
     } catch (rpcError: any) {
@@ -388,11 +397,11 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error creating booking:', error);
-    
+
     // Provide user-friendly error messages based on error type
     let userMessage = 'Failed to create booking';
     let statusCode = 500;
-    
+
     if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
       userMessage = 'Unable to connect to Google Calendar. Please check your internet connection and try again.';
       statusCode = 503; // Service Unavailable
@@ -406,9 +415,9 @@ export async function POST(request: NextRequest) {
       userMessage = 'Calendar authentication failed. Please contact support.';
       statusCode = 500;
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: userMessage,
         details: error.message,
         code: error.code,

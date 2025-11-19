@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Shield ,ChevronDown, ChevronUp, CheckCircle2, X, Eye } from 'lucide-react';
+import { Shield ,ChevronDown, X } from 'lucide-react';
 
 interface Term {
   id: string;
@@ -19,6 +19,15 @@ interface TermsAcceptanceDialogProps {
   onDecline: () => void;
 }
 
+const DEFAULT_TERMS: Term[] = [
+  { id: '1', title: 'Booking and Payment', content: 'All lessons must be booked in advance. Payment is required at the time of booking. We accept all major credit cards and digital payment methods.' },
+  { id: '2', title: 'Cancellation Policy', content: 'Lessons can be cancelled or rescheduled with at least 24 hours notice. Cancellations with less than 24 hours notice may incur a cancellation fee.' },
+  { id: '3', title: 'Vehicle and Insurance', content: "All lessons are conducted in fully insured, dual-control vehicles. Students must hold a valid learner's permit or provisional license." },
+  { id: '4', title: 'Instructor Policies', content: 'Our instructors are fully licensed and accredited. Lessons may be terminated early if unsafe behavior is observed.' },
+  { id: '5', title: 'Liability and Safety', content: 'Students participate in driving lessons at their own risk. We maintain comprehensive insurance coverage, but students are responsible for damages from negligent behavior.' },
+  { id: '6', title: 'Refund Policy', content: 'Refunds are available within 48 hours of booking, subject to our cancellation policy. Unused credits may be transferred but cannot be refunded after commencement of the first lesson.' }
+];
+
 export function TermsAcceptanceDialog({
   open,
   onAccept,
@@ -31,7 +40,6 @@ export function TermsAcceptanceDialog({
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load terms from the database
   useEffect(() => {
     const loadTerms = async () => {
       try {
@@ -46,14 +54,13 @@ export function TermsAcceptanceDialog({
           if (item && item.content_json && Array.isArray(item.content_json)) {
             setTerms(item.content_json);
           } else {
-            setTerms(defaultTerms);
+            setTerms(DEFAULT_TERMS);
           }
         } else {
-          setTerms(defaultTerms);
+          setTerms(DEFAULT_TERMS);
         }
-      } catch (error) {
-        console.error('Error loading terms:', error);
-        setTerms(defaultTerms);
+      } catch (_error) {
+        setTerms(DEFAULT_TERMS);
       } finally {
         setLoading(false);
       }
@@ -64,38 +71,7 @@ export function TermsAcceptanceDialog({
     }
   }, [open]);
 
-  const defaultTerms: Term[] = [
-    {
-      id: '1',
-      title: 'Booking and Payment',
-      content: 'All lessons must be booked in advance. Payment is required at the time of booking. We accept all major credit cards and digital payment methods.'
-    },
-    {
-      id: '2',
-      title: 'Cancellation Policy',
-      content: 'Lessons can be cancelled or rescheduled with at least 24 hours notice. Cancellations with less than 24 hours notice may incur a cancellation fee.'
-    },
-    {
-      id: '3',
-      title: 'Vehicle and Insurance',
-      content: 'All lessons are conducted in fully insured, dual-control vehicles. Students must hold a valid learner\'s permit or provisional license.'
-    },
-    {
-      id: '4',
-      title: 'Instructor Policies',
-      content: 'Our instructors are fully licensed and accredited. Lessons may be terminated early if the student is under the influence of alcohol or drugs, or exhibits unsafe behavior.'
-    },
-    {
-      id: '5',
-      title: 'Liability and Safety',
-      content: 'Students participate in driving lessons at their own risk. We maintain comprehensive insurance coverage, but students are responsible for any damages resulting from negligent or reckless behavior.'
-    },
-    {
-      id: '6',
-      title: 'Refund Policy',
-      content: 'Refunds are available within 48 hours of booking, subject to our cancellation policy. Unused lesson credits may be transferred but cannot be refunded after the commencement of the first lesson.'
-    }
-  ];
+  
 
   const handleAccept = () => {
     if (!accepted) return;
@@ -123,14 +99,7 @@ export function TermsAcceptanceDialog({
     });
   };
 
-  const expandAllTerms = () => {
-    const allTermIds = new Set(terms.map(term => term.id));
-    setExpandedTerms(allTermIds);
-  };
-
-  const collapseAllTerms = () => {
-    setExpandedTerms(new Set());
-  };
+  
 
   const handleDecline = () => {
     setAccepted(false);
@@ -140,59 +109,20 @@ export function TermsAcceptanceDialog({
   return (
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent 
-        className="w-[80vw] max-w-3xl h-[90vh] max-h-[900px] p-0 gap-0 overflow-hidden bg-white rounded-2xl shadow-2xl border-0"
+        className="w-full max-w-none h-[100dvh] p-0 gap-0 overflow-hidden bg-white rounded-none md:rounded-2xl md:h-[85vh] md:max-w-3xl border-0"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        {/* Modern Header */}
-        <div className="relative bg-gradient-to-br from-yellow-600 via-yellow-700 to-indigo-800 text-white">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
-          </div>
-          
-          <div className="relative z-10 p-2 lg:p-2">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <Shield className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <DialogTitle className="text-2xl lg:text-3xl font-bold mb-2">
-                    Terms & Conditions
-                  </DialogTitle>
-                  <p className="text-yellow-100 text-sm lg:text-base">
-                    Please review our terms before proceeding with your booking
-                  </p>
-                </div>
-              </div>
+        <div className="px-4 py-3 border-b bg-white sticky top-0 z-10 md:px-6 md:py-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-emerald-100">
+              <Shield className="h-5 w-5 text-emerald-700" />
             </div>
-            
-            {/* Progress Bar */}
-            <div className="mt-6 space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-yellow-100">Reading Progress</span>
-                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full transition-all duration-300 ${
-                  hasScrolledToBottom 
-                    ? 'bg-green-500/20 text-green-200' 
-                    : 'bg-white/20 text-yellow-100'
-                }`}>
-                  <CheckCircle2 className={`h-4 w-4 transition-colors ${
-                    hasScrolledToBottom ? 'text-green-300' : 'text-yellow-200'
-                  }`} />
-                  <span>{hasScrolledToBottom ? 'Complete' : 'In Progress'}</span>
-                </div>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden">
-                <motion.div 
-                  className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: hasScrolledToBottom ? '100%' : '20%' }}
-                  transition={{ duration: 0.5 }}
-                />
-              </div>
+            <div className="flex-1">
+              <DialogTitle className="text-lg md:text-xl font-bold text-gray-900">Terms & Conditions</DialogTitle>
+              <p className="text-xs md:text-sm text-gray-500">Please review and accept to continue</p>
             </div>
+            <div className={`text-xs px-2.5 py-1 rounded-full ${hasScrolledToBottom ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{hasScrolledToBottom ? 'Ready' : 'Scroll to end'}</div>
           </div>
         </div>
 
@@ -205,40 +135,7 @@ export function TermsAcceptanceDialog({
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Action Bar */}
-            <div className="border-b bg-gray-50 px-6 py-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm font-medium text-gray-700">
-                    {terms.length} Terms Available
-                  </span>
-                  <div className="h-4 w-px bg-gray-300"></div>
-                  <span className="text-sm text-gray-500">
-                    {expandedTerms.size} Expanded
-                  </span>
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    onClick={expandAllTerms}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-8 px-3 border-gray-300 hover:bg-yellow-50 hover:border-yellow-300"
-                  >
-                    <Eye className="h-3 w-3 mr-1" />
-                    Expand All
-                  </Button>
-                  <Button
-                    onClick={collapseAllTerms}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-8 px-3 border-gray-300 hover:bg-gray-100"
-                  >
-                    <ChevronUp className="h-3 w-3 mr-1" />
-                    Collapse All
-                  </Button>
-                </div>
-              </div>
-            </div>
+            
 
             {/* Terms Content with Custom Scroll */}
             <div className="flex-1 overflow-hidden">
@@ -332,8 +229,7 @@ export function TermsAcceptanceDialog({
               </div>
             </div>
 
-            {/* Modern Footer */}
-            <div className="border-t bg-gradient-to-r from-gray-50 to-gray-100 p-1">
+            <div className="border-t bg-white p-3 md:p-4 sticky bottom-0 z-10">
               {/* Acceptance Section */}
               <div className="space-y-4">
                 <div className="flex items-start space-x-3 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -353,7 +249,7 @@ export function TermsAcceptanceDialog({
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Button
                     onClick={handleDecline}
                     variant="outline"
@@ -371,22 +267,7 @@ export function TermsAcceptanceDialog({
                         : 'bg-gray-300 cursor-not-allowed text-gray-500'
                     }`}
                   >
-                    {!hasScrolledToBottom ? (
-                      <>
-                        <ChevronDown className="h-4 w-4 mr-2 animate-bounce" />
-                        Review All Terms First
-                      </>
-                    ) : !accepted ? (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Please Accept Terms
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Accept & Continue to Booking
-                      </>
-                    )}
+                    {!hasScrolledToBottom ? 'Scroll to the end' : !accepted ? 'Please accept the terms' : 'Accept & Continue'}
                   </Button>
                 </div>
               </div>

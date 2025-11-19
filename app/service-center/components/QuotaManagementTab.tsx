@@ -500,8 +500,8 @@ export const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
       
       slots.push({
         time: timeString,
-        available,
-        reason: available ? undefined : reason
+        available
+        // Removed 'reason' field for privacy - don't leak admin calendar details
       });
     }
 
@@ -537,6 +537,7 @@ export const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {timeSlots.map((slot, index) => {
           const isSelected = selectedTimeSlots.includes(slot.time);
+          // Only disable if slot is unavailable OR user has no quota remaining
           const isDisabled = !slot.available || remainingHours < 1;
           
           return (
@@ -553,8 +554,9 @@ export const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
               }`}
             >
               <div className="font-semibold text-lg">{slot.time}</div>
-              {!slot.available && slot.reason && (
-                <div className="text-xs mt-1 opacity-75">{slot.reason}</div>
+              {/* Privacy: Don't show admin event details, just generic message */}
+              {!slot.available && (
+                <div className="text-xs mt-1 opacity-75">Unavailable slot</div>
               )}
               {isSelected && (
                 <div className="text-xs mt-1">✓ Selected</div>
