@@ -7,6 +7,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const ALLOWED_STATUSES = ['pending', 'pending_verification', 'completed', 'cancelled', 'expired'];
+
 export async function POST(request: NextRequest) {
   try {
     const { sessionId, paymentReference, gateway } = await request.json();
@@ -42,15 +44,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session expired' }, { status: 400 });
     }
 
-    // Update session with payment reference and mark as PENDING_VERIFICATION
-    // Admin must verify the payment before hours are granted
+    // Determine and validate new status (admin will verify later)
+    const newStatus = 'pending';
+    if (!ALLOWED_STATUSES.includes(newStatus)) {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
+
+    // Build updated metadata preserving existing keys and adding verification_state
+    const existingMetadata = typeof session.metadata === 'object' && session.metadata !== null
+      ? session.metadata
+      : {};
+
+    const updatedMetadata = {
+      ...existingMetadata,
+      verification_state: 'pending_verification',
+      // Optionally store submitted_by or submitted_gateway if useful
+      submitted_gateway: (gateway || session.gateway) ?? null,
+      submitted_at: new Date().toISOString()
+    };
+
+    // Update session with payment reference and metadata, keep status = 'pending'
     const { data, error } = await supabase
       .from('manual_payment_sessions')
       .update({
         payment_reference: paymentReference.trim(),
-        status: 'pending_verification',
+        status: newStatus,
         submitted_at: new Date().toISOString(),
-        gateway: gateway || session.gateway
+        gateway: gateway || session.gateway,
+        metadata: updatedMetadata
       })
       .eq('session_id', sessionId)
       .select()
@@ -84,10 +105,10 @@ export async function POST(request: NextRequest) {
       console.error('Failed to send WhatsApp notification:', notificationError);
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Payment reference submitted successfully. Your payment is pending admin verification.',
       session: data,
-      status: 'pending_verification',
+      status: newStatus,
       note: 'Your hours will be added to your account once the payment is verified by our team (usually within 24 hours).'
     });
 
@@ -109,6 +130,6 @@ function validatePaymentReference(ref: string, gateway: string): string | null {
     if (cleanRef.length < 6) return 'PayID reference must be at least 6 characters';
     if (!/^[A-Za-z0-9]+$/.test(cleanRef)) return 'PayID reference should contain only letters and numbers';
   }
-  
+
   return null;
 }

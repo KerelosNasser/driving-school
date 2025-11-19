@@ -358,7 +358,8 @@ export async function POST(request: NextRequest) {
 
       console.log('📧 [Booking API] Sending email with payload:', emailPayload);
 
-      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-booking-email`, {
+      const emailEndpoint = new URL('/api/send-booking-email', request.nextUrl.origin).toString();
+      const emailResponse = await fetch(emailEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(emailPayload)

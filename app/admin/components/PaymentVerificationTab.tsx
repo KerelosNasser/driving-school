@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +43,19 @@ export function PaymentVerificationTab() {
 
   useEffect(() => {
     loadPendingPayments();
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('manual-payment-verification')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'manual_payment_sessions' }, () => {
+        loadPendingPayments();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadPendingPayments = async () => {

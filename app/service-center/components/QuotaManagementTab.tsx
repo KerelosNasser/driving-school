@@ -68,7 +68,7 @@ interface CalendarViewProps {
   calendarSettings?: any;
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({
+export const CalendarView: React.FC<CalendarViewProps> = ({
   selectedDate,
   onDateSelect,
   calendarSettings
@@ -344,7 +344,7 @@ interface TimeSlotsViewProps {
   remainingHours: number;
 }
 
-const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
+export const TimeSlotsView: React.FC<TimeSlotsViewProps> = ({
   selectedDate,
   selectedTimeSlots,
   onTimeSlotsChange,

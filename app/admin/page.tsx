@@ -58,6 +58,29 @@ interface ServerBooking {
 // Server-side function to fetch and merge users
 async function getMergedUsers(): Promise<MergedUser[]> {
   try {
+    const adminEmailEnv = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    if (adminEmailEnv) {
+      const supabaseAdmin = getSupabaseAdmin();
+      const { data: supabaseUsers, error: supabaseError } = await supabaseAdmin
+        .from('users')
+        .select('*');
+
+      if (supabaseError) {
+        return [];
+      }
+
+      return (supabaseUsers || []).map(user => ({
+        clerkId: '',
+        email: user.email || '',
+        supabaseUserId: user.id,
+        fullName: user.full_name || 'No Name',
+        phone: user.phone || '',
+        supabaseCreatedAt: user.created_at,
+        clerkCreatedAt: user.created_at,
+        lastSignInAt: null,
+        isSynced: false,
+      }));
+    }
     // Check if Clerk secret key is configured
     if (!process.env.CLERK_SECRET_KEY) {
       console.warn("CLERK_SECRET_KEY not configured, skipping Clerk user fetch");
@@ -97,7 +120,7 @@ async function getMergedUsers(): Promise<MergedUser[]> {
     try {
       const clerkUsersResponse = await clerkClient.users.getUserList({ limit: 200 });
       clerkUsers = clerkUsersResponse.data || [];
-      console.log(`Found ${clerkUsers.length} Clerk users`);
+      
     } catch (clerkError) {
       console.error("Clerk API error:", clerkError);
       console.warn("Continuing with Supabase users only");

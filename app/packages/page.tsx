@@ -16,7 +16,6 @@ import { useUser } from '@clerk/nextjs';
 import ProfileCompletionModal from '@/components/ProfileCompletionModal';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import type { Package } from '@/lib/supabase';
-import GoogleCalendarIntegration from '@/app/service-center/components/GoogleCalendarIntegration';
 import { QuotaIndicator } from '@/components/QuotaIndicator';
 import { parsePaymentError, formatPaymentErrorMessage } from '@/lib/payment-utils';
 
@@ -674,14 +673,17 @@ export default function PackagesPage() {
                   </div>
                 )}
 
-                {/* Calendar Integration */}
+                {/* Booking Redirect */}
                 <div className="max-w-7xl mx-auto">
                   <Card className="shadow-2xl border-0 overflow-hidden">
-                    <CardContent className="p-0">
-                      <GoogleCalendarIntegration
-                        onBookingComplete={handleBookingComplete}
-                        userQuota={quota}
-                      />
+                    <CardContent className="p-8">
+                      <div className="text-center">
+                        <h4 className="text-xl font-semibold text-gray-900">Booking</h4>
+                        <p className="text-gray-600 mt-1">Use the Service Center to schedule lessons with the unified calendar.</p>
+                        <Button className="mt-4" onClick={() => { window.location.href = '/service-center'; }}>
+                          Go to Service Center
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>

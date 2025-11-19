@@ -481,7 +481,6 @@ export function isBypassPhoneNumber(
   if (!phoneNumber) return false;
   try {
     const normalized = normalizePhoneNumber(phoneNumber, country);
-    console.log(`isBypassPhoneNumber: Normalized phone: ${normalized}, Is bypass number: ${TEST_BYPASS_NUMBERS_E164.includes(normalized)}`);
     return TEST_BYPASS_NUMBERS_E164.includes(normalized);
   } catch (e) {
     console.error(`isBypassPhoneNumber error: ${e}`);

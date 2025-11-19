@@ -40,7 +40,8 @@ export async function GET() {
             phone
           )
         `)
-        .eq('status', 'pending_verification')
+        .eq('status', 'pending')
+        .not('payment_reference', 'is', null)
         .order('submitted_at', { ascending: false }),
       new Promise<{ data: null; error: { message: string } }>((_, reject) =>
         setTimeout(() => reject({ data: null, error: { message: 'Database request timeout' } }), 10000)
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (session.status !== 'pending_verification') {
+    if (session.status !== 'pending') {
       return NextResponse.json(
         { error: 'Payment is not pending verification' },
         { status: 400 }
@@ -215,23 +216,28 @@ export async function POST(request: NextRequest) {
       });
 
     } else {
-      // Reject payment
-      const { error: updateError } = await supabase
-        .from('manual_payment_sessions')
-        .update({
-          status: 'rejected',
-          rejected_at: new Date().toISOString(),
-          verified_by: (await auth()).userId,
-          admin_notes: adminNotes || null
-        })
-        .eq('session_id', sessionId);
+      const attempt = async (status: 'rejected' | 'cancelled') => {
+        return await supabase
+          .from('manual_payment_sessions')
+          .update({
+            status,
+            rejected_at: new Date().toISOString(),
+            verified_by: (await auth()).userId,
+            admin_notes: adminNotes || null
+          })
+          .eq('session_id', sessionId);
+      };
 
-      if (updateError) {
-        console.error('Error rejecting payment:', updateError);
-        return NextResponse.json(
-          { error: 'Failed to reject payment' },
-          { status: 500 }
-        );
+      const first = await attempt('rejected');
+      if (first.error) {
+        const second = await attempt('cancelled');
+        if (second.error) {
+          console.error('Error rejecting payment:', first.error || second.error);
+          return NextResponse.json(
+            { error: 'Failed to reject payment' },
+            { status: 500 }
+          );
+        }
       }
 
       return NextResponse.json({ 

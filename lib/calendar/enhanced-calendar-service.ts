@@ -1,5 +1,6 @@
 import { TokenManager } from '@/lib/oauth/token-manager';
 import { createClient } from '@supabase/supabase-js';
+import { formatInTimeZone } from 'date-fns-tz';
 
 export interface CalendarEvent {
   id: string;
@@ -355,11 +356,11 @@ ${booking.notes ? `Notes: ${booking.notes}` : ''}
 Booked via Driving School System
       `.trim(),
       start: {
-        dateTime: startDateTime.toISOString(),
+        dateTime: formatInTimeZone(startDateTime, this.DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss"),
         timeZone: this.DEFAULT_TIMEZONE
       },
       end: {
-        dateTime: endDateTime.toISOString(),
+        dateTime: formatInTimeZone(endDateTime, this.DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss"),
         timeZone: this.DEFAULT_TIMEZONE
       },
       attendees: [
@@ -387,10 +388,26 @@ Booked via Driving School System
     const calendar = await this.getCalendarClient();
     const calendarId = this.getCalendarId();
 
+    const patched: any = { ...updateData };
+    if (patched.start?.dateTime) {
+      patched.start = {
+        ...(patched.start || {}),
+        dateTime: formatInTimeZone(new Date(patched.start.dateTime), this.DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss"),
+        timeZone: this.DEFAULT_TIMEZONE,
+      };
+    }
+    if (patched.end?.dateTime) {
+      patched.end = {
+        ...(patched.end || {}),
+        dateTime: formatInTimeZone(new Date(patched.end.dateTime), this.DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss"),
+        timeZone: this.DEFAULT_TIMEZONE,
+      };
+    }
+
     const response = await calendar.events.patch({
       calendarId: calendarId,
       eventId: eventId,
-      requestBody: updateData as any,
+      requestBody: patched as any,
     });
 
     return this.transformGoogleEvent(response.data);
@@ -702,14 +719,17 @@ Booked via Driving School System
     const calendar = google.calendar({ version: 'v3', auth: authClient });
     const calendarId = this.getCalendarId();
 
+    const startLocal = formatInTimeZone(new Date(eventData.start), this.DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss");
+    const endLocal = formatInTimeZone(new Date(eventData.end), this.DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss");
+
     const createEventData = {
       summary: eventData.title,
       start: {
-        dateTime: eventData.start,
+        dateTime: startLocal,
         timeZone: this.DEFAULT_TIMEZONE,
       },
       end: {
-        dateTime: eventData.end,
+        dateTime: endLocal,
         timeZone: this.DEFAULT_TIMEZONE,
       },
       description: eventData.description || null,
@@ -890,12 +910,15 @@ Booked via Driving School System
       const oauth2 = new google.auth.OAuth2();
       oauth2.setCredentials({ access_token: tokens.access_token });
       const calendar = google.calendar({ version: 'v3', auth: oauth2 });
+      const startLocal = formatInTimeZone(new Date(eventData.start), this.DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss");
+      const endLocal = formatInTimeZone(new Date(eventData.end), this.DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss");
+
       const response = await calendar.events.insert({
         calendarId: 'primary',
         requestBody: {
           summary: eventData.title,
-          start: { dateTime: eventData.start, timeZone: this.DEFAULT_TIMEZONE },
-          end: { dateTime: eventData.end, timeZone: this.DEFAULT_TIMEZONE },
+          start: { dateTime: startLocal, timeZone: this.DEFAULT_TIMEZONE },
+          end: { dateTime: endLocal, timeZone: this.DEFAULT_TIMEZONE },
           description: eventData.description || null,
           location: eventData.location || null,
         } as any,

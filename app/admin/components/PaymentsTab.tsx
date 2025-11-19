@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -57,6 +58,19 @@ export function PaymentsTab() {
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-payments-analytics')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'manual_payment_sessions' }, () => {
+        loadData()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [onlyBrisbane, status, dateFrom, dateTo])
 
   const revenueByGatewayData = useMemo(() => {
     if (!metrics) return []
