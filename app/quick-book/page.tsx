@@ -47,6 +47,7 @@ export default function QuickBookPage() {
   
   const [payIdIdentifier, setPayIdIdentifier] = useState<string>('');
   const [paymentReference, setPaymentReference] = useState<string>('');
+  const [amountPaid, setAmountPaid] = useState<string>('');
   const [confirming, setConfirming] = useState<boolean>(false);
   const [confirmed, setConfirmed] = useState<boolean>(false);
   
@@ -209,7 +210,12 @@ export default function QuickBookPage() {
       const res = await fetch('/api/manual-payment/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, paymentReference: paymentReference.trim(), gateway: 'payid' })
+        body: JSON.stringify({ 
+          sessionId, 
+          paymentReference: paymentReference.trim(), 
+          gateway: 'payid',
+          amountPaid: amountPaid ? parseFloat(amountPaid) : undefined
+        })
       });
       const json = await res.json();
       if (!res.ok) {
@@ -452,9 +458,23 @@ export default function QuickBookPage() {
                   </div>
                 </div>
               )}
-              <div>
-                <Label htmlFor="reference" className="text-gray-700">Transaction ID</Label>
-                <Input id="reference" value={paymentReference} onChange={e => setPaymentReference(e.target.value)} className="mt-1.5 border-emerald-200 focus:border-emerald-500" placeholder="Enter ID from your receipt" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="reference" className="text-gray-700">Transaction ID</Label>
+                  <Input id="reference" value={paymentReference} onChange={e => setPaymentReference(e.target.value)} className="mt-1.5 border-emerald-200 focus:border-emerald-500" placeholder="Enter ID from your receipt" />
+                </div>
+                <div>
+                  <Label htmlFor="amountPaid" className="text-gray-700">Amount Paid (After Tax)</Label>
+                  <Input 
+                    id="amountPaid" 
+                    type="number" 
+                    step="0.01" 
+                    value={amountPaid} 
+                    onChange={e => setAmountPaid(e.target.value)} 
+                    className="mt-1.5 border-emerald-200 focus:border-emerald-500" 
+                    placeholder="e.g. 595.00" 
+                  />
+                </div>
               </div>
               <div className="pt-2">
                 <Button onClick={confirmPayment} className="w-full h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold shadow-lg" disabled={confirming || !paymentReference.trim()}>
@@ -462,30 +482,10 @@ export default function QuickBookPage() {
                 </Button>
               </div>
               {confirmed && (
-                <>
-                  {realtimeStatus === 'connected' && (
-                    <Alert className="mt-3 bg-blue-50 border-blue-300">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                        <AlertDescription className="text-blue-900 text-sm font-medium">
-                          {paymentStatus === 'verifying' ? 'Admin is verifying your payment...' : 'Waiting for admin verification... You\'ll be notified immediately.'}
-                        </AlertDescription>
-                      </div>
-                    </Alert>
-                  )}
-                  {realtimeStatus === 'connecting' && (
-                    <Alert className="mt-3 bg-gray-50 border-gray-300">
-                      <Clock className="h-4 w-4 text-gray-600" />
-                      <AlertDescription className="text-gray-700">Payment submitted. Connecting to real-time updates...</AlertDescription>
-                    </Alert>
-                  )}
-                  {realtimeStatus === 'disconnected' && (
-                    <Alert className="mt-3 bg-yellow-50 border-yellow-300">
-                      <AlertCircle className="h-4 w-4 text-yellow-600" />
-                      <AlertDescription className="text-yellow-800">Payment submitted. Pending admin verification.</AlertDescription>
-                    </Alert>
-                  )}
-                </>
+                <Alert className="mt-3 bg-yellow-50 border-yellow-300">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-800">Payment submitted. Admin will verify shortly.</AlertDescription>
+                </Alert>
               )}
             </CardContent>
           </Card>

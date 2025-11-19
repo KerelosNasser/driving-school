@@ -11,7 +11,7 @@ const ALLOWED_STATUSES = ['pending', 'pending_verification', 'completed', 'cance
 
 export async function POST(request: NextRequest) {
   try {
-    const { sessionId, paymentReference, gateway } = await request.json();
+    const { sessionId, paymentReference, gateway, amountPaid } = await request.json();
 
     if (!sessionId || !paymentReference) {
       return NextResponse.json({ error: 'Missing session ID or payment reference' }, { status: 400 });
@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
     const updatedMetadata = {
       ...existingMetadata,
       verification_state: 'pending_verification',
-      // Optionally store submitted_by or submitted_gateway if useful
       submitted_gateway: (gateway || session.gateway) ?? null,
-      submitted_at: new Date().toISOString()
+      submitted_at: new Date().toISOString(),
+      amount_paid: amountPaid ?? null
     };
 
     // Update session with payment reference and metadata, keep status = 'pending'

@@ -26,7 +26,7 @@ export async function GET() {
     }
 
     const supabase = getSupabaseAdmin();
-    
+
     // Add timeout and better error handling
     const { data, error } = await Promise.race([
       supabase
@@ -55,11 +55,11 @@ export async function GET() {
         hint: (error as any).hint || 'No hint available',
         code: (error as any).code || 'No error code'
       });
-      
+
       // Return empty array instead of error for better UX
-      return NextResponse.json({ 
-        data: [], 
-        warning: 'Could not load pending payments. Please check your database connection.' 
+      return NextResponse.json({
+        data: [],
+        warning: 'Could not load pending payments. Please check your database connection.'
       });
     }
 
@@ -71,11 +71,11 @@ export async function GET() {
       name: error?.name,
       cause: error?.cause
     });
-    
+
     // Return empty array with warning instead of 500 error
-    return NextResponse.json({ 
-      data: [], 
-      warning: 'Database connection failed. Please check your network connection and try again.' 
+    return NextResponse.json({
+      data: [],
+      warning: 'Database connection failed. Please check your network connection and try again.'
     });
   }
 }
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       // Grant hours to user
       try {
         const hoursToAdd = parseFloat(session.metadata?.hours || '0');
-        
+
         // First, ensure user has a quota record
         const { data: existingQuota } = await supabase
           .from('user_quotas')
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
             })
             .eq('user_id', session.user_id);
         }
-        
+
         // Log the transaction in quota_transactions
         await supabase
           .from('quota_transactions')
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
               admin_notes: adminNotes
             }
           });
-        
+
       } catch (quotaUpdateError) {
         console.error('Error updating user quota:', quotaUpdateError);
         return NextResponse.json(
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: true,
         message: 'Payment approved and hours granted successfully',
         hoursAdded: session.metadata?.hours || 0
@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: true,
         message: 'Payment rejected successfully'
       });
@@ -253,10 +253,10 @@ export async function POST(request: NextRequest) {
       name: error?.name,
       cause: error?.cause?.message
     });
-    
+
     return NextResponse.json(
-      { 
-        error: 'Internal server error', 
+      {
+        error: 'Internal server error',
         message: error?.message || 'An unexpected error occurred. Please try again.',
         details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
       },

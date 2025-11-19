@@ -23,6 +23,7 @@ export default function ManualPaymentPage() {
     hours: number;
   } | null>(null);
   const [paymentReference, setPaymentReference] = useState('');
+  const [amountPaid, setAmountPaid] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -120,7 +121,8 @@ export default function ManualPaymentPage() {
         body: JSON.stringify({
           sessionId,
           paymentReference: paymentReference.trim(),
-          gateway: 'payid'
+          gateway: 'payid',
+          amountPaid: amountPaid ? parseFloat(amountPaid) : undefined
         }),
       });
       
@@ -413,23 +415,40 @@ export default function ManualPaymentPage() {
               </CardContent>
             </Card>
 
-            {/* Submit Form - Spans 2 columns on desktop */}
             <Card className="border-0 shadow-sm lg:shadow-lg lg:col-span-2">
               <CardContent className="p-4 lg:p-6 space-y-3">
-                <div>
-                  <Label htmlFor="reference" className="text-sm font-medium">
-                    Transaction ID
-                  </Label>
-                  <Input
-                    id="reference"
-                    placeholder="Enter ID from your receipt"
-                    value={paymentReference}
-                    onChange={(e) => {
-                      setPaymentReference(e.target.value);
-                      setError('');
-                    }}
-                    className="mt-1.5 h-11 text-base border-2 focus:border-emerald-500"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="reference" className="text-sm font-medium">
+                      Transaction ID
+                    </Label>
+                    <Input
+                      id="reference"
+                      placeholder="Enter ID from your receipt"
+                      value={paymentReference}
+                      onChange={(e) => {
+                        setPaymentReference(e.target.value);
+                        setError('');
+                      }}
+                      className="mt-1.5 h-11 text-base border-2 focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="amountPaid" className="text-sm font-medium">
+                      Amount Paid (After Tax)
+                    </Label>
+                    <Input
+                      id="amountPaid"
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 595.00"
+                      value={amountPaid}
+                      onChange={(e) => {
+                        setAmountPaid(e.target.value);
+                      }}
+                      className="mt-1.5 h-11 text-base border-2 focus:border-emerald-500"
+                    />
+                  </div>
                 </div>
 
                 {error && (

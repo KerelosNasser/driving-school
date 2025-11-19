@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, Clock, DollarSign, User, CreditCard, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, DollarSign, User, CreditCard, AlertCircle, Package } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface PendingPayment {
@@ -27,6 +27,7 @@ interface PendingPayment {
     hours?: number;
     user_email?: string;
     user_name?: string;
+    amount_paid?: number;
   };
   users?: {
     email: string;
@@ -125,137 +126,160 @@ export function PaymentVerificationTab() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="p-3 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-600 shadow-lg">
-            <Clock className="h-6 w-6 text-white" />
+    <div className="space-y-6">
+      {/* Modern Header */}
+      <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-2xl p-6 shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+              <Clock className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-white">Payment Verification</h1>
+              <p className="text-yellow-100 mt-1">Review and approve manual payment submissions</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Payment Verification</h1>
-            <p className="text-gray-600">Review and approve manual payment submissions</p>
-          </div>
+          <Badge variant="secondary" className="text-2xl px-6 py-3 bg-white/90 backdrop-blur-sm">
+            {pendingPayments.length}
+          </Badge>
         </div>
-        <Badge variant="secondary" className="text-lg px-4 py-2">
-          {pendingPayments.length} Pending
-        </Badge>
       </div>
 
-      {/* Alert */}
+      {/* Alert Banner */}
       {pendingPayments.length > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-yellow-600" />
-              <p className="text-yellow-800 font-medium">
-                You have {pendingPayments.length} payment{pendingPayments.length !== 1 ? 's' : ''} waiting for verification
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 flex items-center space-x-3">
+          <AlertCircle className="h-6 w-6 text-yellow-600 flex-shrink-0" />
+          <p className="text-yellow-900 font-medium">
+            You have <span className="font-bold">{pendingPayments.length}</span> payment{pendingPayments.length !== 1 ? 's' : ''} waiting for verification
+          </p>
+        </div>
       )}
 
-      {/* Pending Payments List */}
+      {/* Payments List */}
       {pendingPayments.length === 0 ? (
-        <Card className="shadow-lg">
-          <CardContent className="p-12 text-center">
-            <CheckCircle className="h-16 w-16 text-emerald-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">All Caught Up!</h3>
-            <p className="text-gray-600">No pending payment verifications at the moment.</p>
+        <Card className="shadow-xl border-0 bg-gradient-to-br from-emerald-50 to-teal-50">
+          <CardContent className="p-16 text-center">
+            <CheckCircle className="h-20 w-20 text-emerald-600 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">All Caught Up!</h3>
+            <p className="text-gray-600 text-lg">No pending payment verifications at the moment.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {pendingPayments.map((payment) => (
-            <Card key={payment.session_id} className="shadow-lg border-yellow-100">
-              <CardHeader className="bg-gradient-to-r from-yellow-50 to-orange-50">
+            <Card key={payment.session_id} className="shadow-xl border-2 border-yellow-100 hover:shadow-2xl transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-yellow-50 via-orange-50 to-yellow-50 border-b-2 border-yellow-100">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-yellow-200 rounded-lg">
-                      <User className="h-5 w-5 text-yellow-700" />
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl shadow-lg">
+                      <User className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">
+                      <CardTitle className="text-xl font-bold text-gray-900">
                         {payment.users?.full_name || payment.metadata?.user_name || 'Unknown User'}
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-base mt-1">
                         {payment.users?.email || payment.metadata?.user_email || payment.email}
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge className="bg-yellow-500 text-white">
+                  <Badge className="bg-gradient-to-r from-yellow-500 to-orange-600 text-white text-sm px-4 py-2">
                     Pending Verification
                   </Badge>
                 </div>
               </CardHeader>
+              
               <CardContent className="p-6 space-y-6">
-                {/* Payment Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <DollarSign className="h-4 w-4 text-emerald-600" />
-                      <span className="text-sm text-gray-600 font-medium">Amount</span>
+                {/* Payment Details Grid - Enhanced */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Expected Amount */}
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-xl border-2 border-emerald-200 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <DollarSign className="h-5 w-5 text-emerald-600" />
+                      <span className="text-sm text-emerald-700 font-semibold">Expected Amount</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">
-                      ${payment.amount} {payment.currency}
+                    <p className="text-3xl font-bold text-emerald-900">
+                      ${payment.amount.toFixed(2)}
                     </p>
+                    <p className="text-xs text-emerald-600 mt-1">{payment.currency}</p>
                   </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <CreditCard className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm text-gray-600 font-medium">Gateway</span>
+                  {/* Amount Paid (if reported) */}
+                  {payment.metadata?.amount_paid && (
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <DollarSign className="h-5 w-5 text-blue-600" />
+                        <span className="text-sm text-blue-700 font-semibold">Amount Paid</span>
+                      </div>
+                      <p className="text-3xl font-bold text-blue-900">
+                        ${payment.metadata.amount_paid.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">User reported</p>
                     </div>
-                    <p className="text-lg font-semibold text-gray-900 uppercase">
+                  )}
+
+                  {/* Gateway */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-xl border-2 border-purple-200 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <CreditCard className="h-5 w-5 text-purple-600" />
+                      <span className="text-sm text-purple-700 font-semibold">Gateway</span>
+                    </div>
+                    <p className="text-2xl font-bold text-purple-900 uppercase">
                       {payment.gateway}
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Clock className="h-4 w-4 text-purple-600" />
-                      <span className="text-sm text-gray-600 font-medium">Hours</span>
+                  {/* Hours */}
+                  <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-5 rounded-xl border-2 border-orange-200 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Clock className="h-5 w-5 text-orange-600" />
+                      <span className="text-sm text-orange-700 font-semibold">Hours</span>
                     </div>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <p className="text-2xl font-bold text-orange-900">
                       {payment.metadata?.hours || 0} hours
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Clock className="h-4 w-4 text-gray-600" />
-                      <span className="text-sm text-gray-600 font-medium">Submitted</span>
+                  {/* Package */}
+                  <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-5 rounded-xl border-2 border-cyan-200 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Package className="h-5 w-5 text-cyan-600" />
+                      <span className="text-sm text-cyan-700 font-semibold">Package</span>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900">
+                    <p className="text-base font-bold text-cyan-900">
+                      {payment.metadata?.package_name || 'Unknown'}
+                    </p>
+                  </div>
+
+                  {/* Submitted Time */}
+                  <div className="bg-gradient-to-br from-gray-50 to-slate-50 p-5 rounded-xl border-2 border-gray-200 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Clock className="h-5 w-5 text-gray-600" />
+                      <span className="text-sm text-gray-700 font-semibold">Submitted</span>
+                    </div>
+                    <p className="text-base font-bold text-gray-900">
                       {format(new Date(payment.submitted_at), 'MMM dd, yyyy')}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-600">
                       {format(new Date(payment.submitted_at), 'hh:mm a')}
                     </p>
                   </div>
                 </div>
 
-                {/* Package Info */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-blue-900 mb-2">Package Details</h4>
-                  <p className="text-blue-800">{payment.metadata?.package_name || 'Unknown Package'}</p>
-                </div>
-
-                {/* Payment Reference */}
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-emerald-900 mb-2">Payment Reference</h4>
-                  <p className="font-mono text-lg font-bold text-emerald-800">
+                {/* Payment Reference - Prominent Display */}
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-6 shadow-lg">
+                  <h4 className="font-bold text-white mb-3 text-lg">Payment Reference</h4>
+                  <p className="font-mono text-3xl font-bold text-white break-all">
                     {payment.payment_reference}
                   </p>
-                  <p className="text-sm text-emerald-700 mt-1">
-                    Verify this reference in your {payment.gateway.toUpperCase()} account
+                  <p className="text-emerald-100 mt-3 text-sm">
+                    ✓ Verify this reference in your {payment.gateway.toUpperCase()} account
                   </p>
                 </div>
 
                 {/* Admin Notes */}
                 <div>
-                  <Label htmlFor={`notes-${payment.session_id}`} className="text-sm font-medium">
+                  <Label htmlFor={`notes-${payment.session_id}`} className="text-base font-semibold text-gray-700">
                     Admin Notes (Optional)
                   </Label>
                   <Textarea
@@ -266,26 +290,26 @@ export function PaymentVerificationTab() {
                       ...prev,
                       [payment.session_id]: e.target.value
                     }))}
-                    className="mt-2"
-                    rows={2}
+                    className="mt-2 border-2 focus:border-emerald-500"
+                    rows={3}
                   />
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex space-x-3 pt-4 border-t">
+                {/* Action Buttons - Enhanced */}
+                <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 pt-4 border-t-2">
                   <Button
                     onClick={() => handleVerifyPayment(payment.session_id, 'approve')}
                     disabled={processingId === payment.session_id}
-                    className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                    className="flex-1 h-14 text-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg hover:shadow-xl transition-all"
                   >
                     {processingId === payment.session_id ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                         Processing...
                       </>
                     ) : (
                       <>
-                        <CheckCircle className="h-4 w-4 mr-2" />
+                        <CheckCircle className="h-5 w-5 mr-2" />
                         Approve & Grant Hours
                       </>
                     )}
@@ -294,9 +318,9 @@ export function PaymentVerificationTab() {
                     onClick={() => handleVerifyPayment(payment.session_id, 'reject')}
                     disabled={processingId === payment.session_id}
                     variant="destructive"
-                    className="flex-1"
+                    className="flex-1 h-14 text-lg shadow-lg hover:shadow-xl transition-all"
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
+                    <XCircle className="h-5 w-5 mr-2" />
                     Reject Payment
                   </Button>
                 </div>
