@@ -1,6 +1,9 @@
 import { TokenManager } from '@/lib/oauth/token-manager';
 import { createClient } from '@supabase/supabase-js';
 import { formatInTimeZone } from 'date-fns-tz';
+import { createDateTimeInTimezone } from './date-utils';
+import type { calendar_v3 } from 'googleapis';
+import type { GaxiosResponse } from 'gaxios';
 
 export interface CalendarEvent {
   id: string;
@@ -107,7 +110,7 @@ export class EnhancedCalendarService {
     5: { start: '09:00', end: '17:00', enabled: true },  // Friday
     6: { start: '10:00', end: '16:00', enabled: false }  // Saturday
   };
-  
+
   // Helper: create an authenticated Calendar API client using service account
   private async getCalendarClient(): Promise<any> {
     const authClient = await TokenManager.getAuthClient();
@@ -148,9 +151,9 @@ export class EnhancedCalendarService {
    */
   private async ensureSettingsLoaded(forceReload: boolean = false): Promise<void> {
     if (this.settingsLoaded && !forceReload) return;
-    
+
     console.log('🔄 [EnhancedCalendarService] Loading calendar settings from database...');
-    
+
     try {
       // Load calendar settings row (single)
       const { data: settingsRow, error: settingsError } = await this.supabase
@@ -160,14 +163,14 @@ export class EnhancedCalendarService {
 
       if (!settingsError && settingsRow) {
         console.log('✅ [EnhancedCalendarService] Calendar settings loaded:', settingsRow);
-        
+
         // Map enabled working days
         const enabledDays: number[] = [];
-        const dayKeys = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+        const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         dayKeys.forEach((day, idx) => {
           const enabled = Boolean(settingsRow[`${day}_enabled`]);
-          const start = (settingsRow[`${day}_start`] || (this.workingHoursByDay[idx]?.start ?? '09:00')).toString().slice(0,5);
-          const end = (settingsRow[`${day}_end`] || (this.workingHoursByDay[idx]?.end ?? '17:00')).toString().slice(0,5);
+          const start = (settingsRow[`${day}_start`] || (this.workingHoursByDay[idx]?.start ?? '09:00')).toString().slice(0, 5);
+          const end = (settingsRow[`${day}_end`] || (this.workingHoursByDay[idx]?.end ?? '17:00')).toString().slice(0, 5);
           this.workingHoursByDay[idx] = { start, end, enabled };
           if (enabled) enabledDays.push(idx);
         });
@@ -183,7 +186,7 @@ export class EnhancedCalendarService {
           workingHours: { start: monday.start, end: monday.end },
           workingDays: enabledDays,
         };
-        
+
         console.log('⚙️ [EnhancedCalendarService] Updated settings:', this.settings);
       } else {
         console.warn('⚠️ [EnhancedCalendarService] No calendar settings found in database, using defaults');
@@ -260,7 +263,7 @@ export class EnhancedCalendarService {
     await this.ensureSettingsLoaded(forceReload);
     return { ...this.settings };
   }
-  
+
   /**
    * Refresh settings from database (clears cache and reloads)
    */
@@ -339,8 +342,8 @@ export class EnhancedCalendarService {
     // Validate booking request
     await this.validateBookingRequest(booking);
 
-    // Create the calendar event
-    const startDateTime = new Date(`${booking.date}T${booking.time}:00`);
+    // Create the calendar event using timezone-aware utility
+    const startDateTime = createDateTimeInTimezone(booking.date, booking.time, this.DEFAULT_TIMEZONE);
     const endDateTime = new Date(
       startDateTime.getTime() + (booking.duration || this.settings.lessonDurationMinutes) * 60000
     );
@@ -441,7 +444,7 @@ Booked via Driving School System
       let pageToken: string | undefined;
       const all: any[] = [];
       do {
-        const response = await calendar.events.list({
+        const response = (await calendar.events.list({
           calendarId,
           timeMin: startDate,
           timeMax: endDate,
@@ -449,7 +452,7 @@ Booked via Driving School System
           orderBy: 'startTime',
           timeZone: this.DEFAULT_TIMEZONE,
           pageToken,
-        });
+        })) as unknown as GaxiosResponse<calendar_v3.Schema$Events>;
         if (Array.isArray(response.data.items)) {
           all.push(...response.data.items);
         }
@@ -499,29 +502,29 @@ Booked via Driving School System
    */
   async getAdminEvents(startDate: string, endDate: string): Promise<CalendarEvent[]> {
     console.log('🔍 [getAdminEvents] Starting fetch:', { startDate, endDate });
-    
+
     const authClient = await TokenManager.getAuthClient();
     if (!authClient) {
       console.log('❌ [getAdminEvents] No auth client available');
       return [];
     }
-    
+
     const { google } = await import('googleapis');
     const calendar = google.calendar({ version: 'v3', auth: authClient });
     const calendarId = this.getCalendarId();
-    
+
     console.log('🔍 [getAdminEvents] Using calendar ID:', calendarId);
-    
+
     try {
       let pageToken: string | undefined;
       const all: any[] = [];
       let pageCount = 0;
-      
+
       do {
         pageCount++;
         console.log(`🔍 [getAdminEvents] Fetching page ${pageCount}...`);
-        
-        const response = await calendar.events.list({
+
+        const response = (await calendar.events.list({
           calendarId,
           timeMin: startDate,
           timeMax: endDate,
@@ -529,15 +532,15 @@ Booked via Driving School System
           orderBy: 'startTime',
           timeZone: this.DEFAULT_TIMEZONE,
           pageToken,
-        });
-        
+        })) as GaxiosResponse<calendar_v3.Schema$Events>;
+
         console.log(`🔍 [getAdminEvents] Page ${pageCount} response:`, {
           itemsCount: response.data.items?.length || 0,
           hasNextPage: !!response.data.nextPageToken
         });
-        
+
         if (Array.isArray(response.data.items)) {
-          console.log(`🔍 [getAdminEvents] Page ${pageCount} events:`, 
+          console.log(`🔍 [getAdminEvents] Page ${pageCount} events:`,
             response.data.items.map(item => ({
               id: item.id,
               summary: item.summary,
@@ -547,12 +550,12 @@ Booked via Driving School System
           );
           all.push(...response.data.items);
         }
-        
+
         pageToken = response.data.nextPageToken || undefined;
       } while (pageToken);
-      
+
       console.log(`✅ [getAdminEvents] Total events fetched: ${all.length}`);
-      console.log(`✅ [getAdminEvents] All events:`, 
+      console.log(`✅ [getAdminEvents] All events:`,
         all.map(item => ({
           id: item.id,
           summary: item.summary,
@@ -561,10 +564,10 @@ Booked via Driving School System
           timestamp: new Date(item.start?.dateTime || item.start?.date).toLocaleString()
         }))
       );
-      
+
       const transformed = all.map(this.transformGoogleEvent);
       console.log(`✅ [getAdminEvents] Transformed events: ${transformed.length}`);
-      
+
       return transformed;
     } catch (error) {
       console.error('❌ [getAdminEvents] Error fetching events:', error);
@@ -739,7 +742,7 @@ Booked via Driving School System
     // Create event in resolved admin calendar with retry logic
     let lastError: any = null;
     const maxRetries = 3;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const response = await calendar.events.insert({
@@ -751,26 +754,26 @@ Booked via Driving School System
         return this.transformGoogleEvent(response.data);
       } catch (error: any) {
         lastError = error;
-        
+
         // Check if it's a retryable error
-        const isRetryable = 
-          error.code === 'ECONNRESET' || 
+        const isRetryable =
+          error.code === 'ECONNRESET' ||
           error.code === 'ETIMEDOUT' ||
           error.code === 'ENOTFOUND' ||
           (error.response?.status >= 500 && error.response?.status < 600);
-        
+
         if (isRetryable && attempt < maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
           console.warn(`Calendar API attempt ${attempt} failed, retrying in ${delay}ms:`, error.message);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
-        
+
         // Non-retryable error or max retries reached
         throw error;
       }
     }
-    
+
     // Should never reach here, but just in case
     throw lastError || new Error('Failed to create calendar event after retries');
   }
@@ -778,11 +781,11 @@ Booked via Driving School System
   // Private helper methods
 
   private async getEventsForDate(date: string): Promise<CalendarEvent[]> {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Use timezone-aware date creation for start and end of day
+    const startOfDay = createDateTimeInTimezone(date, '00:00', this.DEFAULT_TIMEZONE);
+    const endOfDay = createDateTimeInTimezone(date, '23:59', this.DEFAULT_TIMEZONE);
+    // Add 59 seconds and 999ms to get end of day
+    endOfDay.setSeconds(59, 999);
 
     return this.getEvents(startOfDay.toISOString(), endOfDay.toISOString());
   }
@@ -794,7 +797,7 @@ Booked via Driving School System
 
     const isSlotAvailable = availableSlots.some(slot => {
       // Prefer comparing by local HH:MM to avoid timezone mismatches
-      const slotTime = new Date(slot.start).toTimeString().slice(0,5);
+      const slotTime = new Date(slot.start).toTimeString().slice(0, 5);
       return slotTime === booking.time && slot.available;
     });
 
@@ -841,7 +844,12 @@ Booked via Driving School System
       const hour = Math.floor(time / 60);
       const minute = time % 60;
 
-      const slotStart = new Date(`${date}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`);
+      // Use timezone-aware date creation to ensure slots are in Australia/Brisbane timezone
+      const slotStart = createDateTimeInTimezone(
+        date,
+        `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+        this.DEFAULT_TIMEZONE
+      );
       const slotEnd = new Date(slotStart.getTime() + this.settings.lessonDurationMinutes * 60000);
 
       slots.push({
@@ -940,7 +948,7 @@ Booked via Driving School System
     let userEvent: CalendarEvent | null = null;
     try {
       userEvent = await this.createUserEvent(userId, eventData);
-    } catch {}
+    } catch { }
     return { adminEvent, userEvent };
   }
 
@@ -993,12 +1001,17 @@ Booked via Driving School System
 
       const eventsForDay = await this.getEventsForDate(isoDate);
       try {
+        // Use timezone-aware date creation for admin events query
+        const startOfDay = createDateTimeInTimezone(isoDate, '00:00', this.DEFAULT_TIMEZONE);
+        const endOfDay = createDateTimeInTimezone(isoDate, '23:59', this.DEFAULT_TIMEZONE);
+        endOfDay.setSeconds(59, 999);
+
         const adminEventsForDay = await this.getAdminEvents(
-          new Date(`${isoDate}T00:00:00.000Z`).toISOString(),
-          new Date(`${isoDate}T23:59:59.999Z`).toISOString()
+          startOfDay.toISOString(),
+          endOfDay.toISOString()
         );
         if (adminEventsForDay?.length) eventsForDay.push(...adminEventsForDay);
-      } catch {}
+      } catch { }
 
       const slots = this.filterAvailableSlots(this.generateTimeSlotsInternal(isoDate), eventsForDay, effectiveBuffer);
 
@@ -1009,8 +1022,8 @@ Booked via Driving School System
         if (slots[i].available) {
           if (runStartIndex === null) runStartIndex = i;
           runCount++;
-          if (runCount >= requiredSlots) {
-            const start = slots[runStartIndex].start;
+          if (runCount >= requiredSlots && runStartIndex !== null) {
+            const start = slots[runStartIndex!].start;
             const end = new Date(new Date(start).getTime() + durationMinutes * 60000).toISOString();
             return { start, end };
           }

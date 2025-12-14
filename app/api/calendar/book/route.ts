@@ -3,6 +3,7 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { EnhancedCalendarService } from '@/lib/calendar/enhanced-calendar-service';
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/api/utils';
+import { createDateTimeInTimezone, DEFAULT_TIMEZONE } from '@/lib/calendar/date-utils';
 
 // Helper to map Clerk user ID -> Supabase users.id (UUID)
 async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
@@ -15,7 +16,7 @@ async function getOrCreateSupabaseUserId(clerkUserId: string): Promise<string> {
   if (existingByClerk?.id) return existingByClerk.id as string;
 
   // Get Clerk user details
-  const clerkUser = await clerkClient.users.getUser(clerkUserId);
+  const clerkUser = await (await clerkClient()).users.getUser(clerkUserId);
   const email =
     clerkUser?.primaryEmailAddress?.emailAddress ||
     clerkUser?.emailAddresses?.[0]?.emailAddress ||
@@ -142,21 +143,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse the date and time in LOCAL timezone to avoid UTC offset issues
+    // Parse and create date in Australia/Brisbane timezone using timezone-aware utility
+    // This ensures consistent timezone handling regardless of server timezone
     // date format: "2025-11-20", time format: "10:00"
-    const [year, month, day] = date.split('-').map(Number);
-    const [hours, minutes] = time.split(':').map(Number);
-
-    // Validate parsed values
-    if (!year || !month || !day || hours === undefined || minutes === undefined) {
-      return NextResponse.json(
-        { error: 'Invalid date or time format' },
-        { status: 400 }
-      );
-    }
-
-    // Create date in local timezone (not UTC) to match user's calendar
-    const startDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    const startDateTime = createDateTimeInTimezone(date, time, DEFAULT_TIMEZONE);
 
     const endDateTime = new Date(startDateTime);
     endDateTime.setMinutes(endDateTime.getMinutes() + duration);

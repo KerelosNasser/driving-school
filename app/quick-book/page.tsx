@@ -73,7 +73,7 @@ export default function QuickBookPage() {
 
   useEffect(() => {
     if (!isSignedIn) {
-      router.push('/sign-in');
+      router.push('/sign-in?redirect_url=/quick-book');
     }
   }, [isSignedIn, router]);
 
